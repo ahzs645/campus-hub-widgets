@@ -30,6 +30,7 @@ export default function GroundwaterLevelOptions({ data, onChange }: WidgetOption
     dataSet: (data?.dataSet as string) ?? '',
     displayMode: (data?.displayMode as 'current' | 'history') ?? 'current',
     refreshInterval: (data?.refreshInterval as number) ?? 30,
+    useCorsProxy: (data?.useCorsProxy as boolean) ?? true,
   });
 
   const [presetValue, setPresetValue] = useState(() => {
@@ -45,6 +46,7 @@ export default function GroundwaterLevelOptions({ data, onChange }: WidgetOption
         dataSet: (data.dataSet as string) ?? '',
         displayMode: (data.displayMode as 'current' | 'history') ?? 'current',
         refreshInterval: (data.refreshInterval as number) ?? 30,
+        useCorsProxy: (data.useCorsProxy as boolean) ?? true,
       });
       setPresetValue(WELL_PRESETS.some((p) => p.value === loc) ? loc : 'custom');
     }
@@ -143,6 +145,15 @@ export default function GroundwaterLevelOptions({ data, onChange }: WidgetOption
           value={state.refreshInterval}
           min={10}
           max={120}
+          onChange={handleChange}
+        />
+      </div>
+
+      <div className="space-y-4 border-t border-[color:var(--ui-item-border)] pt-6">
+        <FormSwitch
+          label="Use CORS Proxy"
+          name="useCorsProxy"
+          checked={state.useCorsProxy}
           onChange={handleChange}
         />
       </div>

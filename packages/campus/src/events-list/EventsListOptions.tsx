@@ -20,6 +20,7 @@ interface EventsListData {
   sourceType: 'json' | 'ical' | 'rss';
   cacheTtlSeconds: number;
   selectedCategories: string[];
+  useCorsProxy: boolean;
 }
 
 export default function EventsListOptions({ data, onChange }: WidgetOptionsProps) {
@@ -32,6 +33,7 @@ export default function EventsListOptions({ data, onChange }: WidgetOptionsProps
     sourceType: (data?.sourceType as 'json' | 'ical' | 'rss') ?? 'json',
     cacheTtlSeconds: (data?.cacheTtlSeconds as number) ?? 300,
     selectedCategories: (data?.selectedCategories as string[]) ?? [],
+    useCorsProxy: (data?.useCorsProxy as boolean) ?? true,
   });
 
   const [availableCategories, setAvailableCategories] = useState<CategoryInfo[]>([]);
@@ -50,6 +52,7 @@ export default function EventsListOptions({ data, onChange }: WidgetOptionsProps
         sourceType: (data.sourceType as 'json' | 'ical' | 'rss') ?? 'json',
         cacheTtlSeconds: (data.cacheTtlSeconds as number) ?? 300,
         selectedCategories: (data.selectedCategories as string[]) ?? [],
+        useCorsProxy: (data.useCorsProxy as boolean) ?? true,
       });
     }
   }, [data]);
@@ -71,7 +74,7 @@ export default function EventsListOptions({ data, onChange }: WidgetOptionsProps
       setCategoryLoading(true);
       setCategoryError('');
 
-      const fetchUrl = buildProxyUrl(state.apiUrl);
+      const fetchUrl = state.useCorsProxy ? buildProxyUrl(state.apiUrl) : state.apiUrl;
 
       fetch(fetchUrl, { signal: controller.signal })
         .then(res => {
@@ -122,7 +125,7 @@ export default function EventsListOptions({ data, onChange }: WidgetOptionsProps
       fetchControllerRef.current?.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.apiUrl, state.sourceType]);
+  }, [state.apiUrl, state.sourceType, state.useCorsProxy]);
 
   const handleChange = (name: string, value: string | number | boolean) => {
     const newState = { ...state, [name]: value };
@@ -218,6 +221,13 @@ export default function EventsListOptions({ data, onChange }: WidgetOptionsProps
           type="url"
           value={state.apiUrl}
           placeholder="https://api.example.com/events"
+          onChange={handleChange}
+        />
+
+        <FormSwitch
+          label="Use CORS Proxy"
+          name="useCorsProxy"
+          checked={state.useCorsProxy}
           onChange={handleChange}
         />
 

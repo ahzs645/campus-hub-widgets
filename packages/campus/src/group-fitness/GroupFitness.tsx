@@ -340,5 +340,6 @@ registerWidget({
     showInstructor: true,
     showDescription: true,
     maxRows: 6,
+    useCorsProxy: true,
   },
 });

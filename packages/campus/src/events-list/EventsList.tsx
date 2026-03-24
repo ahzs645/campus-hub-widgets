@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
-import { useEvents, type CalendarEvent } from '@firstform/campus-hub-widget-sdk';
+import { useEvents, type CalendarEvent, buildProxyUrl } from '@firstform/campus-hub-widget-sdk';
 import EventsListOptions from './EventsListOptions';
 
 type Event = CalendarEvent;
@@ -85,6 +85,7 @@ interface EventsListConfig {
   displayMode?: DisplayMode;
   rotationSeconds?: number;
   selectedCategories?: string[];
+  useCorsProxy?: boolean;
 }
 
 const DEFAULT_EVENTS: Event[] = [
@@ -111,9 +112,12 @@ export default function EventsList({ config, theme }: WidgetComponentProps) {
   const displayMode = eventsConfig?.displayMode ?? 'scroll';
   const rotationSeconds = eventsConfig?.rotationSeconds ?? 5;
   const selectedCategories = eventsConfig?.selectedCategories;
+  const useCorsProxy = eventsConfig?.useCorsProxy ?? true;
+
+  const resolvedApiUrl = apiUrl && useCorsProxy ? buildProxyUrl(apiUrl) : apiUrl;
 
   const events = useEvents({
-    apiUrl,
+    apiUrl: resolvedApiUrl,
     sourceType,
     cacheTtlSeconds,
     maxItems,
@@ -374,5 +378,6 @@ registerWidget({
     cacheTtlSeconds: 300,
     displayMode: 'scroll',
     rotationSeconds: 5,
+    useCorsProxy: true,
   },
 });

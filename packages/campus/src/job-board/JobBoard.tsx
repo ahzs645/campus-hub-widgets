@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import QRCodeLib from 'qrcode';
 import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
-import { buildCacheKey, fetchJsonWithCache, fetchTextWithCache, buildProxyUrl, getCorsProxyUrl } from '@firstform/campus-hub-widget-sdk';
+import { buildCacheKey, fetchJsonWithCache, fetchTextWithCache, buildProxyUrl } from '@firstform/campus-hub-widget-sdk';
 import { parseRss } from '@firstform/campus-hub-widget-sdk';
 import JobBoardOptions from './JobBoardOptions';
 
@@ -22,6 +22,7 @@ interface JobBoardConfig {
   label?: string;
   qrUrl?: string;
   qrLabel?: string;
+  useCorsProxy?: boolean;
 }
 
 const TYPE_COLORS: Record<string, { bg: string; text: string }> = {
@@ -82,6 +83,7 @@ export default function JobBoard({
   const label = cfg?.label ?? 'Campus Jobs';
   const qrUrl = cfg?.qrUrl ?? '';
   const qrLabel = cfg?.qrLabel ?? 'Scan to apply';
+  const useCorsProxy = cfg?.useCorsProxy ?? true;
 
   const [jobs, setJobs] = useState<JobPosting[]>(DEMO_JOBS);
   const jobsRef = useRef(jobs);
@@ -129,7 +131,7 @@ export default function JobBoard({
 
     const fetchJobs = async () => {
       try {
-        const fetchUrl = getCorsProxyUrl() ? buildProxyUrl(apiUrl) : apiUrl;
+        const fetchUrl = useCorsProxy ? buildProxyUrl(apiUrl) : apiUrl;
 
         if (sourceType === 'rss') {
           const { text } = await fetchTextWithCache(fetchUrl, {
@@ -185,7 +187,7 @@ export default function JobBoard({
       isMounted = false;
       clearInterval(interval);
     };
-  }, [apiUrl, sourceType, cacheTtlSeconds, queueFetchedJobs]);
+  }, [apiUrl, sourceType, cacheTtlSeconds, queueFetchedJobs, useCorsProxy]);
 
   // QR code generation
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
@@ -349,5 +351,6 @@ registerWidget({
     cacheTtlSeconds: 120,
     qrUrl: '',
     qrLabel: 'Scan to apply',
+    useCorsProxy: true,
   },
 });

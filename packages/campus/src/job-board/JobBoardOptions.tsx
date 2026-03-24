@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { FormInput, FormSelect } from '@firstform/campus-hub-widget-sdk';
+import { FormInput, FormSelect, FormSwitch } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
 interface JobBoardData {
@@ -12,6 +12,7 @@ interface JobBoardData {
   label: string;
   qrUrl: string;
   qrLabel: string;
+  useCorsProxy: boolean;
 }
 
 const SOURCE_TYPES = [
@@ -37,6 +38,7 @@ export default function JobBoardOptions({ data, onChange }: WidgetOptionsProps) 
     label: (data?.label as string) ?? 'Campus Jobs',
     qrUrl: (data?.qrUrl as string) ?? '',
     qrLabel: (data?.qrLabel as string) ?? 'Scan to apply',
+    useCorsProxy: (data?.useCorsProxy as boolean) ?? true,
   });
 
   useEffect(() => {
@@ -50,6 +52,7 @@ export default function JobBoardOptions({ data, onChange }: WidgetOptionsProps) 
         label: (data.label as string) ?? 'Campus Jobs',
         qrUrl: (data.qrUrl as string) ?? '',
         qrLabel: (data.qrLabel as string) ?? 'Scan to apply',
+        useCorsProxy: (data.useCorsProxy as boolean) ?? true,
       });
     }
   }, [data]);
@@ -89,6 +92,13 @@ export default function JobBoardOptions({ data, onChange }: WidgetOptionsProps) 
           name="sourceType"
           value={state.sourceType}
           options={SOURCE_TYPES}
+          onChange={handleChange}
+        />
+
+        <FormSwitch
+          label="Use CORS Proxy"
+          name="useCorsProxy"
+          checked={state.useCorsProxy}
           onChange={handleChange}
         />
 

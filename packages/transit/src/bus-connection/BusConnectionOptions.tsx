@@ -227,8 +227,15 @@ export default function BusConnectionOptions({ data, onChange }: WidgetOptionsPr
             placeholder="e.g. https://your-proxy.com/gtfs-realtime"
           />
 
+          <FormSwitch
+            label="Use CORS Proxy"
+            name="useCorsProxy"
+            checked={state.useCorsProxy}
+            onChange={handleSwitchChange}
+          />
+
           <p className="text-xs text-[var(--ui-text-muted)]">
-            Optional. Provide a CORS-enabled proxy URL to the BC Transit GTFS-Realtime feed for live arrival times. Leave empty to use scheduled times only.
+            Optional. Provide a CORS-enabled proxy URL to the BC Transit GTFS-Realtime feed for live arrival times. Leave empty to use scheduled times only. When no custom proxy URL is set, the system CORS proxy is used if the toggle is enabled.
           </p>
         </div>
       </div>

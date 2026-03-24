@@ -24,6 +24,7 @@ interface GroupFitnessOptionsData {
   showInstructor: boolean;
   showDescription: boolean;
   maxRows: number;
+  useCorsProxy: boolean;
 }
 
 const getInitialState = (data: Record<string, unknown>): GroupFitnessOptionsData => ({
@@ -37,6 +38,7 @@ const getInitialState = (data: Record<string, unknown>): GroupFitnessOptionsData
   showInstructor: (data.showInstructor as boolean) ?? true,
   showDescription: (data.showDescription as boolean) ?? true,
   maxRows: (data.maxRows as number) ?? 6,
+  useCorsProxy: (data.useCorsProxy as boolean) ?? true,
 });
 
 const resolvePreviewSection = (
@@ -82,7 +84,7 @@ export default function GroupFitnessOptions({ data, onChange }: WidgetOptionsPro
       setLoading(true);
       setLoadError('');
 
-      const fetchUrl = buildProxyUrl(state.scheduleUrl.trim());
+      const fetchUrl = state.useCorsProxy ? buildProxyUrl(state.scheduleUrl.trim()) : state.scheduleUrl.trim();
 
       fetch(fetchUrl, { signal: controller.signal })
         .then((response) => {
@@ -102,7 +104,7 @@ export default function GroupFitnessOptions({ data, onChange }: WidgetOptionsPro
           if ((error as { name?: string }).name === 'AbortError') return;
           setScheduleInfo(null);
           setLoadError(
-            getCorsProxyUrl()
+            !state.useCorsProxy || getCorsProxyUrl()
               ? 'Could not load classes from the schedule URL.'
               : 'A CORS proxy must be configured to load days and classes from UNBC.',
           );
@@ -116,7 +118,7 @@ export default function GroupFitnessOptions({ data, onChange }: WidgetOptionsPro
       clearTimeout(timeout);
       fetchControllerRef.current?.abort();
     };
-  }, [state.scheduleUrl]);
+  }, [state.scheduleUrl, state.useCorsProxy]);
 
   const handleChange = (name: string, value: string | number | boolean) => {
     const nextState = { ...state, [name]: value };
@@ -259,6 +261,13 @@ export default function GroupFitnessOptions({ data, onChange }: WidgetOptionsPro
             { value: '720', label: '12 hours' },
           ]}
           onChange={(name, value) => handleChange(name, Number(value))}
+        />
+
+        <FormSwitch
+          label="Use CORS Proxy"
+          name="useCorsProxy"
+          checked={state.useCorsProxy}
+          onChange={handleChange}
         />
 
         <div className="text-sm text-[var(--ui-text-muted)]">
