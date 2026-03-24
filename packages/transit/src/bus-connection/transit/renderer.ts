@@ -91,7 +91,8 @@ let _fontCtx: CanvasRenderingContext2D | null = null;
 export async function loadPixollettaFont(): Promise<void> {
   if (_fontLoaded) return;
   try {
-    const font = new FontFace('Pixolletta8px', 'url(/fonts/Pixolletta8px.ttf)');
+    const fontUrl = new URL('./Pixolletta8px.ttf', import.meta.url).href;
+    const font = new FontFace('Pixolletta8px', `url(${fontUrl})`);
     await font.load();
     document.fonts.add(font);
   } catch (e) {
