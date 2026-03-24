@@ -1,0 +1,11 @@
+{
+  "name": "@firstform/campus-hub-widgets",
+  "private": true,
+  "description": "Campus Hub widget packages",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}
