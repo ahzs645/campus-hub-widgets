@@ -11,6 +11,7 @@ interface RSSData {
   showDate: boolean;
   scrollSpeed: number;
   title: string;
+  useCorsProxy: boolean;
 }
 
 export default function RSSReaderOptions({ data, onChange }: WidgetOptionsProps) {
@@ -22,6 +23,7 @@ export default function RSSReaderOptions({ data, onChange }: WidgetOptionsProps)
     showDate: (data?.showDate as boolean) ?? true,
     scrollSpeed: (data?.scrollSpeed as number) ?? 40,
     title: (data?.title as string) ?? '',
+    useCorsProxy: (data?.useCorsProxy as boolean) ?? true,
   });
 
   useEffect(() => {
@@ -34,6 +36,7 @@ export default function RSSReaderOptions({ data, onChange }: WidgetOptionsProps)
         showDate: (data.showDate as boolean) ?? true,
         scrollSpeed: (data.scrollSpeed as number) ?? 40,
         title: (data.title as string) ?? '',
+        useCorsProxy: (data.useCorsProxy as boolean) ?? true,
       });
     }
   }, [data]);
@@ -133,6 +136,13 @@ export default function RSSReaderOptions({ data, onChange }: WidgetOptionsProps)
             { value: '60', label: '1 hour' },
           ]}
           onChange={(name, value) => handleChange(name, Number(value))}
+        />
+
+        <FormSwitch
+          label="Use CORS Proxy"
+          name="useCorsProxy"
+          checked={state.useCorsProxy}
+          onChange={handleChange}
         />
       </div>
 

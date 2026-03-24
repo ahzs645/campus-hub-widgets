@@ -18,6 +18,7 @@ interface LibraryAvailabilityConfig {
   refreshSeconds?: number;
   openHour?: number;
   closeHour?: number;
+  useCorsProxy?: boolean;
 }
 
 interface LibCalSlot {
@@ -272,6 +273,7 @@ export default function LibraryAvailability({
   const openHour = clamp(Math.round(widgetConfig?.openHour ?? 8), 0, 23);
   const closeHourRaw = clamp(Math.round(widgetConfig?.closeHour ?? 23), 1, 24);
   const closeHour = closeHourRaw <= openHour ? openHour + 1 : closeHourRaw;
+  const useCorsProxy = widgetConfig?.useCorsProxy ?? true;
   const [response, setResponse] = useState<LibCalGridResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -329,7 +331,7 @@ export default function LibraryAvailability({
 
       const start = formatDateKey(firstDay);
       const end = formatDateKey(addDays(firstDay, dayMeta.length));
-      const targetUrl = buildProxyUrl(endpoint);
+      const targetUrl = useCorsProxy ? buildProxyUrl(endpoint) : endpoint;
 
       const formData = new FormData();
       formData.set('lid', lid);
@@ -372,7 +374,7 @@ export default function LibraryAvailability({
         }
       }
     },
-    [dayMeta, endpoint, gid, lid, pageSize],
+    [dayMeta, endpoint, gid, lid, pageSize, useCorsProxy],
   );
 
   useEffect(() => {
@@ -965,5 +967,6 @@ registerWidget({
     refreshSeconds: 120,
     openHour: 8,
     closeHour: 23,
+    useCorsProxy: true,
   },
 });

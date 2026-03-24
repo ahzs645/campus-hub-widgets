@@ -10,6 +10,7 @@ interface ClimbingGymData {
   refreshInterval: number;
   showCapacityBar: boolean;
   showHours: boolean;
+  useCorsProxy: boolean;
 }
 
 const DEFAULT_PORTAL_URL =
@@ -22,6 +23,7 @@ export default function ClimbingGymOptions({ data, onChange }: WidgetOptionsProp
     refreshInterval: (data?.refreshInterval as number) ?? 5,
     showCapacityBar: (data?.showCapacityBar as boolean) ?? true,
     showHours: (data?.showHours as boolean) ?? true,
+    useCorsProxy: (data?.useCorsProxy as boolean) ?? true,
   });
 
   useEffect(() => {
@@ -32,6 +34,7 @@ export default function ClimbingGymOptions({ data, onChange }: WidgetOptionsProp
         refreshInterval: (data.refreshInterval as number) ?? 5,
         showCapacityBar: (data.showCapacityBar as boolean) ?? true,
         showHours: (data.showHours as boolean) ?? true,
+        useCorsProxy: (data.useCorsProxy as boolean) ?? true,
       });
     }
   }, [data]);
@@ -107,6 +110,18 @@ export default function ClimbingGymOptions({ data, onChange }: WidgetOptionsProp
             { value: '30', label: '30 minutes' },
           ]}
           onChange={(name, value) => handleChange(name, Number(value))}
+        />
+      </div>
+
+      {/* CORS Proxy */}
+      <div className="space-y-4 border-t border-[color:var(--ui-item-border)] pt-6">
+        <h3 className="font-semibold text-[var(--ui-text)]">Network</h3>
+
+        <FormSwitch
+          label="Use CORS Proxy"
+          name="useCorsProxy"
+          checked={state.useCorsProxy}
+          onChange={handleChange}
         />
       </div>
 

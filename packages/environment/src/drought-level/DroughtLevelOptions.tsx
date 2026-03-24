@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { FormInput, FormSelect } from '@firstform/campus-hub-widget-sdk';
+import { FormInput, FormSelect, FormSwitch } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
 const BASIN_PRESETS = [
@@ -51,6 +51,7 @@ interface DroughtOptionsData {
   basin: string;
   displayMode: 'single' | 'overview';
   refreshInterval: number;
+  useCorsProxy: boolean;
 }
 
 export default function DroughtLevelOptions({ data, onChange }: WidgetOptionsProps) {
@@ -58,6 +59,7 @@ export default function DroughtLevelOptions({ data, onChange }: WidgetOptionsPro
     basin: (data?.basin as string) ?? '',
     displayMode: (data?.displayMode as 'single' | 'overview') ?? 'single',
     refreshInterval: (data?.refreshInterval as number) ?? 60,
+    useCorsProxy: (data?.useCorsProxy as boolean) ?? true,
   });
 
   useEffect(() => {
@@ -66,6 +68,7 @@ export default function DroughtLevelOptions({ data, onChange }: WidgetOptionsPro
         basin: (data.basin as string) ?? '',
         displayMode: (data.displayMode as 'single' | 'overview') ?? 'single',
         refreshInterval: (data.refreshInterval as number) ?? 60,
+        useCorsProxy: (data.useCorsProxy as boolean) ?? true,
       });
     }
   }, [data]);
@@ -138,6 +141,15 @@ export default function DroughtLevelOptions({ data, onChange }: WidgetOptionsPro
         <div className="text-xs text-[var(--ui-text-muted)] text-center">
           Drought levels are updated weekly during drought season (spring to fall).
         </div>
+      </div>
+
+      <div className="space-y-4 border-t border-[color:var(--ui-item-border)] pt-6">
+        <FormSwitch
+          label="Use CORS Proxy"
+          name="useCorsProxy"
+          checked={state.useCorsProxy}
+          onChange={handleChange}
+        />
       </div>
 
       {/* Drought level legend */}

@@ -13,6 +13,7 @@ interface SimpleTableConfig {
   headerStyle?: 'accent' | 'subtle' | 'none';
   striped?: boolean;
   refreshInterval?: number;
+  useCorsProxy?: boolean;
 }
 
 const DEMO_CSV = `Room,Availability,Hours
@@ -58,6 +59,7 @@ export default function SimpleTable({ config, theme }: WidgetComponentProps) {
   const headerStyle = tableConfig?.headerStyle ?? 'accent';
   const striped = tableConfig?.striped ?? true;
   const refreshInterval = tableConfig?.refreshInterval ?? 30;
+  const useCorsProxy = tableConfig?.useCorsProxy ?? true;
   const [rows, setRows] = useState<string[][]>(() => parseCSV(DEMO_CSV));
   const [error, setError] = useState<string | null>(null);
 
@@ -75,7 +77,7 @@ export default function SimpleTable({ config, theme }: WidgetComponentProps) {
     }
     try {
       setError(null);
-      const url = buildProxyUrl(csvUrl);
+      const url = useCorsProxy ? buildProxyUrl(csvUrl) : csvUrl;
       const { text } = await fetchTextWithCache(url, {
         cacheKey: buildCacheKey('table', csvUrl),
         ttlMs: refreshInterval * 60 * 1000,
@@ -89,7 +91,7 @@ export default function SimpleTable({ config, theme }: WidgetComponentProps) {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load CSV');
     }
-  }, [source, csvUrl, manualData, refreshInterval]);
+  }, [source, csvUrl, manualData, refreshInterval, useCorsProxy]);
 
   useEffect(() => {
     fetchCSV();
@@ -201,5 +203,6 @@ registerWidget({
     headerStyle: 'accent',
     striped: true,
     refreshInterval: 30,
+    useCorsProxy: true,
   },
 });

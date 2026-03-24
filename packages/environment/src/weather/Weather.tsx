@@ -57,6 +57,7 @@ interface WeatherConfig {
   displayItems?: DisplayItems;
   dataSource?: 'openweathermap' | 'unbc-rooftop';
   refreshInterval?: number; // minutes
+  useCorsProxy?: boolean;
 }
 
 const DISPLAY_MODE_PRESETS: Record<Exclude<DisplayMode, 'custom'>, DisplayItems> = {
@@ -229,6 +230,7 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
   const apiKey = weatherConfig?.apiKey?.trim();
   const dataSource = weatherConfig?.dataSource ?? 'openweathermap';
   const refreshInterval = weatherConfig?.refreshInterval ?? 10; // minutes
+  const useCorsProxy = weatherConfig?.useCorsProxy ?? true;
 
   const [weather, setWeather] = useState<WeatherData>({
     ...MOCK_WEATHER,
@@ -243,7 +245,7 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
   const fetchUNBC = useCallback(async () => {
     try {
       setError(null);
-      const fetchUrl = buildProxyUrl(UNBC_URL);
+      const fetchUrl = useCorsProxy ? buildProxyUrl(UNBC_URL) : UNBC_URL;
       const { text } = await fetchTextWithCache(fetchUrl, {
         cacheKey: buildCacheKey('weather-unbc', UNBC_URL),
         ttlMs: refreshMs,
@@ -259,7 +261,7 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);
     }
-  }, [units, refreshMs]);
+  }, [units, refreshMs, useCorsProxy]);
 
   // OpenWeatherMap data source
   const fetchOWM = useCallback(async () => {
@@ -471,5 +473,6 @@ registerWidget({
     apiKey: '',
     dataSource: 'openweathermap',
     refreshInterval: 10,
+    useCorsProxy: true,
   },
 });

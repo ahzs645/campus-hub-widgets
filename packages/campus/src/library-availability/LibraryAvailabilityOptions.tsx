@@ -1,4 +1,4 @@
-import { FormInput, FormSelect } from '@firstform/campus-hub-widget-sdk';
+import { FormInput, FormSelect, FormSwitch } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
 type DisplayMode = 'grid' | 'calendar' | 'cards';
@@ -15,6 +15,7 @@ interface LibraryAvailabilityData {
   refreshSeconds: number;
   openHour: number;
   closeHour: number;
+  useCorsProxy: boolean;
 }
 
 const DEFAULTS: LibraryAvailabilityData = {
@@ -29,6 +30,7 @@ const DEFAULTS: LibraryAvailabilityData = {
   refreshSeconds: 120,
   openHour: 8,
   closeHour: 23,
+  useCorsProxy: true,
 };
 
 export default function LibraryAvailabilityOptions({ data, onChange }: WidgetOptionsProps) {
@@ -44,6 +46,7 @@ export default function LibraryAvailabilityOptions({ data, onChange }: WidgetOpt
     refreshSeconds: (data?.refreshSeconds as number) ?? DEFAULTS.refreshSeconds,
     openHour: (data?.openHour as number) ?? DEFAULTS.openHour,
     closeHour: (data?.closeHour as number) ?? DEFAULTS.closeHour,
+    useCorsProxy: (data?.useCorsProxy as boolean) ?? DEFAULTS.useCorsProxy,
   };
 
   const handleChange = (name: string, value: string | number | boolean) => {
@@ -177,6 +180,17 @@ export default function LibraryAvailabilityOptions({ data, onChange }: WidgetOpt
         <div className="text-xs text-[var(--ui-text-muted)] space-y-1">
           <p>Requires POST form fields: lid, gid, start, end, pageSize.</p>
         </div>
+      </div>
+
+      <div className="space-y-4 border-t border-[color:var(--ui-item-border)] pt-6">
+        <h3 className="font-semibold text-[var(--ui-text)]">Network</h3>
+
+        <FormSwitch
+          label="Use CORS Proxy"
+          name="useCorsProxy"
+          checked={state.useCorsProxy}
+          onChange={handleChange}
+        />
       </div>
     </div>
   );

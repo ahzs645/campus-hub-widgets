@@ -35,6 +35,7 @@ interface NewsTickerConfig {
   eventSourceType?: 'json' | 'ical' | 'rss';
   eventCacheTtlSeconds?: number;
   eventMaxItems?: number;
+  useCorsProxy?: boolean;
 }
 
 const DEFAULT_TICKER_ITEMS: TickerItem[] = [
@@ -302,6 +303,7 @@ export default function NewsTicker({ config, theme }: WidgetComponentProps) {
       : 1;
   const label = tickerConfig?.label ?? 'Breaking';
   const dataSource = tickerConfig?.dataSource ?? 'announcements';
+  const useCorsProxy = tickerConfig?.useCorsProxy ?? true;
 
   // Announcement items state
   const [items, setItems] = useState<TickerItem[]>(configuredItems ?? DEFAULT_TICKER_ITEMS);
@@ -350,7 +352,7 @@ export default function NewsTicker({ config, theme }: WidgetComponentProps) {
 
     const fetchTicker = async () => {
       try {
-        const fetchUrl = buildProxyUrl(announcementsApiUrl);
+        const fetchUrl = useCorsProxy ? buildProxyUrl(announcementsApiUrl) : announcementsApiUrl;
         if (sourceType === 'rss') {
           const { text } = await fetchTextWithCache(fetchUrl, {
             cacheKey: buildCacheKey('ticker-rss', fetchUrl),
@@ -422,6 +424,7 @@ export default function NewsTicker({ config, theme }: WidgetComponentProps) {
     templateRandomWorkplaceName,
     templateSim,
     templateSims,
+    useCorsProxy,
     queueFetchedItems,
   ]);
 
@@ -593,6 +596,7 @@ registerWidget({
     templateSims: 'Sims',
     simcityCategories: '',
     simcityMaxItems: 40,
+    useCorsProxy: true,
     eventSourceType: 'json',
     eventCacheTtlSeconds: 300,
     eventMaxItems: 10,

@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { FormInput, FormSelect } from '@firstform/campus-hub-widget-sdk';
+import { FormInput, FormSelect, FormSwitch } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
 const FIRE_CENTRES = [
@@ -15,12 +15,14 @@ const FIRE_CENTRES = [
 interface FireHazardData {
   fireCentre: string;
   refreshInterval: number;
+  useCorsProxy: boolean;
 }
 
 export default function FireHazardOptions({ data, onChange }: WidgetOptionsProps) {
   const [state, setState] = useState<FireHazardData>({
     fireCentre: (data?.fireCentre as string) ?? 'Cariboo Fire Centre',
     refreshInterval: (data?.refreshInterval as number) ?? 30,
+    useCorsProxy: (data?.useCorsProxy as boolean) ?? true,
   });
 
   useEffect(() => {
@@ -28,6 +30,7 @@ export default function FireHazardOptions({ data, onChange }: WidgetOptionsProps
       setState({
         fireCentre: (data.fireCentre as string) ?? 'Cariboo Fire Centre',
         refreshInterval: (data.refreshInterval as number) ?? 30,
+        useCorsProxy: (data.useCorsProxy as boolean) ?? true,
       });
     }
   }, [data]);
@@ -80,6 +83,15 @@ export default function FireHazardOptions({ data, onChange }: WidgetOptionsProps
           value={state.refreshInterval}
           min={10}
           max={120}
+          onChange={handleChange}
+        />
+      </div>
+
+      <div className="space-y-4 border-t border-[color:var(--ui-item-border)] pt-6">
+        <FormSwitch
+          label="Use CORS Proxy"
+          name="useCorsProxy"
+          checked={state.useCorsProxy}
           onChange={handleChange}
         />
       </div>

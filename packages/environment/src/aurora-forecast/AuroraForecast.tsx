@@ -8,6 +8,7 @@ import AuroraForecastOptions from './AuroraForecastOptions';
 interface AuroraConfig {
   refreshInterval?: number;
   latitude?: number;
+  useCorsProxy?: boolean;
 }
 
 interface KpForecastRow {
@@ -105,6 +106,7 @@ export default function AuroraForecast({
   const cfg = config as AuroraConfig | undefined;
   const refreshInterval = cfg?.refreshInterval ?? 15;
   const latitude = cfg?.latitude ?? 54; // Default: Prince George, BC
+  const useCorsProxy = cfg?.useCorsProxy ?? true;
 
   const [data, setData] = useState<AuroraData>(MOCK_DATA);
   const [error, setError] = useState<string | null>(null);
@@ -115,7 +117,7 @@ export default function AuroraForecast({
   const fetchData = useCallback(async () => {
     try {
       setError(null);
-      const fetchUrl = buildProxyUrl(NOAA_KP_URL);
+      const fetchUrl = useCorsProxy ? buildProxyUrl(NOAA_KP_URL) : NOAA_KP_URL;
       const { data: raw } = await fetchJsonWithCache<unknown>(fetchUrl, {
         cacheKey: buildCacheKey('aurora-kp', NOAA_KP_URL),
         ttlMs: refreshMs,
@@ -130,7 +132,7 @@ export default function AuroraForecast({
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [refreshMs]);
+  }, [refreshMs, useCorsProxy]);
 
   useEffect(() => {
     let isMounted = true;
@@ -328,5 +330,6 @@ registerWidget({
   defaultProps: {
     refreshInterval: 15,
     latitude: 54,
+    useCorsProxy: true,
   },
 });

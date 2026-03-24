@@ -8,6 +8,7 @@ import FireHazardOptions from './FireHazardOptions';
 interface FireHazardConfig {
   fireCentre?: string;
   refreshInterval?: number;
+  useCorsProxy?: boolean;
 }
 
 interface DangerData {
@@ -164,6 +165,7 @@ export default function FireHazard({
   const cfg = config as FireHazardConfig | undefined;
   const fireCentre = cfg?.fireCentre ?? FIRE_CENTRES[0];
   const refreshInterval = cfg?.refreshInterval ?? 30;
+  const useCorsProxy = cfg?.useCorsProxy ?? true;
 
   const [data, setData] = useState<DangerData>(MOCK_DATA);
   const [error, setError] = useState<string | null>(null);
@@ -172,7 +174,7 @@ export default function FireHazard({
   const refreshMs = refreshInterval * 60 * 1000;
 
   const fetchData = useCallback(async () => {
-    if (!getCorsProxyUrl()) {
+    if (!useCorsProxy || !getCorsProxyUrl()) {
       setData({ ...MOCK_DATA, fireCentre });
       return;
     }
@@ -194,7 +196,7 @@ export default function FireHazard({
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [fireCentre, refreshMs]);
+  }, [fireCentre, refreshMs, useCorsProxy]);
 
   useEffect(() => {
     let isMounted = true;
@@ -352,5 +354,6 @@ registerWidget({
   defaultProps: {
     fireCentre: 'Cariboo Fire Centre',
     refreshInterval: 30,
+    useCorsProxy: true,
   },
 });

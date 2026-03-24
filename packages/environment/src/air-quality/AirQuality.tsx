@@ -10,6 +10,7 @@ interface AirQualityConfig {
   waqiToken?: string;
   waqiCity?: string;
   refreshInterval?: number;
+  useCorsProxy?: boolean;
 }
 
 interface AqiData {
@@ -97,6 +98,7 @@ export default function AirQuality({ config, theme }: WidgetComponentProps) {
   const waqiToken = aqConfig?.waqiToken?.trim();
   const waqiCity = aqConfig?.waqiCity?.trim() || 'prince-george';
   const refreshInterval = aqConfig?.refreshInterval ?? 15;
+  const useCorsProxy = aqConfig?.useCorsProxy ?? true;
 
   const [data, setData] = useState<AqiData>(MOCK_DATA);
   const [error, setError] = useState<string | null>(null);
@@ -148,7 +150,7 @@ export default function AirQuality({ config, theme }: WidgetComponentProps) {
   const fetchBcAqhi = useCallback(async () => {
     try {
       setError(null);
-      const fetchUrl = buildProxyUrl(BC_AQHI_URL);
+      const fetchUrl = useCorsProxy ? buildProxyUrl(BC_AQHI_URL) : BC_AQHI_URL;
       const { text } = await fetchTextWithCache(fetchUrl, {
         cacheKey: buildCacheKey('aqi-bcaqhi', BC_AQHI_URL),
         ttlMs: refreshMs,
@@ -163,7 +165,7 @@ export default function AirQuality({ config, theme }: WidgetComponentProps) {
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [refreshMs]);
+  }, [refreshMs, useCorsProxy]);
 
   useEffect(() => {
     let isMounted = true;
@@ -305,5 +307,6 @@ registerWidget({
     waqiToken: '',
     waqiCity: 'prince-george',
     refreshInterval: 15,
+    useCorsProxy: true,
   },
 });

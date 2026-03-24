@@ -1,11 +1,12 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { FormInput } from '@firstform/campus-hub-widget-sdk';
+import { FormInput, FormSwitch } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
 interface AuroraForecastData {
   refreshInterval: number;
   latitude: number;
+  useCorsProxy: boolean;
 }
 
 const KP_LEVELS = [
@@ -25,6 +26,7 @@ export default function AuroraForecastOptions({ data, onChange }: WidgetOptionsP
   const [state, setState] = useState<AuroraForecastData>({
     refreshInterval: (data?.refreshInterval as number) ?? 15,
     latitude: (data?.latitude as number) ?? 54,
+    useCorsProxy: (data?.useCorsProxy as boolean) ?? true,
   });
 
   useEffect(() => {
@@ -32,6 +34,7 @@ export default function AuroraForecastOptions({ data, onChange }: WidgetOptionsP
       setState({
         refreshInterval: (data.refreshInterval as number) ?? 15,
         latitude: (data.latitude as number) ?? 54,
+        useCorsProxy: (data.useCorsProxy as boolean) ?? true,
       });
     }
   }, [data]);
@@ -76,6 +79,15 @@ export default function AuroraForecastOptions({ data, onChange }: WidgetOptionsP
           value={state.refreshInterval}
           min={5}
           max={120}
+          onChange={handleChange}
+        />
+      </div>
+
+      <div className="space-y-4 border-t border-[color:var(--ui-item-border)] pt-6">
+        <FormSwitch
+          label="Use CORS Proxy"
+          name="useCorsProxy"
+          checked={state.useCorsProxy}
           onChange={handleChange}
         />
       </div>

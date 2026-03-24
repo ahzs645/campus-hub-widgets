@@ -10,6 +10,7 @@ interface GroundwaterConfig {
   dataSet?: string;
   displayMode?: 'current' | 'history';
   refreshInterval?: number;
+  useCorsProxy?: boolean;
 }
 
 interface TimeSeriesPoint {
@@ -172,6 +173,7 @@ export default function GroundwaterLevel({
   const selectedDataSet = cfg?.dataSet?.trim() || '';
   const displayMode = cfg?.displayMode ?? 'current';
   const refreshInterval = cfg?.refreshInterval ?? 30;
+  const useCorsProxy = cfg?.useCorsProxy ?? true;
 
   const [data, setData] = useState<GwData>(MOCK_DATA);
   const [error, setError] = useState<string | null>(null);
@@ -180,7 +182,7 @@ export default function GroundwaterLevel({
   const refreshMs = refreshInterval * 60 * 1000;
 
   const fetchViaPublishApi = useCallback(async (): Promise<GwData | null> => {
-    if (!getCorsProxyUrl()) return null;
+    if (!useCorsProxy || !getCorsProxyUrl()) return null;
 
     // Step 1: Get available time series for this location
     const descUrl = `${AQUARIUS_BASE}/GetTimeSeriesDescriptionList?LocationIdentifier=${encodeURIComponent(locationId)}`;
@@ -260,10 +262,10 @@ export default function GroundwaterLevel({
       history,
       availableDataSets,
     };
-  }, [locationId, selectedDataSet, refreshMs]);
+  }, [locationId, selectedDataSet, refreshMs, useCorsProxy]);
 
   const fetchViaWebPortal = useCallback(async (): Promise<Partial<GwData> | null> => {
-    if (!getCorsProxyUrl()) return null;
+    if (!useCorsProxy || !getCorsProxyUrl()) return null;
 
     const portalUrl =
       `https://bcmoe-prod.aquaticinformatics.net/Data/DataSet/Summary` +
@@ -277,10 +279,10 @@ export default function GroundwaterLevel({
     });
 
     return parseWebPortalHtml(text, locationId);
-  }, [locationId, refreshMs]);
+  }, [locationId, refreshMs, useCorsProxy]);
 
   const fetchData = useCallback(async () => {
-    if (!getCorsProxyUrl()) {
+    if (!useCorsProxy || !getCorsProxyUrl()) {
       setData({ ...MOCK_DATA, locationId });
       return;
     }
@@ -481,5 +483,6 @@ registerWidget({
     dataSet: '',
     displayMode: 'current',
     refreshInterval: 30,
+    useCorsProxy: true,
   },
 });

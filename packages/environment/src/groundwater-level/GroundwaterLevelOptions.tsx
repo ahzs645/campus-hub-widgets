@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { FormInput, FormSelect } from '@firstform/campus-hub-widget-sdk';
+import { FormInput, FormSelect, FormSwitch } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
 /** Common Prince George / BC observation wells for quick selection. */
@@ -21,6 +21,7 @@ interface GwOptionsData {
   dataSet: string;
   displayMode: 'current' | 'history';
   refreshInterval: number;
+  useCorsProxy: boolean;
 }
 
 export default function GroundwaterLevelOptions({ data, onChange }: WidgetOptionsProps) {

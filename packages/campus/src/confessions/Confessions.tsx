@@ -107,7 +107,7 @@ export default function Confessions({ config, theme }: WidgetComponentProps) {
   const rotationSeconds = Math.min(120, Math.max(4, Math.round(confConfig?.rotationSeconds ?? 12)));
   const cacheTtlSeconds = Math.min(3600, Math.max(30, Math.round(confConfig?.cacheTtlSeconds ?? 300)));
   const batchRefreshMinutes = Math.min(24 * 60, Math.max(0, Number(confConfig?.batchRefreshMinutes ?? 15)));
-  const useCorsProxy = confConfig?.useCorsProxy ?? true;
+  const useCorsProxy = confConfig?.useCorsProxy ?? false;
   const showByline = confConfig?.showByline ?? true;
 
   const [items, setItems] = useState<ConfessionItem[]>([]);
@@ -383,7 +383,7 @@ registerWidget({
     rotationSeconds: 12,
     cacheTtlSeconds: 300,
     batchRefreshMinutes: 15,
-    useCorsProxy: true,
+    useCorsProxy: false,
     showByline: true,
   },
 });

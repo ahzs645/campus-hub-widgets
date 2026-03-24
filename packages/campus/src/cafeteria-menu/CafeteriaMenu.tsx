@@ -63,6 +63,8 @@ interface CafeteriaConfig {
   weekendDinnerStart?: string;    // HH:MM
   weekendDinnerEnd?: string;      // HH:MM
 
+  useCorsProxy?: boolean;
+
   // Backwards compatibility with older widget configs
   breakfastEnd?: string;     // HH:MM
   lunchEnd?: string;         // HH:MM
@@ -598,6 +600,7 @@ export default function CafeteriaMenu({
   const menuUrl = cfg?.menuUrl?.trim() || 'https://unbc.icaneat.ca/menu/';
   const danaLocations = cfg?.danaLocations?.trim() || '48784';
   const refreshInterval = cfg?.refreshInterval ?? 30;
+  const useCorsProxy = cfg?.useCorsProxy ?? true;
 
   const [menu, setMenu] = useState<ParsedMenu>(DEMO_MENU);
   const [isDemo, setIsDemo] = useState(true);
@@ -625,7 +628,7 @@ export default function CafeteriaMenu({
   //   3. Generic HTML parse of the menu page
 
   const fetchMenu = useCallback(async () => {
-    if (!getCorsProxyUrl()) return; // stay on demo data
+    if (!useCorsProxy || !getCorsProxyUrl()) return; // stay on demo data
 
     try {
       setError(null);
@@ -640,7 +643,7 @@ export default function CafeteriaMenu({
           const danaUrl = `https://menu.danahospitality.ca/unbc/menu.asp?loc=${loc}&grid=1`;
           try {
             const { text } = await fetchTextWithCache(
-              buildProxyUrl(danaUrl),
+              useCorsProxy ? buildProxyUrl(danaUrl) : danaUrl,
               {
                 cacheKey: buildCacheKey('cafeteria-dana', loc),
                 ttlMs: refreshMs,
@@ -665,7 +668,7 @@ export default function CafeteriaMenu({
           const baseUrl = new URL(menuUrl).origin;
           const wpApiUrl = `${baseUrl}/wp-json/wp/v2/pages?slug=menu&_fields=id,slug,content`;
           const { data: pages } = await fetchJsonWithCache<WpPage[]>(
-            buildProxyUrl(wpApiUrl),
+            useCorsProxy ? buildProxyUrl(wpApiUrl) : wpApiUrl,
             {
               cacheKey: buildCacheKey('cafeteria-wp', wpApiUrl),
               ttlMs: refreshMs,
@@ -682,7 +685,7 @@ export default function CafeteriaMenu({
               for (const url of danaUrls) {
                 try {
                   const { text } = await fetchTextWithCache(
-                    buildProxyUrl(url),
+                    useCorsProxy ? buildProxyUrl(url) : url,
                     {
                       cacheKey: buildCacheKey('cafeteria-dana-disc', url),
                       ttlMs: refreshMs,
@@ -713,7 +716,7 @@ export default function CafeteriaMenu({
       // --- Strategy 3: Generic HTML scrape of menu page ---
       if (!result) {
         const { text } = await fetchTextWithCache(
-          buildProxyUrl(menuUrl),
+          useCorsProxy ? buildProxyUrl(menuUrl) : menuUrl,
           {
             cacheKey: buildCacheKey('cafeteria-page', menuUrl),
             ttlMs: refreshMs,
@@ -735,7 +738,7 @@ export default function CafeteriaMenu({
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);
     }
-  }, [menuUrl, danaLocations, refreshMs]);
+  }, [menuUrl, danaLocations, refreshMs, useCorsProxy]);
 
   useEffect(() => {
     let mounted = true;
@@ -1030,5 +1033,6 @@ registerWidget({
     weekendLunchEnd: '15:45',
     weekendDinnerStart: '16:00',
     weekendDinnerEnd: '22:00',
+    useCorsProxy: true,
   },
 });

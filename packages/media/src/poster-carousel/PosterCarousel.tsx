@@ -20,6 +20,7 @@ interface PosterCarouselConfig {
   dataSource?: DataSource;
   maxStories?: number;
   refreshInterval?: number;
+  useCorsProxy?: boolean;
 }
 
 const DEFAULT_POSTERS: Poster[] = [
@@ -96,6 +97,7 @@ export default function PosterCarousel({ config, theme }: WidgetComponentProps) 
   const apiUrl = carouselConfig?.apiUrl;
   const maxStories = carouselConfig?.maxStories ?? 5;
   const refreshInterval = carouselConfig?.refreshInterval ?? 30; // minutes
+  const useCorsProxy = carouselConfig?.useCorsProxy ?? true;
 
   const [posters, setPosters] = useState<Poster[]>(carouselConfig?.posters ?? DEFAULT_POSTERS);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -142,7 +144,7 @@ export default function PosterCarousel({ config, theme }: WidgetComponentProps) 
 
     const fetchNews = async () => {
       try {
-        const proxiedUrl = buildProxyUrl(UNBC_NEWS_URL);
+        const proxiedUrl = useCorsProxy ? buildProxyUrl(UNBC_NEWS_URL) : UNBC_NEWS_URL;
         const { text } = await fetchTextWithCache(proxiedUrl, {
           cacheKey: buildCacheKey('unbc-news', UNBC_NEWS_URL),
           ttlMs: refreshInterval * 60 * 1000,
@@ -166,7 +168,7 @@ export default function PosterCarousel({ config, theme }: WidgetComponentProps) 
     fetchNews();
     const interval = setInterval(fetchNews, refreshInterval * 60 * 1000);
     return () => clearInterval(interval);
-  }, [dataSource, maxStories, refreshInterval]);
+  }, [dataSource, maxStories, refreshInterval, useCorsProxy]);
 
   const nextSlide = useCallback(() => {
     setIsTransitioning(true);
@@ -317,5 +319,6 @@ registerWidget({
   OptionsComponent: PosterCarouselOptions,
   defaultProps: {
     rotationSeconds: 10,
+    useCorsProxy: true,
   },
 });

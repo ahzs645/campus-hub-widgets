@@ -1,10 +1,11 @@
-import { FormInput, FormSelect } from '@firstform/campus-hub-widget-sdk';
+import { FormInput, FormSelect, FormSwitch } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
 interface CafeteriaData {
   menuUrl: string;
   danaLocations: string;
   refreshInterval: number;
+  useCorsProxy: boolean;
   weekdayBreakfastStart: string;
   weekdayBreakfastEnd: string;
   weekdayLunchStart: string;
@@ -24,6 +25,7 @@ export default function CafeteriaMenuOptions({ data, onChange }: WidgetOptionsPr
     menuUrl: (data?.menuUrl as string) ?? 'https://unbc.icaneat.ca/menu/',
     danaLocations: (data?.danaLocations as string) ?? '48784',
     refreshInterval: (data?.refreshInterval as number) ?? 30,
+    useCorsProxy: (data?.useCorsProxy as boolean) ?? true,
     weekdayBreakfastStart: (data?.weekdayBreakfastStart as string) ?? '07:00',
     weekdayBreakfastEnd: (data?.weekdayBreakfastEnd as string) ?? '10:45',
     weekdayLunchStart: (data?.weekdayLunchStart as string) ?? '11:00',
@@ -119,6 +121,18 @@ export default function CafeteriaMenuOptions({ data, onChange }: WidgetOptionsPr
             { value: '360', label: '6 hours' },
           ]}
           onChange={(name, value) => handleChange(name, Number(value))}
+        />
+      </div>
+
+      {/* CORS Proxy */}
+      <div className="space-y-4 border-t border-[color:var(--ui-item-border)] pt-6">
+        <h3 className="font-semibold text-[var(--ui-text)]">Network</h3>
+
+        <FormSwitch
+          label="Use CORS Proxy"
+          name="useCorsProxy"
+          checked={state.useCorsProxy}
+          onChange={handleChange}
         />
       </div>
 

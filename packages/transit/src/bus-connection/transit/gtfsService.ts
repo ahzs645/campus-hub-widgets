@@ -145,7 +145,7 @@ interface RealtimeUpdate {
   departureTime: number | null;
 }
 
-async function fetchRealtimeUpdates(proxyUrl?: string): Promise<Map<string, RealtimeUpdate>> {
+async function fetchRealtimeUpdates(proxyUrl?: string, useCorsProxy: boolean = true): Promise<Map<string, RealtimeUpdate>> {
   try {
     let url: string;
     if (proxyUrl) {
@@ -153,9 +153,12 @@ async function fetchRealtimeUpdates(proxyUrl?: string): Promise<Map<string, Real
       url = proxyUrl.endsWith('/')
         ? `${proxyUrl}tripupdates.pb?operatorIds=22`
         : `${proxyUrl}/tripupdates.pb?operatorIds=22`;
-    } else {
+    } else if (useCorsProxy) {
       // Use the default BC Transit feed URL, wrapped with the system CORS proxy
       url = buildProxyUrl(GTFS_RT_TRIP_UPDATES_URL);
+    } else {
+      // No proxy available, cannot fetch
+      return new Map();
     }
 
     const res = await fetch(url);
@@ -222,17 +225,18 @@ function applyRealtimeUpdates(trips: Trip[], rtUpdates: Map<string, RealtimeUpda
 export function createLiveTripProvider(
   onUpdate: (trips: Trip[]) => void,
   proxyUrl?: string,
-  getSimulatedNow?: () => Date | null
+  getSimulatedNow?: () => Date | null,
+  useCorsProxy: boolean = true,
 ) {
   let intervalId: ReturnType<typeof setInterval> | null = null;
   let rtUpdates = new Map<string, RealtimeUpdate>();
-  const canFetchRealtime = !!(proxyUrl || getCorsProxyUrl());
+  const canFetchRealtime = !!(proxyUrl || (useCorsProxy && getCorsProxyUrl()));
 
   async function refresh() {
     const simNow = getSimulatedNow ? getSimulatedNow() : null;
     // Only fetch realtime if not simulating and a proxy is available
     if (!simNow && canFetchRealtime) {
-      rtUpdates = await fetchRealtimeUpdates(proxyUrl);
+      rtUpdates = await fetchRealtimeUpdates(proxyUrl, useCorsProxy);
     }
     const scheduled = getScheduledTrips(simNow);
     const merged = simNow ? scheduled : (canFetchRealtime ? applyRealtimeUpdates(scheduled, rtUpdates) : scheduled);

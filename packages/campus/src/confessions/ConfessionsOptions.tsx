@@ -20,7 +20,7 @@ const DEFAULTS: ConfessionsOptionsState = {
   rotationSeconds: 12,
   cacheTtlSeconds: 300,
   batchRefreshMinutes: 15,
-  useCorsProxy: true,
+  useCorsProxy: false,
   showByline: true,
 };
 

@@ -19,6 +19,7 @@ interface BusConnectionConfig {
   simulate?: boolean;
   simMode?: 'weekday' | 'saturday';
   simTime?: number;
+  useCorsProxy?: boolean;
 }
 
 function findWeekdayDate(): string | null {
@@ -51,6 +52,7 @@ export default function BusConnection({ config, theme }: WidgetComponentProps) {
   const simulate = busConfig?.simulate ?? false;
   const simMode = busConfig?.simMode ?? 'weekday';
   const simTime = busConfig?.simTime ?? 540;
+  const useCorsProxy = busConfig?.useCorsProxy ?? true;
 
   const simulatedTime = useMemo(() => {
     if (!simulate) return null;
@@ -119,10 +121,12 @@ export default function BusConnection({ config, theme }: WidgetComponentProps) {
     const provider = createLiveTripProvider(
       (updatedTrips) => setLiveTrips(updatedTrips),
       proxyUrl,
+      undefined,
+      useCorsProxy,
     );
     provider.start();
     return () => provider.stop();
-  }, [proxyUrl, simulate]);
+  }, [proxyUrl, simulate, useCorsProxy]);
 
   useEffect(() => {
     if (!fontReady || !displaySize) return;
@@ -217,5 +221,6 @@ registerWidget({
     simulate: false,
     simMode: 'weekday',
     simTime: 540,
+    useCorsProxy: true,
   },
 });

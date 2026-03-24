@@ -179,7 +179,7 @@ export default function ClubSpotlight({ config, theme }: WidgetComponentProps) {
   const apiUrl = cfg?.apiUrl?.trim() || DEFAULT_API_URL;
   const pageUrl = cfg?.pageUrl?.trim() || DEFAULT_PAGE_URL;
   const rotationSeconds = Math.max(4, Math.min(120, cfg?.rotationSeconds ?? 10));
-  const useCorsProxy = cfg?.useCorsProxy ?? true;
+  const useCorsProxy = cfg?.useCorsProxy ?? false;
   const refreshMinutes = Math.max(5, Math.min(1440, cfg?.refreshMinutes ?? 30));
   const showQrCode = cfg?.showQrCode ?? false;
   const qrLabel = cfg?.qrLabel ?? 'Learn more';
@@ -396,7 +396,7 @@ registerWidget({
     apiUrl: 'https://overtheedge.unbc.ca/wp-json/wp/v2/organization?per_page=100&_embed=wp:featuredmedia&org_status=181,183,182',
     pageUrl: DEFAULT_PAGE_URL,
     rotationSeconds: 10,
-    useCorsProxy: true,
+    useCorsProxy: false,
     refreshMinutes: 30,
     showQrCode: false,
     qrLabel: 'Learn more',

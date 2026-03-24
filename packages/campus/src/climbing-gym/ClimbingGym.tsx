@@ -19,6 +19,7 @@ interface ClimbingGymConfig {
   refreshInterval?: number; // minutes
   showCapacityBar?: boolean;
   showHours?: boolean;
+  useCorsProxy?: boolean;
 }
 
 interface DaySchedule {
@@ -117,6 +118,7 @@ export default function ClimbingGym({ config, theme }: WidgetComponentProps) {
   const refreshInterval = cfg?.refreshInterval ?? 5;
   const showCapacityBar = cfg?.showCapacityBar ?? true;
   const showHours = cfg?.showHours ?? true;
+  const useCorsProxy = cfg?.useCorsProxy ?? true;
 
   const [data, setData] = useState<OccupancyData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -127,7 +129,7 @@ export default function ClimbingGym({ config, theme }: WidgetComponentProps) {
   const fetchOccupancy = useCallback(async () => {
     try {
       setError(null);
-      const fetchUrl = buildProxyUrl(portalUrl);
+      const fetchUrl = useCorsProxy ? buildProxyUrl(portalUrl) : portalUrl;
       const { text } = await fetchTextWithCache(fetchUrl, {
         cacheKey: buildCacheKey('climbing-gym', portalUrl),
         ttlMs: refreshMs,
@@ -143,7 +145,7 @@ export default function ClimbingGym({ config, theme }: WidgetComponentProps) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);
     }
-  }, [portalUrl, refreshMs]);
+  }, [portalUrl, refreshMs, useCorsProxy]);
 
   useEffect(() => {
     let isMounted = true;
@@ -295,5 +297,6 @@ registerWidget({
     refreshInterval: 5,
     showCapacityBar: true,
     showHours: true,
+    useCorsProxy: true,
   },
 });

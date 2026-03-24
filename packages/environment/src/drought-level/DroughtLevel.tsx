@@ -9,6 +9,7 @@ interface DroughtLevelConfig {
   basin?: string;
   displayMode?: 'single' | 'overview';
   refreshInterval?: number;
+  useCorsProxy?: boolean;
 }
 
 interface DroughtFeature {
@@ -82,6 +83,7 @@ export default function DroughtLevel({
   const selectedBasin = cfg?.basin ?? '';
   const displayMode = cfg?.displayMode ?? 'single';
   const refreshInterval = cfg?.refreshInterval ?? 60;
+  const useCorsProxy = cfg?.useCorsProxy ?? true;
 
   const [basins, setBasins] = useState<BasinData[]>(MOCK_DATA);
   const [error, setError] = useState<string | null>(null);
@@ -90,7 +92,7 @@ export default function DroughtLevel({
   const refreshMs = refreshInterval * 60 * 1000;
 
   const fetchData = useCallback(async () => {
-    if (!getCorsProxyUrl()) {
+    if (!useCorsProxy || !getCorsProxyUrl()) {
       setBasins(MOCK_DATA);
       return;
     }
@@ -131,7 +133,7 @@ export default function DroughtLevel({
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [refreshMs]);
+  }, [refreshMs, useCorsProxy]);
 
   useEffect(() => {
     let isMounted = true;
@@ -419,5 +421,6 @@ registerWidget({
     basin: '',
     displayMode: 'single',
     refreshInterval: 60,
+    useCorsProxy: true,
   },
 });

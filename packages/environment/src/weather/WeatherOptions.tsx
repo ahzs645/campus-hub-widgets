@@ -66,6 +66,7 @@ interface WeatherData {
   apiKey: string;
   dataSource: 'openweathermap' | 'unbc-rooftop';
   refreshInterval: number;
+  useCorsProxy: boolean;
 }
 
 export default function WeatherOptions({ data, onChange }: WidgetOptionsProps) {
@@ -83,6 +84,7 @@ export default function WeatherOptions({ data, onChange }: WidgetOptionsProps) {
     apiKey: (data?.apiKey as string) ?? '',
     dataSource: (data?.dataSource as 'openweathermap' | 'unbc-rooftop') ?? 'openweathermap',
     refreshInterval: (data?.refreshInterval as number) ?? 10,
+    useCorsProxy: (data?.useCorsProxy as boolean) ?? true,
   });
 
   useEffect(() => {
@@ -96,6 +98,7 @@ export default function WeatherOptions({ data, onChange }: WidgetOptionsProps) {
         apiKey: (data.apiKey as string) ?? '',
         dataSource: (data.dataSource as 'openweathermap' | 'unbc-rooftop') ?? 'openweathermap',
         refreshInterval: (data.refreshInterval as number) ?? 10,
+        useCorsProxy: (data.useCorsProxy as boolean) ?? true,
       });
     }
   }, [data]);
@@ -236,6 +239,16 @@ export default function WeatherOptions({ data, onChange }: WidgetOptionsProps) {
             { value: '60', label: '1 hour' },
           ]}
           onChange={(name, value) => handleChange(name, Number(value))}
+        />
+      </div>
+
+      {/* CORS Proxy */}
+      <div className="space-y-4 border-t border-[color:var(--ui-item-border)] pt-6">
+        <FormSwitch
+          label="Use CORS Proxy"
+          name="useCorsProxy"
+          checked={state.useCorsProxy}
+          onChange={handleChange}
         />
       </div>
 

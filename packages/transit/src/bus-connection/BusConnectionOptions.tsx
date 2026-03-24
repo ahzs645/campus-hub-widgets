@@ -15,6 +15,7 @@ interface BusConnectionData {
   simulate: boolean;
   simMode: 'weekday' | 'saturday';
   simTime: number;
+  useCorsProxy: boolean;
 }
 
 export default function BusConnectionOptions({ data, onChange }: WidgetOptionsProps) {
@@ -30,6 +31,7 @@ export default function BusConnectionOptions({ data, onChange }: WidgetOptionsPr
     simulate: (data?.simulate as boolean) ?? false,
     simMode: (data?.simMode as 'weekday' | 'saturday') ?? 'weekday',
     simTime: (data?.simTime as number) ?? 540,
+    useCorsProxy: (data?.useCorsProxy as boolean) ?? true,
   });
 
   useEffect(() => {
@@ -46,6 +48,7 @@ export default function BusConnectionOptions({ data, onChange }: WidgetOptionsPr
         simulate: (data.simulate as boolean) ?? false,
         simMode: (data.simMode as 'weekday' | 'saturday') ?? 'weekday',
         simTime: (data.simTime as number) ?? 540,
+        useCorsProxy: (data.useCorsProxy as boolean) ?? true,
       });
     }
   }, [data]);

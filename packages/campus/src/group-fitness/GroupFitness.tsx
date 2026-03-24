@@ -25,6 +25,7 @@ interface GroupFitnessConfig {
   showInstructor?: boolean;
   showDescription?: boolean;
   maxRows?: number;
+  useCorsProxy?: boolean;
 }
 
 const formatLastModified = (value?: string): string | null => {
@@ -99,8 +100,8 @@ function VerticalTicker({ children, className }: { children: React.ReactNode; cl
   );
 }
 
-const getLoadError = (error: unknown): string => {
-  if (!getCorsProxyUrl()) {
+const getLoadError = (error: unknown, useCorsProxy: boolean): string => {
+  if (useCorsProxy && !getCorsProxyUrl()) {
     return 'Could not load the schedule. A CORS proxy must be configured.';
   }
 
@@ -122,6 +123,7 @@ export default function GroupFitness({
   const showInstructor = cfg?.showInstructor ?? true;
   const showDescription = cfg?.showDescription ?? true;
   const maxRows = Math.max(1, cfg?.maxRows ?? 6);
+  const useCorsProxy = cfg?.useCorsProxy ?? true;
 
   const [schedule, setSchedule] = useState<ParsedGroupFitnessSchedule | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -133,7 +135,7 @@ export default function GroupFitness({
     setLoading(true);
 
     try {
-      const fetchUrl = buildProxyUrl(scheduleUrl);
+      const fetchUrl = useCorsProxy ? buildProxyUrl(scheduleUrl) : scheduleUrl;
       const { text } = await fetchTextWithCache(fetchUrl, {
         cacheKey: buildCacheKey('group-fitness', scheduleUrl),
         ttlMs: refreshMs,
@@ -147,11 +149,11 @@ export default function GroupFitness({
       setSchedule(parsed);
       setError(null);
     } catch (fetchError) {
-      setError(getLoadError(fetchError));
+      setError(getLoadError(fetchError, useCorsProxy));
     } finally {
       setLoading(false);
     }
-  }, [refreshMs, scheduleUrl]);
+  }, [refreshMs, scheduleUrl, useCorsProxy]);
 
   useEffect(() => {
     void fetchSchedule();

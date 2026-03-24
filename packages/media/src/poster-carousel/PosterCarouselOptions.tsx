@@ -11,6 +11,7 @@ interface PosterCarouselData {
   apiUrl: string;
   maxStories: number;
   refreshInterval: number;
+  useCorsProxy: boolean;
 }
 
 export default function PosterCarouselOptions({ data, onChange }: WidgetOptionsProps) {
@@ -20,6 +21,7 @@ export default function PosterCarouselOptions({ data, onChange }: WidgetOptionsP
     apiUrl: (data?.apiUrl as string) ?? '',
     maxStories: (data?.maxStories as number) ?? 5,
     refreshInterval: (data?.refreshInterval as number) ?? 30,
+    useCorsProxy: (data?.useCorsProxy as boolean) ?? true,
   });
 
   useEffect(() => {
@@ -30,6 +32,7 @@ export default function PosterCarouselOptions({ data, onChange }: WidgetOptionsP
         apiUrl: (data.apiUrl as string) ?? '',
         maxStories: (data.maxStories as number) ?? 5,
         refreshInterval: (data.refreshInterval as number) ?? 30,
+        useCorsProxy: (data.useCorsProxy as boolean) ?? true,
       });
     }
   }, [data]);
@@ -123,6 +126,13 @@ export default function PosterCarouselOptions({ data, onChange }: WidgetOptionsP
               value={state.maxStories}
               min={1}
               max={20}
+              onChange={handleChange}
+            />
+
+            <FormSwitch
+              label="Use CORS Proxy"
+              name="useCorsProxy"
+              checked={state.useCorsProxy}
               onChange={handleChange}
             />
 

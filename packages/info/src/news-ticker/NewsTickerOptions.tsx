@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { FormInput, FormSelect } from '@firstform/campus-hub-widget-sdk';
+import { FormInput, FormSelect, FormSwitch } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
 interface NewsTickerData {
@@ -23,6 +23,7 @@ interface NewsTickerData {
   eventSourceType: 'json' | 'ical' | 'rss';
   eventCacheTtlSeconds: number;
   eventMaxItems: number;
+  useCorsProxy: boolean;
 }
 
 const EVENT_DOT_COLORS = ['#6366f1', '#f43f5e', '#f59e0b', '#10b981', '#06b6d4'];
@@ -57,6 +58,7 @@ export default function NewsTickerOptions({ data, onChange }: WidgetOptionsProps
     eventSourceType: (data?.eventSourceType as 'json' | 'ical' | 'rss') ?? 'json',
     eventCacheTtlSeconds: (data?.eventCacheTtlSeconds as number) ?? 300,
     eventMaxItems: (data?.eventMaxItems as number) ?? 10,
+    useCorsProxy: (data?.useCorsProxy as boolean) ?? true,
   });
 
   useEffect(() => {
@@ -81,6 +83,7 @@ export default function NewsTickerOptions({ data, onChange }: WidgetOptionsProps
         eventSourceType: (data.eventSourceType as 'json' | 'ical' | 'rss') ?? 'json',
         eventCacheTtlSeconds: (data.eventCacheTtlSeconds as number) ?? 300,
         eventMaxItems: (data.eventMaxItems as number) ?? 10,
+        useCorsProxy: (data.useCorsProxy as boolean) ?? true,
       });
     }
   }, [data]);
@@ -364,6 +367,18 @@ export default function NewsTickerOptions({ data, onChange }: WidgetOptionsProps
             </div>
           </>
         )}
+      </div>
+
+      {/* Network */}
+      <div className="space-y-4 border-t border-[color:var(--ui-item-border)] pt-6">
+        <h3 className="font-semibold text-[var(--ui-text)] text-center">Network</h3>
+
+        <FormSwitch
+          label="Use CORS Proxy"
+          name="useCorsProxy"
+          checked={state.useCorsProxy}
+          onChange={handleChange}
+        />
       </div>
 
       {/* Preview */}
