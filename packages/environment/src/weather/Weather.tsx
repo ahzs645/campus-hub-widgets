@@ -57,7 +57,6 @@ interface WeatherConfig {
   displayItems?: DisplayItems;
   dataSource?: 'openweathermap' | 'unbc-rooftop';
   refreshInterval?: number; // minutes
-  corsProxy?: string;
 }
 
 const DISPLAY_MODE_PRESETS: Record<Exclude<DisplayMode, 'custom'>, DisplayItems> = {
@@ -222,7 +221,7 @@ const parseUNBCWeatherData = (html: string, units: 'celsius' | 'fahrenheit'): We
   };
 };
 
-export default function Weather({ config, theme, corsProxy: globalCorsProxy }: WidgetComponentProps) {
+export default function Weather({ config, theme }: WidgetComponentProps) {
   const weatherConfig = config as WeatherConfig | undefined;
   const units = weatherConfig?.units ?? 'fahrenheit';
   const location = weatherConfig?.location ?? 'Campus';
@@ -230,7 +229,6 @@ export default function Weather({ config, theme, corsProxy: globalCorsProxy }: W
   const apiKey = weatherConfig?.apiKey?.trim();
   const dataSource = weatherConfig?.dataSource ?? 'openweathermap';
   const refreshInterval = weatherConfig?.refreshInterval ?? 10; // minutes
-  const corsProxy = weatherConfig?.corsProxy?.trim() || globalCorsProxy;
 
   const [weather, setWeather] = useState<WeatherData>({
     ...MOCK_WEATHER,
@@ -245,7 +243,7 @@ export default function Weather({ config, theme, corsProxy: globalCorsProxy }: W
   const fetchUNBC = useCallback(async () => {
     try {
       setError(null);
-      const fetchUrl = buildProxyUrl(corsProxy, UNBC_URL);
+      const fetchUrl = buildProxyUrl(UNBC_URL);
       const { text } = await fetchTextWithCache(fetchUrl, {
         cacheKey: buildCacheKey('weather-unbc', UNBC_URL),
         ttlMs: refreshMs,
@@ -261,7 +259,7 @@ export default function Weather({ config, theme, corsProxy: globalCorsProxy }: W
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);
     }
-  }, [corsProxy, units, refreshMs]);
+  }, [units, refreshMs]);
 
   // OpenWeatherMap data source
   const fetchOWM = useCallback(async () => {
@@ -473,6 +471,5 @@ registerWidget({
     apiKey: '',
     dataSource: 'openweathermap',
     refreshInterval: 10,
-    corsProxy: '',
   },
 });

@@ -5,7 +5,7 @@
  */
 
 import GtfsRealtimeBindings from 'gtfs-realtime-bindings';
-import { buildProxyUrl } from '@firstform/campus-hub-widget-sdk';
+import { buildProxyUrl, getCorsProxyUrl } from '@firstform/campus-hub-widget-sdk';
 import { ROUTES, STOP_SCHEDULE, SERVICE_DATES, STOP_INFO } from './gtfsData';
 
 const POLL_INTERVAL = 30000;
@@ -145,7 +145,7 @@ interface RealtimeUpdate {
   departureTime: number | null;
 }
 
-async function fetchRealtimeUpdates(proxyUrl?: string, corsProxy?: string): Promise<Map<string, RealtimeUpdate>> {
+async function fetchRealtimeUpdates(proxyUrl?: string): Promise<Map<string, RealtimeUpdate>> {
   try {
     let url: string;
     if (proxyUrl) {
@@ -154,8 +154,8 @@ async function fetchRealtimeUpdates(proxyUrl?: string, corsProxy?: string): Prom
         ? `${proxyUrl}tripupdates.pb?operatorIds=22`
         : `${proxyUrl}/tripupdates.pb?operatorIds=22`;
     } else {
-      // Use the default BC Transit feed URL, wrapped with the global CORS proxy
-      url = buildProxyUrl(corsProxy, GTFS_RT_TRIP_UPDATES_URL);
+      // Use the default BC Transit feed URL, wrapped with the system CORS proxy
+      url = buildProxyUrl(GTFS_RT_TRIP_UPDATES_URL);
     }
 
     const res = await fetch(url);

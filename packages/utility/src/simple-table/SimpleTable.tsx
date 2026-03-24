@@ -13,7 +13,6 @@ interface SimpleTableConfig {
   headerStyle?: 'accent' | 'subtle' | 'none';
   striped?: boolean;
   refreshInterval?: number;
-  corsProxy?: string;
 }
 
 const DEMO_CSV = `Room,Availability,Hours
@@ -50,7 +49,7 @@ function parseCSV(text: string): string[][] {
   });
 }
 
-export default function SimpleTable({ config, theme, corsProxy: globalCorsProxy }: WidgetComponentProps) {
+export default function SimpleTable({ config, theme }: WidgetComponentProps) {
   const tableConfig = config as SimpleTableConfig | undefined;
   const source = tableConfig?.source ?? 'manual';
   const csvUrl = tableConfig?.csvUrl?.trim() || '';
@@ -59,8 +58,6 @@ export default function SimpleTable({ config, theme, corsProxy: globalCorsProxy 
   const headerStyle = tableConfig?.headerStyle ?? 'accent';
   const striped = tableConfig?.striped ?? true;
   const refreshInterval = tableConfig?.refreshInterval ?? 30;
-  const corsProxy = tableConfig?.corsProxy?.trim() || globalCorsProxy;
-
   const [rows, setRows] = useState<string[][]>(() => parseCSV(DEMO_CSV));
   const [error, setError] = useState<string | null>(null);
 
@@ -78,7 +75,7 @@ export default function SimpleTable({ config, theme, corsProxy: globalCorsProxy 
     }
     try {
       setError(null);
-      const url = buildProxyUrl(corsProxy, csvUrl);
+      const url = buildProxyUrl(csvUrl);
       const { text } = await fetchTextWithCache(url, {
         cacheKey: buildCacheKey('table', csvUrl),
         ttlMs: refreshInterval * 60 * 1000,
@@ -92,7 +89,7 @@ export default function SimpleTable({ config, theme, corsProxy: globalCorsProxy 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load CSV');
     }
-  }, [source, csvUrl, manualData, corsProxy, refreshInterval]);
+  }, [source, csvUrl, manualData, refreshInterval]);
 
   useEffect(() => {
     fetchCSV();
@@ -204,6 +201,5 @@ registerWidget({
     headerStyle: 'accent',
     striped: true,
     refreshInterval: 30,
-    corsProxy: '',
   },
 });

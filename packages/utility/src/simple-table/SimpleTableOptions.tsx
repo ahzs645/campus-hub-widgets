@@ -11,7 +11,6 @@ interface TableData {
   headerStyle: 'accent' | 'subtle' | 'none';
   striped: boolean;
   refreshInterval: number;
-  corsProxy: string;
 }
 
 export default function SimpleTableOptions({ data, onChange }: WidgetOptionsProps) {
@@ -23,7 +22,6 @@ export default function SimpleTableOptions({ data, onChange }: WidgetOptionsProp
     headerStyle: (data?.headerStyle as 'accent' | 'subtle' | 'none') ?? 'accent',
     striped: (data?.striped as boolean) ?? true,
     refreshInterval: (data?.refreshInterval as number) ?? 30,
-    corsProxy: (data?.corsProxy as string) ?? '',
   });
 
   useEffect(() => {
@@ -36,7 +34,6 @@ export default function SimpleTableOptions({ data, onChange }: WidgetOptionsProp
         headerStyle: (data.headerStyle as 'accent' | 'subtle' | 'none') ?? 'accent',
         striped: (data.striped as boolean) ?? true,
         refreshInterval: (data.refreshInterval as number) ?? 30,
-        corsProxy: (data.corsProxy as string) ?? '',
       });
     }
   }, [data]);
@@ -147,16 +144,6 @@ export default function SimpleTableOptions({ data, onChange }: WidgetOptionsProp
               { value: '60', label: '1 hour' },
             ]}
             onChange={(name, value) => handleChange(name, Number(value))}
-          />
-
-          {/* CORS Proxy */}
-          <FormInput
-            label="CORS Proxy (optional)"
-            name="corsProxy"
-            type="text"
-            value={state.corsProxy}
-            placeholder="Use global setting"
-            onChange={handleChange}
           />
         </div>
       )}

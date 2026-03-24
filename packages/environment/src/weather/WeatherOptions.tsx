@@ -66,7 +66,6 @@ interface WeatherData {
   apiKey: string;
   dataSource: 'openweathermap' | 'unbc-rooftop';
   refreshInterval: number;
-  corsProxy: string;
 }
 
 export default function WeatherOptions({ data, onChange }: WidgetOptionsProps) {
@@ -84,7 +83,6 @@ export default function WeatherOptions({ data, onChange }: WidgetOptionsProps) {
     apiKey: (data?.apiKey as string) ?? '',
     dataSource: (data?.dataSource as 'openweathermap' | 'unbc-rooftop') ?? 'openweathermap',
     refreshInterval: (data?.refreshInterval as number) ?? 10,
-    corsProxy: (data?.corsProxy as string) ?? '',
   });
 
   useEffect(() => {
@@ -98,7 +96,6 @@ export default function WeatherOptions({ data, onChange }: WidgetOptionsProps) {
         apiKey: (data.apiKey as string) ?? '',
         dataSource: (data.dataSource as 'openweathermap' | 'unbc-rooftop') ?? 'openweathermap',
         refreshInterval: (data.refreshInterval as number) ?? 10,
-        corsProxy: (data.corsProxy as string) ?? '',
       });
     }
   }, [data]);
@@ -258,39 +255,6 @@ export default function WeatherOptions({ data, onChange }: WidgetOptionsProps) {
 
           <div className="text-sm text-[var(--ui-text-muted)]">
             Leave empty to use demo data. Supports OpenWeatherMap API.
-          </div>
-        </div>
-      )}
-
-      {/* CORS Proxy - for UNBC */}
-      {isUNBC && (
-        <div className="space-y-4 border-t border-[color:var(--ui-item-border)] pt-6">
-          <h3 className="font-semibold text-[var(--ui-text)]">CORS Proxy</h3>
-
-          <FormSelect
-            label="CORS Proxy"
-            name="corsProxy"
-            value={state.corsProxy || ''}
-            options={[
-              { value: '', label: 'Use global setting' },
-              { value: 'custom', label: 'Custom URL...' },
-            ]}
-            onChange={handleChange}
-          />
-
-          {state.corsProxy === 'custom' && (
-            <FormInput
-              label="Custom Proxy URL"
-              name="corsProxy"
-              type="text"
-              value=""
-              placeholder="https://your-proxy.example.com/?url="
-              onChange={handleChange}
-            />
-          )}
-
-          <div className="text-sm text-[var(--ui-text-muted)]">
-            Required to fetch UNBC data from the browser. The station URL is appended to this proxy.
           </div>
         </div>
       )}

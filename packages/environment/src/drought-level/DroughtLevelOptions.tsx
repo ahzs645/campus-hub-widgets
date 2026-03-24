@@ -51,7 +51,6 @@ interface DroughtOptionsData {
   basin: string;
   displayMode: 'single' | 'overview';
   refreshInterval: number;
-  corsProxy: string;
 }
 
 export default function DroughtLevelOptions({ data, onChange }: WidgetOptionsProps) {

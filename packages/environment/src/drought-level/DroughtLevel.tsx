@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
-import { buildCacheKey, buildProxyUrl, fetchJsonWithCache } from '@firstform/campus-hub-widget-sdk';
+import { buildCacheKey, buildProxyUrl, fetchJsonWithCache, getCorsProxyUrl } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale } from '@firstform/campus-hub-widget-sdk';
 import DroughtLevelOptions from './DroughtLevelOptions';
 
@@ -9,7 +9,6 @@ interface DroughtLevelConfig {
   basin?: string;
   displayMode?: 'single' | 'overview';
   refreshInterval?: number;
-  corsProxy?: string;
 }
 
 interface DroughtFeature {
@@ -78,13 +77,11 @@ const MOCK_DATA: BasinData[] = [
 export default function DroughtLevel({
   config,
   theme,
-  corsProxy: globalCorsProxy,
 }: WidgetComponentProps) {
   const cfg = config as DroughtLevelConfig | undefined;
   const selectedBasin = cfg?.basin ?? '';
   const displayMode = cfg?.displayMode ?? 'single';
   const refreshInterval = cfg?.refreshInterval ?? 60;
-  const corsProxy = cfg?.corsProxy?.trim() || globalCorsProxy;
 
   const [basins, setBasins] = useState<BasinData[]>(MOCK_DATA);
   const [error, setError] = useState<string | null>(null);
@@ -93,7 +90,7 @@ export default function DroughtLevel({
   const refreshMs = refreshInterval * 60 * 1000;
 
   const fetchData = useCallback(async () => {
-    if (!corsProxy) {
+    if (!getCorsProxyUrl()) {
       setBasins(MOCK_DATA);
       return;
     }
@@ -106,7 +103,7 @@ export default function DroughtLevel({
         f: 'json',
       });
       const targetUrl = `${FEATURE_SERVER_URL}?${queryParams}`;
-      const fetchUrl = buildProxyUrl(corsProxy, targetUrl);
+      const fetchUrl = buildProxyUrl(targetUrl);
 
       const { data: resp } = await fetchJsonWithCache<ArcGISResponse>(fetchUrl, {
         cacheKey: buildCacheKey('drought-level', 'all-basins'),
@@ -134,7 +131,7 @@ export default function DroughtLevel({
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [corsProxy, refreshMs]);
+  }, [refreshMs]);
 
   useEffect(() => {
     let isMounted = true;
@@ -422,6 +419,5 @@ registerWidget({
     basin: '',
     displayMode: 'single',
     refreshInterval: 60,
-    corsProxy: '',
   },
 });

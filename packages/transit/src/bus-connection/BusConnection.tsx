@@ -38,7 +38,7 @@ function parseDateStr(str: string | null): { y: number; m: number; d: number } |
   };
 }
 
-export default function BusConnection({ config, theme, corsProxy: globalCorsProxy }: WidgetComponentProps) {
+export default function BusConnection({ config, theme }: WidgetComponentProps) {
   const busConfig = config as BusConnectionConfig | undefined;
   const glow = busConfig?.glow ?? true;
   const scrollHeadsigns = busConfig?.scrollHeadsigns ?? true;
@@ -47,7 +47,6 @@ export default function BusConnection({ config, theme, corsProxy: globalCorsProx
   const pixelPitch = busConfig?.pixelPitch ?? 6;
   const padding = busConfig?.padding ?? 8;
   const proxyUrl = busConfig?.proxyUrl?.trim() || undefined;
-  const corsProxy = proxyUrl ? undefined : (globalCorsProxy?.trim() || undefined);
   const entrySpacing = busConfig?.entrySpacing ?? 2;
   const simulate = busConfig?.simulate ?? false;
   const simMode = busConfig?.simMode ?? 'weekday';
@@ -120,11 +119,10 @@ export default function BusConnection({ config, theme, corsProxy: globalCorsProx
     const provider = createLiveTripProvider(
       (updatedTrips) => setLiveTrips(updatedTrips),
       proxyUrl,
-      corsProxy,
     );
     provider.start();
     return () => provider.stop();
-  }, [proxyUrl, corsProxy, simulate]);
+  }, [proxyUrl, simulate]);
 
   useEffect(() => {
     if (!fontReady || !displaySize) return;

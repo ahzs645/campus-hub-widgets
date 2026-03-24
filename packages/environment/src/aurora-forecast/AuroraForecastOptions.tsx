@@ -5,7 +5,6 @@ import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
 interface AuroraForecastData {
   refreshInterval: number;
-  corsProxy: string;
   latitude: number;
 }
 
@@ -25,7 +24,6 @@ const KP_LEVELS = [
 export default function AuroraForecastOptions({ data, onChange }: WidgetOptionsProps) {
   const [state, setState] = useState<AuroraForecastData>({
     refreshInterval: (data?.refreshInterval as number) ?? 15,
-    corsProxy: (data?.corsProxy as string) ?? '',
     latitude: (data?.latitude as number) ?? 54,
   });
 
@@ -33,7 +31,6 @@ export default function AuroraForecastOptions({ data, onChange }: WidgetOptionsP
     if (data) {
       setState({
         refreshInterval: (data.refreshInterval as number) ?? 15,
-        corsProxy: (data.corsProxy as string) ?? '',
         latitude: (data.latitude as number) ?? 54,
       });
     }
@@ -69,21 +66,8 @@ export default function AuroraForecastOptions({ data, onChange }: WidgetOptionsP
 
       <div className="space-y-4 border-t border-[color:var(--ui-item-border)] pt-6">
         <h3 className="font-semibold text-[var(--ui-text)] text-center">
-          Data Source
+          Settings
         </h3>
-
-        <FormInput
-          label="CORS Proxy (optional)"
-          name="corsProxy"
-          type="text"
-          value={state.corsProxy}
-          placeholder="https://corsproxy.io/?"
-          onChange={handleChange}
-        />
-        <div className="text-xs text-[var(--ui-text-muted)] text-center">
-          NOAA SWPC APIs are typically CORS-friendly. Only set a proxy if direct
-          access is blocked. Without access, demo data is shown.
-        </div>
 
         <FormInput
           label="Refresh Interval (minutes)"

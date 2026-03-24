@@ -7,7 +7,6 @@ import AuroraForecastOptions from './AuroraForecastOptions';
 
 interface AuroraConfig {
   refreshInterval?: number;
-  corsProxy?: string;
   latitude?: number;
 }
 
@@ -102,11 +101,9 @@ const AURORA_GRADIENT = 'linear-gradient(135deg, #064e3b 0%, #0f172a 30%, #1e1b4
 export default function AuroraForecast({
   config,
   theme,
-  corsProxy: globalCorsProxy,
 }: WidgetComponentProps) {
   const cfg = config as AuroraConfig | undefined;
   const refreshInterval = cfg?.refreshInterval ?? 15;
-  const corsProxy = cfg?.corsProxy?.trim() || globalCorsProxy;
   const latitude = cfg?.latitude ?? 54; // Default: Prince George, BC
 
   const [data, setData] = useState<AuroraData>(MOCK_DATA);
@@ -118,7 +115,7 @@ export default function AuroraForecast({
   const fetchData = useCallback(async () => {
     try {
       setError(null);
-      const fetchUrl = corsProxy ? buildProxyUrl(corsProxy, NOAA_KP_URL) : NOAA_KP_URL;
+      const fetchUrl = buildProxyUrl(NOAA_KP_URL);
       const { data: raw } = await fetchJsonWithCache<unknown>(fetchUrl, {
         cacheKey: buildCacheKey('aurora-kp', NOAA_KP_URL),
         ttlMs: refreshMs,
@@ -133,7 +130,7 @@ export default function AuroraForecast({
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [corsProxy, refreshMs]);
+  }, [refreshMs]);
 
   useEffect(() => {
     let isMounted = true;
@@ -330,7 +327,6 @@ registerWidget({
   OptionsComponent: AuroraForecastOptions,
   defaultProps: {
     refreshInterval: 15,
-    corsProxy: '',
     latitude: 54,
   },
 });

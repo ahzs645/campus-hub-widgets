@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import QRCodeLib from 'qrcode';
 import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
-import { buildCacheKey, fetchJsonWithCache, fetchTextWithCache, buildProxyUrl } from '@firstform/campus-hub-widget-sdk';
+import { buildCacheKey, fetchJsonWithCache, fetchTextWithCache, buildProxyUrl, getCorsProxyUrl } from '@firstform/campus-hub-widget-sdk';
 import { parseRss } from '@firstform/campus-hub-widget-sdk';
 import JobBoardOptions from './JobBoardOptions';
 
@@ -16,7 +16,6 @@ interface JobPosting {
 interface JobBoardConfig {
   apiUrl?: string;
   sourceType?: 'json' | 'rss';
-  corsProxy?: string;
   cacheTtlSeconds?: number;
   speed?: number;
   scale?: number;
@@ -68,13 +67,11 @@ const areJobsEqual = (a: JobPosting[], b: JobPosting[]): boolean => {
 export default function JobBoard({
   config,
   theme,
-  corsProxy: globalCorsProxy,
 }: WidgetComponentProps) {
   const cfg = config as JobBoardConfig | undefined;
   const rawApiUrl = cfg?.apiUrl?.trim();
   const apiUrl = rawApiUrl && rawApiUrl.length > 0 ? rawApiUrl : undefined;
   const sourceType = cfg?.sourceType ?? 'json';
-  const corsProxy = cfg?.corsProxy?.trim() || globalCorsProxy;
   const cacheTtlSeconds = cfg?.cacheTtlSeconds ?? 120;
   const speed = cfg?.speed ?? 35;
   const configuredScale = cfg?.scale;

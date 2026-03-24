@@ -27,13 +27,11 @@ const DEFAULT_CHILDREN: ChildWidgetDef[] = [
 function RenderedChild({
   child,
   theme,
-  corsProxy,
   isActive,
   shouldRender = true,
 }: {
   child: ChildWidgetDef;
   theme: WidgetComponentProps['theme'];
-  corsProxy?: string;
   isActive: boolean;
   shouldRender?: boolean;
 }) {
@@ -54,7 +52,7 @@ function RenderedChild({
       className="w-full h-full"
       style={{ pointerEvents: isActive ? 'auto' : 'none' }}
     >
-      <WidgetComponent config={child.props} theme={theme} corsProxy={corsProxy} />
+      <WidgetComponent config={child.props} theme={theme} />
     </div>
   );
 }
@@ -68,12 +66,10 @@ function StackMode({
   items,
   activeIndex,
   theme,
-  corsProxy,
 }: {
   items: ChildWidgetDef[];
   activeIndex: number;
   theme: WidgetComponentProps['theme'];
-  corsProxy?: string;
 }) {
   const [animating, setAnimating] = useState(false);
   const prevIndexRef = useRef(activeIndex);
@@ -126,7 +122,7 @@ function StackMode({
             <RenderedChild
               child={child}
               theme={theme}
-              corsProxy={corsProxy}
+
               isActive={isActive}
               shouldRender={isActive}
             />
@@ -152,12 +148,10 @@ function CarouselMode({
   items,
   activeIndex,
   theme,
-  corsProxy,
 }: {
   items: ChildWidgetDef[];
   activeIndex: number;
   theme: WidgetComponentProps['theme'];
-  corsProxy?: string;
 }) {
   return (
     <div
@@ -194,7 +188,7 @@ function CarouselMode({
             <RenderedChild
               child={child}
               theme={theme}
-              corsProxy={corsProxy}
+
               isActive={isActive}
               shouldRender={isVisible}
             />
@@ -227,14 +221,12 @@ function FadeMode({
   activeIndex,
   previousActiveIndex,
   theme,
-  corsProxy,
   progress,
 }: {
   items: ChildWidgetDef[];
   activeIndex: number;
   previousActiveIndex: number | null;
   theme: WidgetComponentProps['theme'];
-  corsProxy?: string;
   progress: number;
 }) {
   return (
@@ -251,7 +243,7 @@ function FadeMode({
             <RenderedChild
               child={child}
               theme={theme}
-              corsProxy={corsProxy}
+
               isActive={isActive}
               shouldRender={isActive || wasActive}
             />
@@ -295,7 +287,7 @@ function FadeMode({
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
-export default function WidgetStack({ config, theme, corsProxy }: WidgetComponentProps) {
+export default function WidgetStack({ config, theme }: WidgetComponentProps) {
   const stackConfig = config as WidgetStackConfig | undefined;
   const rotationSeconds = stackConfig?.rotationSeconds ?? 8;
   const animationMode = stackConfig?.animationMode ?? 'fade';
@@ -376,10 +368,10 @@ export default function WidgetStack({ config, theme, corsProxy }: WidgetComponen
   return (
     <div className="w-full h-full rounded-2xl overflow-hidden" style={{ backgroundColor: `${theme.primary}20` }}>
       {animationMode === 'stack' && (
-        <StackMode items={items} activeIndex={resolvedActiveIndex} theme={theme} corsProxy={corsProxy} />
+        <StackMode items={items} activeIndex={resolvedActiveIndex} theme={theme} />
       )}
       {animationMode === 'carousel' && (
-        <CarouselMode items={items} activeIndex={resolvedActiveIndex} theme={theme} corsProxy={corsProxy} />
+        <CarouselMode items={items} activeIndex={resolvedActiveIndex} theme={theme} />
       )}
       {animationMode === 'fade' && (
         <FadeMode
@@ -387,8 +379,7 @@ export default function WidgetStack({ config, theme, corsProxy }: WidgetComponen
           activeIndex={resolvedActiveIndex}
           previousActiveIndex={resolvedPreviousActiveIndex}
           theme={theme}
-          corsProxy={corsProxy}
-          progress={progress}
+                   progress={progress}
         />
       )}
     </div>
