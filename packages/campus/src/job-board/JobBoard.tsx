@@ -129,7 +129,7 @@ export default function JobBoard({
 
     const fetchJobs = async () => {
       try {
-        const fetchUrl = corsProxy ? buildProxyUrl(corsProxy, apiUrl) : apiUrl;
+        const fetchUrl = getCorsProxyUrl() ? buildProxyUrl(apiUrl) : apiUrl;
 
         if (sourceType === 'rss') {
           const { text } = await fetchTextWithCache(fetchUrl, {
@@ -185,7 +185,7 @@ export default function JobBoard({
       isMounted = false;
       clearInterval(interval);
     };
-  }, [apiUrl, sourceType, corsProxy, cacheTtlSeconds, queueFetchedJobs]);
+  }, [apiUrl, sourceType, cacheTtlSeconds, queueFetchedJobs]);
 
   // QR code generation
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
@@ -347,7 +347,6 @@ registerWidget({
     label: 'Campus Jobs',
     sourceType: 'json',
     cacheTtlSeconds: 120,
-    corsProxy: '',
     qrUrl: '',
     qrLabel: 'Scan to apply',
   },

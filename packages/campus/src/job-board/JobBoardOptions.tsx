@@ -6,7 +6,6 @@ import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 interface JobBoardData {
   apiUrl: string;
   sourceType: string;
-  corsProxy: string;
   cacheTtlSeconds: number;
   speed: number;
   scale: number;
@@ -32,7 +31,6 @@ export default function JobBoardOptions({ data, onChange }: WidgetOptionsProps) 
   const [state, setState] = useState<JobBoardData>({
     apiUrl: (data?.apiUrl as string) ?? '',
     sourceType: (data?.sourceType as string) ?? 'json',
-    corsProxy: (data?.corsProxy as string) ?? '',
     cacheTtlSeconds: (data?.cacheTtlSeconds as number) ?? 120,
     speed: (data?.speed as number) ?? 35,
     scale: (data?.scale as number) ?? 1,

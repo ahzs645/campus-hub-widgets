@@ -1,14 +1,13 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
-import { buildCacheKey, buildProxyUrl, fetchTextWithCache } from '@firstform/campus-hub-widget-sdk';
+import { buildCacheKey, buildProxyUrl, fetchTextWithCache, getCorsProxyUrl } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale } from '@firstform/campus-hub-widget-sdk';
 import FireHazardOptions from './FireHazardOptions';
 
 interface FireHazardConfig {
   fireCentre?: string;
   refreshInterval?: number;
-  corsProxy?: string;
 }
 
 interface DangerData {
@@ -161,12 +160,10 @@ const MOCK_DATA: DangerData = {
 export default function FireHazard({
   config,
   theme,
-  corsProxy: globalCorsProxy,
 }: WidgetComponentProps) {
   const cfg = config as FireHazardConfig | undefined;
   const fireCentre = cfg?.fireCentre ?? FIRE_CENTRES[0];
   const refreshInterval = cfg?.refreshInterval ?? 30;
-  const corsProxy = cfg?.corsProxy?.trim() || globalCorsProxy;
 
   const [data, setData] = useState<DangerData>(MOCK_DATA);
   const [error, setError] = useState<string | null>(null);
@@ -175,14 +172,14 @@ export default function FireHazard({
   const refreshMs = refreshInterval * 60 * 1000;
 
   const fetchData = useCallback(async () => {
-    if (!corsProxy) {
+    if (!getCorsProxyUrl()) {
       setData({ ...MOCK_DATA, fireCentre });
       return;
     }
     try {
       setError(null);
       const targetUrl = buildApiUrl(fireCentre);
-      const fetchUrl = buildProxyUrl(corsProxy, targetUrl);
+      const fetchUrl = buildProxyUrl(targetUrl);
       const { text } = await fetchTextWithCache(fetchUrl, {
         cacheKey: buildCacheKey('fire-hazard', fireCentre),
         ttlMs: refreshMs,

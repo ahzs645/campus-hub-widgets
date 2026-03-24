@@ -21,7 +21,6 @@ interface RSSConfig {
   showDate?: boolean;
   scrollSpeed?: number;
   title?: string;
-  corsProxy?: string;
 }
 
 const DEMO_ITEMS: FeedItem[] = [
@@ -78,7 +77,7 @@ function timeAgo(dateStr: string): string {
   return `${days}d ago`;
 }
 
-export default function RSSReader({ config, theme, corsProxy: globalCorsProxy }: WidgetComponentProps) {
+export default function RSSReader({ config, theme }: WidgetComponentProps) {
   const rssConfig = config as RSSConfig | undefined;
   const feedUrl = rssConfig?.feedUrl?.trim() || '';
   const maxItems = rssConfig?.maxItems ?? 10;
@@ -87,8 +86,6 @@ export default function RSSReader({ config, theme, corsProxy: globalCorsProxy }:
   const showDate = rssConfig?.showDate ?? true;
   const scrollSpeed = rssConfig?.scrollSpeed ?? 40;
   const customTitle = rssConfig?.title?.trim() || '';
-  const corsProxy = rssConfig?.corsProxy?.trim() || globalCorsProxy;
-
   const [items, setItems] = useState<FeedItem[]>(DEMO_ITEMS);
   const [feedTitle, setFeedTitle] = useState(customTitle || 'Campus News');
   const [error, setError] = useState<string | null>(null);
@@ -104,7 +101,7 @@ export default function RSSReader({ config, theme, corsProxy: globalCorsProxy }:
     }
     try {
       setError(null);
-      const url = buildProxyUrl(corsProxy, feedUrl);
+      const url = buildProxyUrl(feedUrl);
       const { text } = await fetchTextWithCache(url, {
         cacheKey: buildCacheKey('rss', feedUrl),
         ttlMs: refreshInterval * 60 * 1000,
@@ -119,7 +116,7 @@ export default function RSSReader({ config, theme, corsProxy: globalCorsProxy }:
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load feed');
     }
-  }, [feedUrl, corsProxy, refreshInterval, maxItems, customTitle]);
+  }, [feedUrl, refreshInterval, maxItems, customTitle]);
 
   useEffect(() => {
     fetchFeed();
@@ -246,6 +243,5 @@ registerWidget({
     showDate: true,
     scrollSpeed: 40,
     title: '',
-    corsProxy: '',
   },
 });

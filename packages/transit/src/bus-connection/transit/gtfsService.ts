@@ -222,18 +222,17 @@ function applyRealtimeUpdates(trips: Trip[], rtUpdates: Map<string, RealtimeUpda
 export function createLiveTripProvider(
   onUpdate: (trips: Trip[]) => void,
   proxyUrl?: string,
-  corsProxy?: string,
   getSimulatedNow?: () => Date | null
 ) {
   let intervalId: ReturnType<typeof setInterval> | null = null;
   let rtUpdates = new Map<string, RealtimeUpdate>();
-  const canFetchRealtime = !!(proxyUrl || corsProxy);
+  const canFetchRealtime = !!(proxyUrl || getCorsProxyUrl());
 
   async function refresh() {
     const simNow = getSimulatedNow ? getSimulatedNow() : null;
     // Only fetch realtime if not simulating and a proxy is available
     if (!simNow && canFetchRealtime) {
-      rtUpdates = await fetchRealtimeUpdates(proxyUrl, corsProxy);
+      rtUpdates = await fetchRealtimeUpdates(proxyUrl);
     }
     const scheduled = getScheduledTrips(simNow);
     const merged = simNow ? scheduled : (canFetchRealtime ? applyRealtimeUpdates(scheduled, rtUpdates) : scheduled);

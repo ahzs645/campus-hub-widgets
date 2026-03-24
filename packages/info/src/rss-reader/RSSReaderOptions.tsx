@@ -11,7 +11,6 @@ interface RSSData {
   showDate: boolean;
   scrollSpeed: number;
   title: string;
-  corsProxy: string;
 }
 
 export default function RSSReaderOptions({ data, onChange }: WidgetOptionsProps) {
@@ -23,7 +22,6 @@ export default function RSSReaderOptions({ data, onChange }: WidgetOptionsProps)
     showDate: (data?.showDate as boolean) ?? true,
     scrollSpeed: (data?.scrollSpeed as number) ?? 40,
     title: (data?.title as string) ?? '',
-    corsProxy: (data?.corsProxy as string) ?? '',
   });
 
   useEffect(() => {

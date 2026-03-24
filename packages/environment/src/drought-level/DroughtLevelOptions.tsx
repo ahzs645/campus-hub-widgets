@@ -58,7 +58,6 @@ export default function DroughtLevelOptions({ data, onChange }: WidgetOptionsPro
     basin: (data?.basin as string) ?? '',
     displayMode: (data?.displayMode as 'single' | 'overview') ?? 'single',
     refreshInterval: (data?.refreshInterval as number) ?? 60,
-    corsProxy: (data?.corsProxy as string) ?? '',
   });
 
   useEffect(() => {
@@ -67,7 +66,6 @@ export default function DroughtLevelOptions({ data, onChange }: WidgetOptionsPro
         basin: (data.basin as string) ?? '',
         displayMode: (data.displayMode as 'single' | 'overview') ?? 'single',
         refreshInterval: (data.refreshInterval as number) ?? 60,
-        corsProxy: (data.corsProxy as string) ?? '',
       });
     }
   }, [data]);
@@ -125,21 +123,8 @@ export default function DroughtLevelOptions({ data, onChange }: WidgetOptionsPro
 
       <div className="space-y-4 border-t border-[color:var(--ui-item-border)] pt-6">
         <h3 className="font-semibold text-[var(--ui-text)] text-center">
-          Connection
+          Settings
         </h3>
-
-        <FormInput
-          label="CORS Proxy (required)"
-          name="corsProxy"
-          type="text"
-          value={state.corsProxy}
-          placeholder="https://corsproxy.io/?"
-          onChange={handleChange}
-        />
-        <div className="text-xs text-[var(--ui-text-muted)] text-center">
-          A CORS proxy is required to fetch data from the BC ArcGIS service.
-          Without it, mock data will be shown.
-        </div>
 
         <FormInput
           label="Refresh Interval (minutes)"
