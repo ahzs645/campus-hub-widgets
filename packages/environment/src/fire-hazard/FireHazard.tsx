@@ -194,7 +194,7 @@ export default function FireHazard({
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [corsProxy, fireCentre, refreshMs]);
+  }, [fireCentre, refreshMs]);
 
   useEffect(() => {
     let isMounted = true;
@@ -352,6 +352,5 @@ registerWidget({
   defaultProps: {
     fireCentre: 'Cariboo Fire Centre',
     refreshInterval: 30,
-    corsProxy: '',
   },
 });

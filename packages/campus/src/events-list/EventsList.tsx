@@ -78,7 +78,6 @@ type DisplayMode = 'scroll' | 'ticker' | 'paginate';
 interface EventsListConfig {
   apiUrl?: string;
   sourceType?: 'json' | 'ical' | 'rss';
-  corsProxy?: string;
   cacheTtlSeconds?: number;
   events?: Event[];
   maxItems?: number;
@@ -106,7 +105,6 @@ export default function EventsList({ config, theme }: WidgetComponentProps) {
   const eventsConfig = config as EventsListConfig | undefined;
   const apiUrl = eventsConfig?.apiUrl;
   const sourceType = eventsConfig?.sourceType ?? 'json';
-  const corsProxy = eventsConfig?.corsProxy?.trim();
   const cacheTtlSeconds = eventsConfig?.cacheTtlSeconds ?? 300;
   const maxItems = eventsConfig?.maxItems ?? 10;
   const title = eventsConfig?.title ?? 'Upcoming Events';
@@ -117,7 +115,6 @@ export default function EventsList({ config, theme }: WidgetComponentProps) {
   const events = useEvents({
     apiUrl,
     sourceType,
-    corsProxy,
     cacheTtlSeconds,
     maxItems,
     pollIntervalMs: 30_000,
@@ -375,7 +372,6 @@ registerWidget({
     title: 'Upcoming Events',
     sourceType: 'json',
     cacheTtlSeconds: 300,
-    corsProxy: '',
     displayMode: 'scroll',
     rotationSeconds: 5,
   },

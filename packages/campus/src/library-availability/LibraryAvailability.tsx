@@ -1,6 +1,6 @@
 'use client';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { buildProxyUrl } from '@firstform/campus-hub-widget-sdk';
+import { buildProxyUrl, getCorsProxyUrl } from '@firstform/campus-hub-widget-sdk';
 import { registerWidget, WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import LibraryAvailabilityOptions from './LibraryAvailabilityOptions';
 
@@ -18,7 +18,6 @@ interface LibraryAvailabilityConfig {
   refreshSeconds?: number;
   openHour?: number;
   closeHour?: number;
-  corsProxy?: string;
 }
 
 interface LibCalSlot {
@@ -259,7 +258,6 @@ function availabilityColor(ratio: number): string {
 export default function LibraryAvailability({
   config,
   theme,
-  corsProxy: globalCorsProxy,
 }: WidgetComponentProps) {
   const widgetConfig = config as LibraryAvailabilityConfig | undefined;
   const title = widgetConfig?.title?.trim() || 'Library Study Room Availability';
@@ -274,9 +272,6 @@ export default function LibraryAvailability({
   const openHour = clamp(Math.round(widgetConfig?.openHour ?? 8), 0, 23);
   const closeHourRaw = clamp(Math.round(widgetConfig?.closeHour ?? 23), 1, 24);
   const closeHour = closeHourRaw <= openHour ? openHour + 1 : closeHourRaw;
-  const localCorsProxy = widgetConfig?.corsProxy?.trim();
-  const corsProxy = localCorsProxy || globalCorsProxy?.trim();
-
   const [response, setResponse] = useState<LibCalGridResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -334,7 +329,7 @@ export default function LibraryAvailability({
 
       const start = formatDateKey(firstDay);
       const end = formatDateKey(addDays(firstDay, dayMeta.length));
-      const targetUrl = buildProxyUrl(corsProxy, endpoint);
+      const targetUrl = buildProxyUrl(endpoint);
 
       const formData = new FormData();
       formData.set('lid', lid);
@@ -377,7 +372,7 @@ export default function LibraryAvailability({
         }
       }
     },
-    [corsProxy, dayMeta, endpoint, gid, lid, pageSize],
+    [dayMeta, endpoint, gid, lid, pageSize],
   );
 
   useEffect(() => {
@@ -970,6 +965,5 @@ registerWidget({
     refreshSeconds: 120,
     openHour: 8,
     closeHour: 23,
-    corsProxy: '',
   },
 });

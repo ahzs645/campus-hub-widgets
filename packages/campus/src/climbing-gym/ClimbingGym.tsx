@@ -17,7 +17,6 @@ interface ClimbingGymConfig {
   gymName?: string;
   portalUrl?: string;
   refreshInterval?: number; // minutes
-  corsProxy?: string;
   showCapacityBar?: boolean;
   showHours?: boolean;
 }
@@ -111,12 +110,11 @@ const LEVEL_COLORS = {
   high: '#ef4444',
 };
 
-export default function ClimbingGym({ config, theme, corsProxy: globalCorsProxy }: WidgetComponentProps) {
+export default function ClimbingGym({ config, theme }: WidgetComponentProps) {
   const cfg = config as ClimbingGymConfig | undefined;
   const gymName = cfg?.gymName ?? 'OVERhang';
   const portalUrl = cfg?.portalUrl?.trim() || DEFAULT_PORTAL_URL;
   const refreshInterval = cfg?.refreshInterval ?? 5;
-  const corsProxy = cfg?.corsProxy?.trim() || globalCorsProxy || '';
   const showCapacityBar = cfg?.showCapacityBar ?? true;
   const showHours = cfg?.showHours ?? true;
 
@@ -129,7 +127,7 @@ export default function ClimbingGym({ config, theme, corsProxy: globalCorsProxy 
   const fetchOccupancy = useCallback(async () => {
     try {
       setError(null);
-      const fetchUrl = buildProxyUrl(corsProxy, portalUrl);
+      const fetchUrl = buildProxyUrl(portalUrl);
       const { text } = await fetchTextWithCache(fetchUrl, {
         cacheKey: buildCacheKey('climbing-gym', portalUrl),
         ttlMs: refreshMs,
@@ -145,7 +143,7 @@ export default function ClimbingGym({ config, theme, corsProxy: globalCorsProxy 
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);
     }
-  }, [corsProxy, portalUrl, refreshMs]);
+  }, [portalUrl, refreshMs]);
 
   useEffect(() => {
     let isMounted = true;
@@ -295,7 +293,6 @@ registerWidget({
     gymName: 'OVERhang',
     portalUrl: DEFAULT_PORTAL_URL,
     refreshInterval: 5,
-    corsProxy: '',
     showCapacityBar: true,
     showHours: true,
   },

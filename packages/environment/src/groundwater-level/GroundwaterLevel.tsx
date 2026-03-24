@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
-import { buildCacheKey, buildProxyUrl, fetchJsonWithCache, fetchTextWithCache } from '@firstform/campus-hub-widget-sdk';
+import { buildCacheKey, buildProxyUrl, fetchJsonWithCache, fetchTextWithCache, getCorsProxyUrl } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale } from '@firstform/campus-hub-widget-sdk';
 import GroundwaterLevelOptions from './GroundwaterLevelOptions';
 
@@ -10,7 +10,6 @@ interface GroundwaterConfig {
   dataSet?: string;
   displayMode?: 'current' | 'history';
   refreshInterval?: number;
-  corsProxy?: string;
 }
 
 interface TimeSeriesPoint {
@@ -167,14 +166,12 @@ function Sparkline({
 export default function GroundwaterLevel({
   config,
   theme,
-  corsProxy: globalCorsProxy,
 }: WidgetComponentProps) {
   const cfg = config as GroundwaterConfig | undefined;
   const locationId = cfg?.locationId?.trim() || 'OW378';
   const selectedDataSet = cfg?.dataSet?.trim() || '';
   const displayMode = cfg?.displayMode ?? 'current';
   const refreshInterval = cfg?.refreshInterval ?? 30;
-  const corsProxy = cfg?.corsProxy?.trim() || globalCorsProxy;
 
   const [data, setData] = useState<GwData>(MOCK_DATA);
   const [error, setError] = useState<string | null>(null);
@@ -183,11 +180,11 @@ export default function GroundwaterLevel({
   const refreshMs = refreshInterval * 60 * 1000;
 
   const fetchViaPublishApi = useCallback(async (): Promise<GwData | null> => {
-    if (!corsProxy) return null;
+    if (!getCorsProxyUrl()) return null;
 
     // Step 1: Get available time series for this location
     const descUrl = `${AQUARIUS_BASE}/GetTimeSeriesDescriptionList?LocationIdentifier=${encodeURIComponent(locationId)}`;
-    const descFetchUrl = buildProxyUrl(corsProxy, descUrl);
+    const descFetchUrl = buildProxyUrl(descUrl);
 
     const { data: descResp } = await fetchJsonWithCache<TimeSeriesDescriptionListResponse>(
       descFetchUrl,
@@ -234,7 +231,7 @@ export default function GroundwaterLevel({
       `?TimeSeriesUniqueId=${encodeURIComponent(chosen.UniqueId)}` +
       `&QueryFrom=${queryFrom.toISOString()}` +
       `&QueryTo=${now.toISOString()}`;
-    const dataFetchUrl = buildProxyUrl(corsProxy, dataUrl);
+    const dataFetchUrl = buildProxyUrl(dataUrl);
 
     const { data: tsResp } = await fetchJsonWithCache<TimeSeriesCorrectedDataResponse>(
       dataFetchUrl,
@@ -263,16 +260,16 @@ export default function GroundwaterLevel({
       history,
       availableDataSets,
     };
-  }, [corsProxy, locationId, selectedDataSet, refreshMs]);
+  }, [locationId, selectedDataSet, refreshMs]);
 
   const fetchViaWebPortal = useCallback(async (): Promise<Partial<GwData> | null> => {
-    if (!corsProxy) return null;
+    if (!getCorsProxyUrl()) return null;
 
     const portalUrl =
       `https://bcmoe-prod.aquaticinformatics.net/Data/DataSet/Summary` +
       `/Location/${encodeURIComponent(locationId)}` +
       `/DataSet/SGWL/Working/Interval/Latest`;
-    const fetchUrl = buildProxyUrl(corsProxy, portalUrl);
+    const fetchUrl = buildProxyUrl(portalUrl);
 
     const { text } = await fetchTextWithCache(fetchUrl, {
       cacheKey: buildCacheKey('gw-portal', locationId),
@@ -280,10 +277,10 @@ export default function GroundwaterLevel({
     });
 
     return parseWebPortalHtml(text, locationId);
-  }, [corsProxy, locationId, refreshMs]);
+  }, [locationId, refreshMs]);
 
   const fetchData = useCallback(async () => {
-    if (!corsProxy) {
+    if (!getCorsProxyUrl()) {
       setData({ ...MOCK_DATA, locationId });
       return;
     }
@@ -311,7 +308,7 @@ export default function GroundwaterLevel({
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [corsProxy, locationId, fetchViaPublishApi, fetchViaWebPortal]);
+  }, [locationId, fetchViaPublishApi, fetchViaWebPortal]);
 
   useEffect(() => {
     let isMounted = true;
@@ -484,6 +481,5 @@ registerWidget({
     dataSet: '',
     displayMode: 'current',
     refreshInterval: 30,
-    corsProxy: '',
   },
 });

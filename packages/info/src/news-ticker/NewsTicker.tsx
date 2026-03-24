@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, fetchJsonWithCache, fetchTextWithCache } from '@firstform/campus-hub-widget-sdk';
 import { parseRss } from '@firstform/campus-hub-widget-sdk';
-import { useEvents, applyCorsProxy, type CalendarEvent } from '@firstform/campus-hub-widget-sdk';
+import { useEvents, buildProxyUrl, type CalendarEvent } from '@firstform/campus-hub-widget-sdk';
 import NewsTickerOptions from './NewsTickerOptions';
 
 interface TickerItem {
@@ -17,7 +17,6 @@ type AnnouncementSourceType = 'json' | 'rss' | 'simcity-template';
 interface NewsTickerConfig {
   apiUrl?: string;
   sourceType?: AnnouncementSourceType;
-  corsProxy?: string;
   cacheTtlSeconds?: number;
   items?: TickerItem[];
   speed?: number;
@@ -34,7 +33,6 @@ interface NewsTickerConfig {
   dataSource?: 'announcements' | 'events';
   eventApiUrl?: string;
   eventSourceType?: 'json' | 'ical' | 'rss';
-  eventCorsProxy?: string;
   eventCacheTtlSeconds?: number;
   eventMaxItems?: number;
 }
@@ -279,7 +277,7 @@ const areTickerItemsEqual = (a: TickerItem[], b: TickerItem[]): boolean => {
   return true;
 };
 
-export default function NewsTicker({ config, theme, corsProxy: globalCorsProxy }: WidgetComponentProps) {
+export default function NewsTicker({ config, theme }: WidgetComponentProps) {
   const tickerConfig = config as NewsTickerConfig | undefined;
   const rawApiUrl = tickerConfig?.apiUrl?.trim();
   const apiUrl = rawApiUrl && rawApiUrl.length > 0 ? rawApiUrl : undefined;
@@ -294,7 +292,6 @@ export default function NewsTicker({ config, theme, corsProxy: globalCorsProxy }
   const templateRandomWorkplaceName = tickerConfig?.templateRandomWorkplaceName;
   const templateSim = tickerConfig?.templateSim;
   const templateSims = tickerConfig?.templateSims;
-  const corsProxy = tickerConfig?.corsProxy?.trim();
   const cacheTtlSeconds = tickerConfig?.cacheTtlSeconds ?? 120;
   const simcityMaxItems = clampSimCityMaxItems(tickerConfig?.simcityMaxItems);
   const speed = tickerConfig?.speed ?? 30;
@@ -353,7 +350,7 @@ export default function NewsTicker({ config, theme, corsProxy: globalCorsProxy }
 
     const fetchTicker = async () => {
       try {
-        const fetchUrl = applyCorsProxy(announcementsApiUrl, corsProxy);
+        const fetchUrl = buildProxyUrl(announcementsApiUrl);
         if (sourceType === 'rss') {
           const { text } = await fetchTextWithCache(fetchUrl, {
             cacheKey: buildCacheKey('ticker-rss', fetchUrl),
@@ -415,7 +412,6 @@ export default function NewsTicker({ config, theme, corsProxy: globalCorsProxy }
     dataSource,
     announcementsApiUrl,
     sourceType,
-    corsProxy,
     cacheTtlSeconds,
     label,
     simcityMaxItems,
@@ -433,7 +429,6 @@ export default function NewsTicker({ config, theme, corsProxy: globalCorsProxy }
   const events = useEvents({
     apiUrl: dataSource === 'events' ? tickerConfig?.eventApiUrl : undefined,
     sourceType: tickerConfig?.eventSourceType ?? 'json',
-    corsProxy: tickerConfig?.eventCorsProxy?.trim() || globalCorsProxy,
     cacheTtlSeconds: tickerConfig?.eventCacheTtlSeconds ?? 300,
     maxItems: tickerConfig?.eventMaxItems ?? 10,
     pollIntervalMs: 30_000,
@@ -590,7 +585,6 @@ registerWidget({
     dataSource: 'announcements',
     sourceType: 'json',
     cacheTtlSeconds: 120,
-    corsProxy: '',
     templateCityName: 'SimCity',
     templateMayorName: 'Mayor Sim',
     templateRandomSimName: '',
@@ -601,7 +595,6 @@ registerWidget({
     simcityMaxItems: 40,
     eventSourceType: 'json',
     eventCacheTtlSeconds: 300,
-    eventCorsProxy: '',
     eventMaxItems: 10,
   },
 });

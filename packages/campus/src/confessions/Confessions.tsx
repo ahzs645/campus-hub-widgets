@@ -24,7 +24,6 @@ interface ConfessionsConfig {
   rotationSeconds?: number;
   cacheTtlSeconds?: number;
   batchRefreshMinutes?: number;
-  corsProxy?: string;
   useCorsProxy?: boolean;
   showByline?: boolean;
 }
@@ -100,7 +99,7 @@ const appendCacheBust = (url: string, token: number): string => {
   return `${url}${separator}_batch=${token}`;
 };
 
-export default function Confessions({ config, theme, corsProxy: globalCorsProxy }: WidgetComponentProps) {
+export default function Confessions({ config, theme }: WidgetComponentProps) {
   const confConfig = config as ConfessionsConfig | undefined;
   const apiUrl = confConfig?.apiUrl?.trim() || DEFAULT_API_URL;
   const pageUrl = confConfig?.pageUrl?.trim() || DEFAULT_PAGE_URL;
@@ -109,7 +108,6 @@ export default function Confessions({ config, theme, corsProxy: globalCorsProxy 
   const cacheTtlSeconds = Math.min(3600, Math.max(30, Math.round(confConfig?.cacheTtlSeconds ?? 300)));
   const batchRefreshMinutes = Math.min(24 * 60, Math.max(0, Number(confConfig?.batchRefreshMinutes ?? 15)));
   const useCorsProxy = confConfig?.useCorsProxy ?? true;
-  const corsProxy = useCorsProxy ? (confConfig?.corsProxy?.trim() || globalCorsProxy) : undefined;
   const showByline = confConfig?.showByline ?? true;
 
   const [items, setItems] = useState<ConfessionItem[]>([]);
@@ -130,7 +128,7 @@ export default function Confessions({ config, theme, corsProxy: globalCorsProxy 
     const cacheBustToken = forceFresh ? Date.now() : null;
 
     try {
-      const pageApiUrlBase = buildProxyUrl(corsProxy, apiUrl);
+      const pageApiUrlBase = useCorsProxy ? buildProxyUrl(apiUrl) : apiUrl;
       const pageApiUrl = cacheBustToken ? appendCacheBust(pageApiUrlBase, cacheBustToken) : pageApiUrlBase;
       const { data } = await fetchJsonWithCache<WordPressPageResponse[] | WordPressPageResponse>(
         pageApiUrl,
@@ -158,7 +156,7 @@ export default function Confessions({ config, theme, corsProxy: globalCorsProxy 
     }
 
     try {
-      const pageHtmlUrlBase = buildProxyUrl(corsProxy, pageUrl);
+      const pageHtmlUrlBase = useCorsProxy ? buildProxyUrl(pageUrl) : pageUrl;
       const pageHtmlUrl = cacheBustToken ? appendCacheBust(pageHtmlUrlBase, cacheBustToken) : pageHtmlUrlBase;
       const { text } = await fetchTextWithCache(pageHtmlUrl, {
         cacheKey: buildCacheKey(
@@ -179,7 +177,7 @@ export default function Confessions({ config, theme, corsProxy: globalCorsProxy 
     } finally {
       setLoading(false);
     }
-  }, [apiUrl, pageUrl, maxItems, cacheTtlSeconds, corsProxy]);
+  }, [apiUrl, pageUrl, maxItems, cacheTtlSeconds, useCorsProxy]);
 
   useEffect(() => {
     fetchConfessions(false);
@@ -385,7 +383,6 @@ registerWidget({
     rotationSeconds: 12,
     cacheTtlSeconds: 300,
     batchRefreshMinutes: 15,
-    corsProxy: '',
     useCorsProxy: true,
     showByline: true,
   },

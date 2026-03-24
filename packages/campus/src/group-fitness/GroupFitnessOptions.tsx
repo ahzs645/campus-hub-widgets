@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { FormInput, FormSelect, FormSwitch } from '@firstform/campus-hub-widget-sdk';
-import { buildProxyUrl } from '@firstform/campus-hub-widget-sdk';
+import { buildProxyUrl, getCorsProxyUrl } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 import {
   DEFAULT_GROUP_FITNESS_URL,
@@ -20,7 +20,6 @@ interface GroupFitnessOptionsData {
   selectedDay: string;
   selectedClass: string;
   refreshInterval: number;
-  corsProxy: string;
   showSemester: boolean;
   showInstructor: boolean;
   showDescription: boolean;
@@ -34,7 +33,6 @@ const getInitialState = (data: Record<string, unknown>): GroupFitnessOptionsData
   selectedDay: (data.selectedDay as string) ?? 'today',
   selectedClass: (data.selectedClass as string) ?? '',
   refreshInterval: (data.refreshInterval as number) ?? 60,
-  corsProxy: (data.corsProxy as string) ?? '',
   showSemester: (data.showSemester as boolean) ?? true,
   showInstructor: (data.showInstructor as boolean) ?? true,
   showDescription: (data.showDescription as boolean) ?? true,
@@ -84,7 +82,7 @@ export default function GroupFitnessOptions({ data, onChange }: WidgetOptionsPro
       setLoading(true);
       setLoadError('');
 
-      const fetchUrl = buildProxyUrl(state.corsProxy.trim(), state.scheduleUrl.trim());
+      const fetchUrl = buildProxyUrl(state.scheduleUrl.trim());
 
       fetch(fetchUrl, { signal: controller.signal })
         .then((response) => {
@@ -104,9 +102,9 @@ export default function GroupFitnessOptions({ data, onChange }: WidgetOptionsPro
           if ((error as { name?: string }).name === 'AbortError') return;
           setScheduleInfo(null);
           setLoadError(
-            state.corsProxy.trim()
+            getCorsProxyUrl()
               ? 'Could not load classes from the schedule URL.'
-              : 'Add a CORS proxy to load days and classes from UNBC.',
+              : 'A CORS proxy must be configured to load days and classes from UNBC.',
           );
         })
         .finally(() => {
@@ -118,7 +116,7 @@ export default function GroupFitnessOptions({ data, onChange }: WidgetOptionsPro
       clearTimeout(timeout);
       fetchControllerRef.current?.abort();
     };
-  }, [state.scheduleUrl, state.corsProxy]);
+  }, [state.scheduleUrl]);
 
   const handleChange = (name: string, value: string | number | boolean) => {
     const nextState = { ...state, [name]: value };
@@ -248,15 +246,6 @@ export default function GroupFitnessOptions({ data, onChange }: WidgetOptionsPro
           onChange={handleChange}
         />
 
-        <FormInput
-          label="CORS Proxy"
-          name="corsProxy"
-          type="text"
-          value={state.corsProxy}
-          placeholder="https://your-proxy.example.com"
-          onChange={handleChange}
-        />
-
         <FormSelect
           label="Refresh Every"
           name="refreshInterval"
@@ -273,7 +262,7 @@ export default function GroupFitnessOptions({ data, onChange }: WidgetOptionsPro
         />
 
         <div className="text-sm text-[var(--ui-text-muted)]">
-          This page is on `unbc.ca`, so a proxy is usually required to fetch it from the browser.
+          This page is on `unbc.ca`, so a CORS proxy is used to fetch it from the browser.
         </div>
       </div>
 

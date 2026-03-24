@@ -8,7 +8,6 @@ interface AirQualityData {
   waqiToken: string;
   waqiCity: string;
   refreshInterval: number;
-  corsProxy: string;
 }
 
 export default function AirQualityOptions({ data, onChange }: WidgetOptionsProps) {
@@ -17,7 +16,6 @@ export default function AirQualityOptions({ data, onChange }: WidgetOptionsProps
     waqiToken: (data?.waqiToken as string) ?? '',
     waqiCity: (data?.waqiCity as string) ?? 'prince-george',
     refreshInterval: (data?.refreshInterval as number) ?? 15,
-    corsProxy: (data?.corsProxy as string) ?? '',
   });
 
   useEffect(() => {
@@ -27,7 +25,6 @@ export default function AirQualityOptions({ data, onChange }: WidgetOptionsProps
         waqiToken: (data.waqiToken as string) ?? '',
         waqiCity: (data.waqiCity as string) ?? 'prince-george',
         refreshInterval: (data.refreshInterval as number) ?? 15,
-        corsProxy: (data.corsProxy as string) ?? '',
       });
     }
   }, [data]);
@@ -83,19 +80,9 @@ export default function AirQualityOptions({ data, onChange }: WidgetOptionsProps
             </div>
           </>
         ) : (
-          <>
-            <FormInput
-              label="CORS Proxy (required)"
-              name="corsProxy"
-              type="text"
-              value={state.corsProxy}
-              placeholder="https://r.jina.ai/http://"
-              onChange={handleChange}
-            />
-            <div className="text-xs text-[var(--ui-text-muted)] text-center">
-              BC AQHI requires a CORS proxy since the BC government site doesn&apos;t allow cross-origin requests. Uses the AQHI scale (1-10+) specific to BC.
-            </div>
-          </>
+          <div className="text-xs text-[var(--ui-text-muted)] text-center">
+            BC AQHI data from the BC government site. Uses the AQHI scale (1-10+) specific to BC.
+          </div>
         )}
       </div>
 

@@ -10,7 +10,6 @@ interface NewsTickerData {
   dataSource: 'announcements' | 'events';
   apiUrl: string;
   sourceType: 'json' | 'rss' | 'simcity-template';
-  corsProxy: string;
   cacheTtlSeconds: number;
   templateCityName: string;
   templateMayorName: string;
@@ -22,7 +21,6 @@ interface NewsTickerData {
   simcityMaxItems: number;
   eventApiUrl: string;
   eventSourceType: 'json' | 'ical' | 'rss';
-  eventCorsProxy: string;
   eventCacheTtlSeconds: number;
   eventMaxItems: number;
 }
@@ -46,7 +44,6 @@ export default function NewsTickerOptions({ data, onChange }: WidgetOptionsProps
     dataSource: (data?.dataSource as 'announcements' | 'events') ?? 'announcements',
     apiUrl: (data?.apiUrl as string) ?? '',
     sourceType: (data?.sourceType as 'json' | 'rss' | 'simcity-template') ?? 'json',
-    corsProxy: (data?.corsProxy as string) ?? '',
     cacheTtlSeconds: (data?.cacheTtlSeconds as number) ?? 120,
     templateCityName: (data?.templateCityName as string) ?? 'SimCity',
     templateMayorName: (data?.templateMayorName as string) ?? 'Mayor Sim',
@@ -58,7 +55,6 @@ export default function NewsTickerOptions({ data, onChange }: WidgetOptionsProps
     simcityMaxItems: clampSimCityMaxItems(data?.simcityMaxItems),
     eventApiUrl: (data?.eventApiUrl as string) ?? '',
     eventSourceType: (data?.eventSourceType as 'json' | 'ical' | 'rss') ?? 'json',
-    eventCorsProxy: (data?.eventCorsProxy as string) ?? '',
     eventCacheTtlSeconds: (data?.eventCacheTtlSeconds as number) ?? 300,
     eventMaxItems: (data?.eventMaxItems as number) ?? 10,
   });
@@ -72,7 +68,6 @@ export default function NewsTickerOptions({ data, onChange }: WidgetOptionsProps
         dataSource: (data.dataSource as 'announcements' | 'events') ?? 'announcements',
         apiUrl: (data.apiUrl as string) ?? '',
         sourceType: (data.sourceType as 'json' | 'rss' | 'simcity-template') ?? 'json',
-        corsProxy: (data.corsProxy as string) ?? '',
         cacheTtlSeconds: (data.cacheTtlSeconds as number) ?? 120,
         templateCityName: (data.templateCityName as string) ?? 'SimCity',
         templateMayorName: (data.templateMayorName as string) ?? 'Mayor Sim',
@@ -84,7 +79,6 @@ export default function NewsTickerOptions({ data, onChange }: WidgetOptionsProps
         simcityMaxItems: clampSimCityMaxItems(data.simcityMaxItems),
         eventApiUrl: (data.eventApiUrl as string) ?? '',
         eventSourceType: (data.eventSourceType as 'json' | 'ical' | 'rss') ?? 'json',
-        eventCorsProxy: (data.eventCorsProxy as string) ?? '',
         eventCacheTtlSeconds: (data.eventCacheTtlSeconds as number) ?? 300,
         eventMaxItems: (data.eventMaxItems as number) ?? 10,
       });
@@ -193,15 +187,6 @@ export default function NewsTickerOptions({ data, onChange }: WidgetOptionsProps
             />
 
             <FormInput
-              label="CORS Proxy (optional)"
-              name="eventCorsProxy"
-              type="text"
-              value={state.eventCorsProxy}
-              placeholder="https://r.jina.ai/http://"
-              onChange={handleChange}
-            />
-
-            <FormInput
               label="Cache TTL (seconds)"
               name="eventCacheTtlSeconds"
               type="number"
@@ -262,15 +247,6 @@ export default function NewsTickerOptions({ data, onChange }: WidgetOptionsProps
               placeholder={
                 isSimCityTemplate ? DEFAULT_SIMCITY_API_URL : 'https://api.example.com/announcements'
               }
-              onChange={handleChange}
-            />
-
-            <FormInput
-              label="CORS Proxy (optional)"
-              name="corsProxy"
-              type="text"
-              value={state.corsProxy}
-              placeholder="https://r.jina.ai/http://"
               onChange={handleChange}
             />
 

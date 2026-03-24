@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppIcon } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale } from '@firstform/campus-hub-widget-sdk';
-import { buildCacheKey, buildProxyUrl, fetchTextWithCache } from '@firstform/campus-hub-widget-sdk';
+import { buildCacheKey, buildProxyUrl, fetchTextWithCache, getCorsProxyUrl } from '@firstform/campus-hub-widget-sdk';
 import { registerWidget, type WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import GroupFitnessOptions from './GroupFitnessOptions';
 import {
@@ -21,7 +21,6 @@ interface GroupFitnessConfig {
   selectedDay?: string;
   selectedClass?: string;
   refreshInterval?: number;
-  corsProxy?: string;
   showSemester?: boolean;
   showInstructor?: boolean;
   showDescription?: boolean;
@@ -100,9 +99,9 @@ function VerticalTicker({ children, className }: { children: React.ReactNode; cl
   );
 }
 
-const getLoadError = (error: unknown, corsProxy?: string): string => {
-  if (!corsProxy) {
-    return 'Could not load the schedule. Add a CORS proxy in this widget or the display settings.';
+const getLoadError = (error: unknown): string => {
+  if (!getCorsProxyUrl()) {
+    return 'Could not load the schedule. A CORS proxy must be configured.';
   }
 
   return error instanceof Error ? error.message : 'Could not load the schedule.';
@@ -111,7 +110,6 @@ const getLoadError = (error: unknown, corsProxy?: string): string => {
 export default function GroupFitness({
   config,
   theme,
-  corsProxy: globalCorsProxy,
 }: WidgetComponentProps) {
   const cfg = config as GroupFitnessConfig | undefined;
   const title = cfg?.title?.trim() || 'Group Fitness';
@@ -120,7 +118,6 @@ export default function GroupFitness({
   const selectedDay = cfg?.selectedDay ?? 'today';
   const selectedClass = cfg?.selectedClass?.trim() ?? '';
   const refreshInterval = Math.max(15, cfg?.refreshInterval ?? 60);
-  const corsProxy = cfg?.corsProxy?.trim() || globalCorsProxy;
   const showSemester = cfg?.showSemester ?? true;
   const showInstructor = cfg?.showInstructor ?? true;
   const showDescription = cfg?.showDescription ?? true;
@@ -136,7 +133,7 @@ export default function GroupFitness({
     setLoading(true);
 
     try {
-      const fetchUrl = buildProxyUrl(corsProxy, scheduleUrl);
+      const fetchUrl = buildProxyUrl(scheduleUrl);
       const { text } = await fetchTextWithCache(fetchUrl, {
         cacheKey: buildCacheKey('group-fitness', scheduleUrl),
         ttlMs: refreshMs,
@@ -150,11 +147,11 @@ export default function GroupFitness({
       setSchedule(parsed);
       setError(null);
     } catch (fetchError) {
-      setError(getLoadError(fetchError, corsProxy));
+      setError(getLoadError(fetchError));
     } finally {
       setLoading(false);
     }
-  }, [corsProxy, refreshMs, scheduleUrl]);
+  }, [refreshMs, scheduleUrl]);
 
   useEffect(() => {
     void fetchSchedule();
@@ -337,7 +334,6 @@ registerWidget({
     selectedDay: 'today',
     selectedClass: '',
     refreshInterval: 60,
-    corsProxy: '',
     showSemester: true,
     showInstructor: true,
     showDescription: true,

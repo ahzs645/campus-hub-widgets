@@ -9,7 +9,6 @@ interface ClubSpotlightData {
   apiUrl: string;
   pageUrl: string;
   rotationSeconds: number;
-  corsProxy: string;
   useCorsProxy: boolean;
   refreshMinutes: number;
   showQrCode: boolean;
@@ -21,7 +20,6 @@ export default function ClubSpotlightOptions({ data, onChange }: WidgetOptionsPr
     apiUrl: (data?.apiUrl as string) ?? DEFAULT_API_URL,
     pageUrl: (data?.pageUrl as string) ?? 'https://overtheedge.unbc.ca/clubs/',
     rotationSeconds: (data?.rotationSeconds as number) ?? 10,
-    corsProxy: (data?.corsProxy as string) ?? '',
     useCorsProxy: (data?.useCorsProxy as boolean) ?? true,
     refreshMinutes: (data?.refreshMinutes as number) ?? 30,
     showQrCode: (data?.showQrCode as boolean) ?? false,
@@ -34,7 +32,6 @@ export default function ClubSpotlightOptions({ data, onChange }: WidgetOptionsPr
         apiUrl: (data.apiUrl as string) ?? DEFAULT_API_URL,
         pageUrl: (data.pageUrl as string) ?? 'https://overtheedge.unbc.ca/clubs/',
         rotationSeconds: (data.rotationSeconds as number) ?? 10,
-        corsProxy: (data.corsProxy as string) ?? '',
         useCorsProxy: (data.useCorsProxy as boolean) ?? true,
         refreshMinutes: (data.refreshMinutes as number) ?? 30,
         showQrCode: (data.showQrCode as boolean) ?? false,
@@ -86,22 +83,6 @@ export default function ClubSpotlightOptions({ data, onChange }: WidgetOptionsPr
           onChange={handleChange}
         />
 
-        {state.useCorsProxy && (
-          <>
-            <FormInput
-              label="CORS Proxy URL"
-              name="corsProxy"
-              type="text"
-              value={state.corsProxy}
-              placeholder="Uses global proxy if empty"
-              onChange={handleChange}
-            />
-            <div className="text-xs text-[var(--ui-text-muted)] text-center">
-              A CORS proxy is required to fetch the clubs page from the browser.
-              Leave empty to use the global CORS proxy configured in display settings.
-            </div>
-          </>
-        )}
       </div>
 
       <div className="space-y-4 border-t border-[color:var(--ui-item-border)] pt-6">

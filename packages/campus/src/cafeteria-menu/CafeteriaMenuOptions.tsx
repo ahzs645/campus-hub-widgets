@@ -5,7 +5,6 @@ interface CafeteriaData {
   menuUrl: string;
   danaLocations: string;
   refreshInterval: number;
-  corsProxy: string;
   weekdayBreakfastStart: string;
   weekdayBreakfastEnd: string;
   weekdayLunchStart: string;
@@ -25,7 +24,6 @@ export default function CafeteriaMenuOptions({ data, onChange }: WidgetOptionsPr
     menuUrl: (data?.menuUrl as string) ?? 'https://unbc.icaneat.ca/menu/',
     danaLocations: (data?.danaLocations as string) ?? '48784',
     refreshInterval: (data?.refreshInterval as number) ?? 30,
-    corsProxy: (data?.corsProxy as string) ?? '',
     weekdayBreakfastStart: (data?.weekdayBreakfastStart as string) ?? '07:00',
     weekdayBreakfastEnd: (data?.weekdayBreakfastEnd as string) ?? '10:45',
     weekdayLunchStart: (data?.weekdayLunchStart as string) ?? '11:00',
@@ -124,24 +122,6 @@ export default function CafeteriaMenuOptions({ data, onChange }: WidgetOptionsPr
         />
       </div>
 
-      {/* CORS Proxy */}
-      <div className="space-y-4 border-t border-[color:var(--ui-item-border)] pt-6">
-        <h3 className="font-semibold text-[var(--ui-text)]">CORS Proxy</h3>
-
-        <FormInput
-          label="CORS Proxy URL (optional)"
-          name="corsProxy"
-          type="text"
-          value={state.corsProxy}
-          placeholder="Leave blank to use global setting"
-          onChange={handleChange}
-        />
-
-        <div className="text-sm text-[var(--ui-text-muted)]">
-          A CORS proxy is required to fetch menu data from the browser. Without
-          it, demo data is shown.
-        </div>
-      </div>
     </div>
   );
 }

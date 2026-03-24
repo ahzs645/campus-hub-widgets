@@ -15,7 +15,6 @@ interface LibraryAvailabilityData {
   refreshSeconds: number;
   openHour: number;
   closeHour: number;
-  corsProxy: string;
 }
 
 const DEFAULTS: LibraryAvailabilityData = {
@@ -30,7 +29,6 @@ const DEFAULTS: LibraryAvailabilityData = {
   refreshSeconds: 120,
   openHour: 8,
   closeHour: 23,
-  corsProxy: '',
 };
 
 export default function LibraryAvailabilityOptions({ data, onChange }: WidgetOptionsProps) {
@@ -46,7 +44,6 @@ export default function LibraryAvailabilityOptions({ data, onChange }: WidgetOpt
     refreshSeconds: (data?.refreshSeconds as number) ?? DEFAULTS.refreshSeconds,
     openHour: (data?.openHour as number) ?? DEFAULTS.openHour,
     closeHour: (data?.closeHour as number) ?? DEFAULTS.closeHour,
-    corsProxy: (data?.corsProxy as string) ?? DEFAULTS.corsProxy,
   };
 
   const handleChange = (name: string, value: string | number | boolean) => {
@@ -177,18 +174,8 @@ export default function LibraryAvailabilityOptions({ data, onChange }: WidgetOpt
           onChange={handleChange}
         />
 
-        <FormInput
-          label="CORS Proxy (optional)"
-          name="corsProxy"
-          type="text"
-          value={state.corsProxy}
-          placeholder="https://your-proxy.example.com"
-          onChange={handleChange}
-        />
-
         <div className="text-xs text-[var(--ui-text-muted)] space-y-1">
           <p>Requires POST form fields: lid, gid, start, end, pageSize.</p>
-          <p>If this widget runs on another domain, set a CORS proxy.</p>
         </div>
       </div>
     </div>

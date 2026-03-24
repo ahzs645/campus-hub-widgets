@@ -10,7 +10,6 @@ interface PosterCarouselData {
   dataSource: DataSource;
   apiUrl: string;
   maxStories: number;
-  corsProxy: string;
   refreshInterval: number;
 }
 
@@ -20,7 +19,6 @@ export default function PosterCarouselOptions({ data, onChange }: WidgetOptionsP
     dataSource: (data?.dataSource as DataSource) ?? 'default',
     apiUrl: (data?.apiUrl as string) ?? '',
     maxStories: (data?.maxStories as number) ?? 5,
-    corsProxy: (data?.corsProxy as string) ?? '',
     refreshInterval: (data?.refreshInterval as number) ?? 30,
   });
 
@@ -31,7 +29,6 @@ export default function PosterCarouselOptions({ data, onChange }: WidgetOptionsP
         dataSource: (data.dataSource as DataSource) ?? 'default',
         apiUrl: (data.apiUrl as string) ?? '',
         maxStories: (data.maxStories as number) ?? 5,
-        corsProxy: (data.corsProxy as string) ?? '',
         refreshInterval: (data.refreshInterval as number) ?? 30,
       });
     }
@@ -143,36 +140,6 @@ export default function PosterCarouselOptions({ data, onChange }: WidgetOptionsP
             />
           </div>
 
-          {/* CORS Proxy */}
-          <div className="space-y-4 border-t border-[color:var(--ui-item-border)] pt-6">
-            <h3 className="font-semibold text-[var(--ui-text)]">CORS Proxy</h3>
-
-            <FormSelect
-              label="CORS Proxy"
-              name="corsProxy"
-              value={state.corsProxy || ''}
-              options={[
-                { value: '', label: 'Use global setting' },
-                { value: 'custom', label: 'Custom URL...' },
-              ]}
-              onChange={handleChange}
-            />
-
-            {state.corsProxy === 'custom' && (
-              <FormInput
-                label="Custom Proxy URL"
-                name="corsProxy"
-                type="text"
-                value=""
-                placeholder="https://your-proxy.example.com/?url="
-                onChange={handleChange}
-              />
-            )}
-
-            <div className="text-sm text-[var(--ui-text-muted)]">
-              Required to fetch the UNBC news page from the browser.
-            </div>
-          </div>
         </>
       )}
 

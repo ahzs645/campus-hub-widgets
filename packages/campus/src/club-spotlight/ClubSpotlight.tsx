@@ -17,7 +17,6 @@ interface ClubSpotlightConfig {
   pageUrl?: string;
   apiUrl?: string;
   rotationSeconds?: number;
-  corsProxy?: string;
   useCorsProxy?: boolean;
   refreshMinutes?: number;
   showQrCode?: boolean;
@@ -175,13 +174,12 @@ function parseClubsFromHtml(html: string): ClubItem[] {
   return clubs;
 }
 
-export default function ClubSpotlight({ config, theme, corsProxy: globalCorsProxy }: WidgetComponentProps) {
+export default function ClubSpotlight({ config, theme }: WidgetComponentProps) {
   const cfg = config as ClubSpotlightConfig | undefined;
   const apiUrl = cfg?.apiUrl?.trim() || DEFAULT_API_URL;
   const pageUrl = cfg?.pageUrl?.trim() || DEFAULT_PAGE_URL;
   const rotationSeconds = Math.max(4, Math.min(120, cfg?.rotationSeconds ?? 10));
   const useCorsProxy = cfg?.useCorsProxy ?? true;
-  const corsProxy = useCorsProxy ? (cfg?.corsProxy?.trim() || globalCorsProxy) : undefined;
   const refreshMinutes = Math.max(5, Math.min(1440, cfg?.refreshMinutes ?? 30));
   const showQrCode = cfg?.showQrCode ?? false;
   const qrLabel = cfg?.qrLabel ?? 'Learn more';
@@ -198,7 +196,7 @@ export default function ClubSpotlight({ config, theme, corsProxy: globalCorsProx
 
     // Strategy 1: Try the WordPress REST API (returns structured JSON with images)
     try {
-      const apiFetchUrl = buildProxyUrl(corsProxy, apiUrl);
+      const apiFetchUrl = useCorsProxy ? buildProxyUrl(apiUrl) : apiUrl;
       const { data: posts } = await fetchJsonWithCache<WpClubPost[]>(apiFetchUrl, {
         cacheKey: buildCacheKey('club-spotlight-api', apiUrl),
         ttlMs,
@@ -217,7 +215,7 @@ export default function ClubSpotlight({ config, theme, corsProxy: globalCorsProx
 
     // Strategy 2: Scrape the HTML page directly
     try {
-      const pageFetchUrl = buildProxyUrl(corsProxy, pageUrl);
+      const pageFetchUrl = useCorsProxy ? buildProxyUrl(pageUrl) : pageUrl;
       const { text } = await fetchTextWithCache(pageFetchUrl, {
         cacheKey: buildCacheKey('club-spotlight-page', pageUrl),
         ttlMs,
@@ -235,7 +233,7 @@ export default function ClubSpotlight({ config, theme, corsProxy: globalCorsProx
     }
 
     setError('Could not load clubs from API or page');
-  }, [corsProxy, apiUrl, pageUrl, refreshMinutes]);
+  }, [useCorsProxy, apiUrl, pageUrl, refreshMinutes]);
 
   useEffect(() => {
     fetchClubs();
@@ -398,7 +396,6 @@ registerWidget({
     apiUrl: 'https://overtheedge.unbc.ca/wp-json/wp/v2/organization?per_page=100&_embed=wp:featuredmedia&org_status=181,183,182',
     pageUrl: DEFAULT_PAGE_URL,
     rotationSeconds: 10,
-    corsProxy: '',
     useCorsProxy: true,
     refreshMinutes: 30,
     showQrCode: false,

@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { FormInput, FormSelect, FormSwitch } from '@firstform/campus-hub-widget-sdk';
-import { applyCorsProxy } from '@firstform/campus-hub-widget-sdk';
+import { buildProxyUrl } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
 type DisplayMode = 'scroll' | 'ticker' | 'paginate';
@@ -18,7 +18,6 @@ interface EventsListData {
   rotationSeconds: number;
   apiUrl: string;
   sourceType: 'json' | 'ical' | 'rss';
-  corsProxy: string;
   cacheTtlSeconds: number;
   selectedCategories: string[];
 }
@@ -31,7 +30,6 @@ export default function EventsListOptions({ data, onChange }: WidgetOptionsProps
     rotationSeconds: (data?.rotationSeconds as number) ?? 5,
     apiUrl: (data?.apiUrl as string) ?? '',
     sourceType: (data?.sourceType as 'json' | 'ical' | 'rss') ?? 'json',
-    corsProxy: (data?.corsProxy as string) ?? '',
     cacheTtlSeconds: (data?.cacheTtlSeconds as number) ?? 300,
     selectedCategories: (data?.selectedCategories as string[]) ?? [],
   });
@@ -50,14 +48,13 @@ export default function EventsListOptions({ data, onChange }: WidgetOptionsProps
         rotationSeconds: (data.rotationSeconds as number) ?? 5,
         apiUrl: (data.apiUrl as string) ?? '',
         sourceType: (data.sourceType as 'json' | 'ical' | 'rss') ?? 'json',
-        corsProxy: (data.corsProxy as string) ?? '',
         cacheTtlSeconds: (data.cacheTtlSeconds as number) ?? 300,
         selectedCategories: (data.selectedCategories as string[]) ?? [],
       });
     }
   }, [data]);
 
-  // Fetch categories when apiUrl or corsProxy changes (JSON only)
+  // Fetch categories when apiUrl changes (JSON only)
   useEffect(() => {
     if (!state.apiUrl || state.sourceType !== 'json') {
       setAvailableCategories([]);
@@ -74,7 +71,7 @@ export default function EventsListOptions({ data, onChange }: WidgetOptionsProps
       setCategoryLoading(true);
       setCategoryError('');
 
-      const fetchUrl = applyCorsProxy(state.apiUrl, state.corsProxy?.trim());
+      const fetchUrl = buildProxyUrl(state.apiUrl);
 
       fetch(fetchUrl, { signal: controller.signal })
         .then(res => {
@@ -125,7 +122,7 @@ export default function EventsListOptions({ data, onChange }: WidgetOptionsProps
       fetchControllerRef.current?.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.apiUrl, state.corsProxy, state.sourceType]);
+  }, [state.apiUrl, state.sourceType]);
 
   const handleChange = (name: string, value: string | number | boolean) => {
     const newState = { ...state, [name]: value };
@@ -221,15 +218,6 @@ export default function EventsListOptions({ data, onChange }: WidgetOptionsProps
           type="url"
           value={state.apiUrl}
           placeholder="https://api.example.com/events"
-          onChange={handleChange}
-        />
-
-        <FormInput
-          label="CORS Proxy (optional)"
-          name="corsProxy"
-          type="text"
-          value={state.corsProxy}
-          placeholder="https://r.jina.ai/http://"
           onChange={handleChange}
         />
 

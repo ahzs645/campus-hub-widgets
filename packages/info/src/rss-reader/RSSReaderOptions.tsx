@@ -34,7 +34,6 @@ export default function RSSReaderOptions({ data, onChange }: WidgetOptionsProps)
         showDate: (data.showDate as boolean) ?? true,
         scrollSpeed: (data.scrollSpeed as number) ?? 40,
         title: (data.title as string) ?? '',
-        corsProxy: (data.corsProxy as string) ?? '',
       });
     }
   }, [data]);
@@ -137,23 +136,6 @@ export default function RSSReaderOptions({ data, onChange }: WidgetOptionsProps)
         />
       </div>
 
-      {/* CORS Proxy */}
-      <div className="space-y-4 border-t border-[color:var(--ui-item-border)] pt-6">
-        <h3 className="font-semibold text-[var(--ui-text)]">CORS Proxy</h3>
-
-        <FormInput
-          label="Proxy URL (optional)"
-          name="corsProxy"
-          type="text"
-          value={state.corsProxy}
-          placeholder="Use global setting"
-          onChange={handleChange}
-        />
-
-        <div className="text-sm text-[var(--ui-text-muted)]">
-          Most RSS feeds require a CORS proxy to load from the browser. Leave empty to use the global proxy setting.
-        </div>
-      </div>
     </div>
   );
 }

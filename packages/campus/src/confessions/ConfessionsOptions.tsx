@@ -8,7 +8,6 @@ interface ConfessionsOptionsState {
   rotationSeconds: number;
   cacheTtlSeconds: number;
   batchRefreshMinutes: number;
-  corsProxy: string;
   useCorsProxy: boolean;
   showByline: boolean;
 }
@@ -21,7 +20,6 @@ const DEFAULTS: ConfessionsOptionsState = {
   rotationSeconds: 12,
   cacheTtlSeconds: 300,
   batchRefreshMinutes: 15,
-  corsProxy: '',
   useCorsProxy: true,
   showByline: true,
 };
@@ -40,7 +38,6 @@ export default function ConfessionsOptions({ data, onChange }: WidgetOptionsProp
     rotationSeconds: clamp(toNumber(data?.rotationSeconds, DEFAULTS.rotationSeconds), 4, 120),
     cacheTtlSeconds: clamp(toNumber(data?.cacheTtlSeconds, DEFAULTS.cacheTtlSeconds), 30, 3600),
     batchRefreshMinutes: clamp(toNumber(data?.batchRefreshMinutes, DEFAULTS.batchRefreshMinutes), 0, 1440),
-    corsProxy: (data?.corsProxy as string) ?? DEFAULTS.corsProxy,
     useCorsProxy: (data?.useCorsProxy as boolean) ?? DEFAULTS.useCorsProxy,
     showByline: (data?.showByline as boolean) ?? DEFAULTS.showByline,
   };
@@ -151,16 +148,7 @@ export default function ConfessionsOptions({ data, onChange }: WidgetOptionsProp
           checked={state.useCorsProxy}
           onChange={handleChange}
         />
-        {state.useCorsProxy ? (
-          <FormInput
-            label="CORS Proxy (optional)"
-            name="corsProxy"
-            type="text"
-            value={state.corsProxy}
-            placeholder="Leave blank to use global setting"
-            onChange={handleChange}
-          />
-        ) : (
+        {!state.useCorsProxy && (
           <div className="text-sm text-[var(--ui-text-muted)]">
             Proxy disabled for this widget. Requests are made directly to the source URLs.
           </div>

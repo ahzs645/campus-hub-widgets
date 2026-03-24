@@ -15,14 +15,12 @@ const FIRE_CENTRES = [
 interface FireHazardData {
   fireCentre: string;
   refreshInterval: number;
-  corsProxy: string;
 }
 
 export default function FireHazardOptions({ data, onChange }: WidgetOptionsProps) {
   const [state, setState] = useState<FireHazardData>({
     fireCentre: (data?.fireCentre as string) ?? 'Cariboo Fire Centre',
     refreshInterval: (data?.refreshInterval as number) ?? 30,
-    corsProxy: (data?.corsProxy as string) ?? '',
   });
 
   useEffect(() => {
@@ -30,7 +28,6 @@ export default function FireHazardOptions({ data, onChange }: WidgetOptionsProps
       setState({
         fireCentre: (data.fireCentre as string) ?? 'Cariboo Fire Centre',
         refreshInterval: (data.refreshInterval as number) ?? 30,
-        corsProxy: (data.corsProxy as string) ?? '',
       });
     }
   }, [data]);
@@ -69,18 +66,6 @@ export default function FireHazardOptions({ data, onChange }: WidgetOptionsProps
           summary.
         </div>
 
-        <FormInput
-          label="CORS Proxy (required)"
-          name="corsProxy"
-          type="text"
-          value={state.corsProxy}
-          placeholder="https://corsproxy.io/?"
-          onChange={handleChange}
-        />
-        <div className="text-xs text-[var(--ui-text-muted)] text-center">
-          A CORS proxy is required to fetch data from the BC Government site.
-          Without a proxy, mock data will be shown.
-        </div>
       </div>
 
       <div className="space-y-4 border-t border-[color:var(--ui-item-border)] pt-6">

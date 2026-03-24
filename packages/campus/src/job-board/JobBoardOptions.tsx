@@ -44,7 +44,6 @@ export default function JobBoardOptions({ data, onChange }: WidgetOptionsProps) 
       setState({
         apiUrl: (data.apiUrl as string) ?? '',
         sourceType: (data.sourceType as string) ?? 'json',
-        corsProxy: (data.corsProxy as string) ?? '',
         cacheTtlSeconds: (data.cacheTtlSeconds as number) ?? 120,
         speed: (data.speed as number) ?? 35,
         scale: (data.scale as number) ?? 1,
@@ -93,14 +92,6 @@ export default function JobBoardOptions({ data, onChange }: WidgetOptionsProps) 
           onChange={handleChange}
         />
 
-        <FormInput
-          label="CORS Proxy (optional)"
-          name="corsProxy"
-          type="text"
-          value={state.corsProxy}
-          placeholder="https://corsproxy.io/?"
-          onChange={handleChange}
-        />
       </div>
 
       {/* QR Code */}

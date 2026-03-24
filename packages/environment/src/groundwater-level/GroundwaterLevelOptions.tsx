@@ -21,7 +21,6 @@ interface GwOptionsData {
   dataSet: string;
   displayMode: 'current' | 'history';
   refreshInterval: number;
-  corsProxy: string;
 }
 
 export default function GroundwaterLevelOptions({ data, onChange }: WidgetOptionsProps) {
@@ -30,7 +29,6 @@ export default function GroundwaterLevelOptions({ data, onChange }: WidgetOption
     dataSet: (data?.dataSet as string) ?? '',
     displayMode: (data?.displayMode as 'current' | 'history') ?? 'current',
     refreshInterval: (data?.refreshInterval as number) ?? 30,
-    corsProxy: (data?.corsProxy as string) ?? '',
   });
 
   const [presetValue, setPresetValue] = useState(() => {
@@ -46,7 +44,6 @@ export default function GroundwaterLevelOptions({ data, onChange }: WidgetOption
         dataSet: (data.dataSet as string) ?? '',
         displayMode: (data.displayMode as 'current' | 'history') ?? 'current',
         refreshInterval: (data.refreshInterval as number) ?? 30,
-        corsProxy: (data.corsProxy as string) ?? '',
       });
       setPresetValue(WELL_PRESETS.some((p) => p.value === loc) ? loc : 'custom');
     }
@@ -135,21 +132,8 @@ export default function GroundwaterLevelOptions({ data, onChange }: WidgetOption
 
       <div className="space-y-4 border-t border-[color:var(--ui-item-border)] pt-6">
         <h3 className="font-semibold text-[var(--ui-text)] text-center">
-          Connection
+          Settings
         </h3>
-
-        <FormInput
-          label="CORS Proxy (required)"
-          name="corsProxy"
-          type="text"
-          value={state.corsProxy}
-          placeholder="https://corsproxy.io/?"
-          onChange={handleChange}
-        />
-        <div className="text-xs text-[var(--ui-text-muted)] text-center">
-          A CORS proxy is required to access the BC AQUARIUS platform from
-          the browser. Without it, mock data will be shown.
-        </div>
 
         <FormInput
           label="Refresh Interval (minutes)"

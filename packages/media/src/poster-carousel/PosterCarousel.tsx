@@ -19,7 +19,6 @@ interface PosterCarouselConfig {
   posters?: Poster[];
   dataSource?: DataSource;
   maxStories?: number;
-  corsProxy?: string;
   refreshInterval?: number;
 }
 
@@ -90,13 +89,12 @@ const parseUNBCNewsPage = (html: string, maxStories: number): Poster[] => {
   return posters;
 };
 
-export default function PosterCarousel({ config, theme, corsProxy: globalCorsProxy }: WidgetComponentProps) {
+export default function PosterCarousel({ config, theme }: WidgetComponentProps) {
   const carouselConfig = config as PosterCarouselConfig | undefined;
   const rotationSeconds = carouselConfig?.rotationSeconds ?? 10;
   const dataSource = carouselConfig?.dataSource ?? 'default';
   const apiUrl = carouselConfig?.apiUrl;
   const maxStories = carouselConfig?.maxStories ?? 5;
-  const corsProxy = carouselConfig?.corsProxy?.trim() || globalCorsProxy || '';
   const refreshInterval = carouselConfig?.refreshInterval ?? 30; // minutes
 
   const [posters, setPosters] = useState<Poster[]>(carouselConfig?.posters ?? DEFAULT_POSTERS);
@@ -144,7 +142,7 @@ export default function PosterCarousel({ config, theme, corsProxy: globalCorsPro
 
     const fetchNews = async () => {
       try {
-        const proxiedUrl = buildProxyUrl(corsProxy, UNBC_NEWS_URL);
+        const proxiedUrl = buildProxyUrl(UNBC_NEWS_URL);
         const { text } = await fetchTextWithCache(proxiedUrl, {
           cacheKey: buildCacheKey('unbc-news', UNBC_NEWS_URL),
           ttlMs: refreshInterval * 60 * 1000,
@@ -168,7 +166,7 @@ export default function PosterCarousel({ config, theme, corsProxy: globalCorsPro
     fetchNews();
     const interval = setInterval(fetchNews, refreshInterval * 60 * 1000);
     return () => clearInterval(interval);
-  }, [dataSource, corsProxy, maxStories, refreshInterval]);
+  }, [dataSource, maxStories, refreshInterval]);
 
   const nextSlide = useCallback(() => {
     setIsTransitioning(true);
