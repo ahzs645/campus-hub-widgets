@@ -291,7 +291,12 @@ export default function GroundwaterLevel({
       setError(null);
 
       // Try the Publish API first
-      const apiData = await fetchViaPublishApi();
+      let apiData: GwData | null = null;
+      try {
+        apiData = await fetchViaPublishApi();
+      } catch {
+        // Publish API may require auth — fall through to WebPortal scrape
+      }
       if (apiData) {
         setData(apiData);
         setLastUpdated(new Date());
