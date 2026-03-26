@@ -9,6 +9,7 @@ import './aurora-forecast/AuroraForecast';
 import './drought-level/DroughtLevel';
 import './groundwater-level/GroundwaterLevel';
 import './satellite-view/SatelliteView';
+import './sunset-sunrise/SunsetSunrise';
 
 // Register lazy loaders for display mode
 registerWidgetLoader('weather', () => import('./weather/Weather'));
@@ -19,3 +20,4 @@ registerWidgetLoader('aurora-forecast', () => import('./aurora-forecast/AuroraFo
 registerWidgetLoader('drought-level', () => import('./drought-level/DroughtLevel'));
 registerWidgetLoader('groundwater-level', () => import('./groundwater-level/GroundwaterLevel'));
 registerWidgetLoader('satellite-view', () => import('./satellite-view/SatelliteView'));
+registerWidgetLoader('sunset-sunrise', () => import('./sunset-sunrise/SunsetSunrise'));
