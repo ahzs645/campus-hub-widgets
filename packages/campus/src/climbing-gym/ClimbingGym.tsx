@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, buildProxyUrl, fetchTextWithCache } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale } from '@firstform/campus-hub-widget-sdk';
-import { AppIcon } from '@firstform/campus-hub-widget-sdk';
+import { AppIcon, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
 import ClimbingGymOptions from './ClimbingGymOptions';
 
 interface OccupancyData {
@@ -182,10 +182,11 @@ export default function ClimbingGym({ config, theme }: WidgetComponentProps) {
   });
 
   return (
-    <div
+    <ThemedContainer
       ref={containerRef}
-      className="w-full h-full overflow-hidden"
-      style={{ backgroundColor: `${theme.primary}20` }}
+      theme={theme}
+      color="primary"
+      opacity="20"
     >
       <div
         style={{
@@ -276,7 +277,7 @@ export default function ClimbingGym({ config, theme }: WidgetComponentProps) {
           </div>
         )}
       </div>
-    </div>
+    </ThemedContainer>
   );
 }
 

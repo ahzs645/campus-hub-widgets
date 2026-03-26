@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, registerWidget, DarkContainer } from '@firstform/campus-hub-widget-sdk';
 import { MatrixLayout } from './matrix/MatrixLayout';
 import { createPendulumEngine } from './matrix/PendulumEngine';
 import { createStackEngine } from './matrix/StackEngine';
@@ -171,10 +171,7 @@ export default function NothingGlyph({ config }: WidgetComponentProps) {
   }, [mode, pixelSize, glow, brightness, canvasW, canvasH, gridW, gridH]);
 
   return (
-    <div
-      className="w-full h-full flex flex-col items-center justify-center"
-      style={{ background: '#0a0a0a', borderRadius: '4px', overflow: 'hidden' }}
-    >
+    <DarkContainer bg="#0a0a0a" radius={4} className="flex flex-col items-center justify-center">
       <div className="flex-1 flex items-center justify-center min-h-0">
         <canvas
           ref={canvasRef}
@@ -190,7 +187,7 @@ export default function NothingGlyph({ config }: WidgetComponentProps) {
       <div className="text-[10px] text-gray-500 pb-1 text-center">
         {modeMeta.name}
       </div>
-    </div>
+    </DarkContainer>
   );
 }
 

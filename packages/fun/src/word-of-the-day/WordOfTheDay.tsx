@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, registerWidget, DarkContainer } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale } from '@firstform/campus-hub-widget-sdk';
 import WordOfTheDayOptions from './WordOfTheDayOptions';
 
@@ -143,11 +143,7 @@ export default function WordOfTheDay({ config, theme }: WidgetComponentProps) {
   const word = pool[wordIndex % pool.length];
 
   return (
-    <div
-      ref={containerRef}
-      className="w-full h-full overflow-hidden"
-      style={{ backgroundColor: '#111113', borderRadius: 22 }}
-    >
+    <DarkContainer ref={containerRef} bg="#111113">
       <div
         style={{
           width: DESIGN_W,
@@ -255,7 +251,7 @@ export default function WordOfTheDay({ config, theme }: WidgetComponentProps) {
           </span>
         </div>
       </div>
-    </div>
+    </DarkContainer>
   );
 }
 

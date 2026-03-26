@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, fetchJsonWithCache } from '@firstform/campus-hub-widget-sdk';
 import { useFitScale } from '@firstform/campus-hub-widget-sdk';
-import { AppIcon } from '@firstform/campus-hub-widget-sdk';
+import { AppIcon, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
 import GoogleCalendarOptions from './GoogleCalendarOptions';
 
 interface CalendarEvent {
@@ -148,10 +148,11 @@ export default function GoogleCalendar({ config, theme }: WidgetComponentProps) 
   }
 
   return (
-    <div
+    <ThemedContainer
       ref={containerRef}
-      className="w-full h-full overflow-hidden"
-      style={{ backgroundColor: `${theme.primary}10` }}
+      theme={theme}
+      color="primary"
+      opacity="10"
     >
       <div
         style={{
@@ -238,7 +239,7 @@ export default function GoogleCalendar({ config, theme }: WidgetComponentProps) 
           ))}
         </div>
       </div>
-    </div>
+    </ThemedContainer>
   );
 }
 

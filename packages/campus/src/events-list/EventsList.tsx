@@ -2,76 +2,18 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
 import { useEvents, type CalendarEvent, buildProxyUrl } from '@firstform/campus-hub-widget-sdk';
+import {
+  ThemedCard,
+  Badge,
+  ProgressBar,
+  DotIndicator,
+  SectionHeader,
+  ScrollableList,
+  MarqueeText,
+} from '@firstform/campus-hub-widget-sdk';
 import EventsListOptions from './EventsListOptions';
 
 type Event = CalendarEvent;
-
-/**
- * Inline marquee for text that overflows its container.
- * Measures the text; if it fits, renders normally. If it overflows,
- * duplicates the text and scrolls it with a CSS animation.
- */
-function MarqueeText({
-  text,
-  className,
-  style,
-  speed = 30,
-}: {
-  text: string;
-  className?: string;
-  style?: React.CSSProperties;
-  speed?: number;
-}) {
-  const outerRef = useRef<HTMLDivElement>(null);
-  const innerRef = useRef<HTMLSpanElement>(null);
-  const [overflows, setOverflows] = useState(false);
-  const [duration, setDuration] = useState(speed);
-
-  useEffect(() => {
-    const outer = outerRef.current;
-    const inner = innerRef.current;
-    if (!outer || !inner) return;
-
-    const check = () => {
-      const ow = outer.clientWidth;
-      const iw = inner.scrollWidth;
-      const doesOverflow = iw > ow + 2; // 2px tolerance
-      setOverflows(doesOverflow);
-      if (doesOverflow) {
-        // Speed: ~40px per second
-        setDuration(iw / 40);
-      }
-    };
-
-    check();
-    const ro = new ResizeObserver(check);
-    ro.observe(outer);
-    return () => ro.disconnect();
-  }, [text]);
-
-  if (!overflows) {
-    return (
-      <div ref={outerRef} className={`overflow-hidden whitespace-nowrap ${className ?? ''}`} style={style}>
-        <span ref={innerRef}>{text}</span>
-      </div>
-    );
-  }
-
-  return (
-    <div ref={outerRef} className={`overflow-hidden whitespace-nowrap ${className ?? ''}`} style={style}>
-      <span
-        ref={innerRef}
-        className="inline-block animate-marquee"
-        style={{ animationDuration: `${duration}s` }}
-      >
-        <span>{text}</span>
-        <span className="mx-8 opacity-30">&bull;</span>
-        <span>{text}</span>
-        <span className="mx-8 opacity-30">&bull;</span>
-      </span>
-    </div>
-  );
-}
 
 type DisplayMode = 'scroll' | 'ticker' | 'paginate';
 
@@ -129,7 +71,6 @@ export default function EventsList({ config, theme }: WidgetComponentProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(3);
   const containerRef = useRef<HTMLDivElement>(null);
-  const progressRef = useRef<HTMLDivElement>(null);
 
   /* ---------- measure container & compute items per page ---------- */
 
@@ -193,28 +134,20 @@ export default function EventsList({ config, theme }: WidgetComponentProps) {
   /* ---------- shared renderers ---------- */
 
   const renderEventCard = (event: Event, index: number, grow = false) => (
-    <div
+    <ThemedCard
       key={event.id ?? index}
-      className={`p-5 pl-8 rounded-xl overflow-hidden relative${grow ? ' flex-1 min-h-0 flex flex-col justify-center' : ''}`}
-      style={{
-        backgroundColor: `${theme.primary}50`,
-      }}
+      theme={theme}
+      accentBarColor={event.color ?? theme.accent}
+      className={grow ? 'flex-1 min-h-0 flex flex-col justify-center' : ''}
     >
-      <div
-        className="absolute left-3 top-4 bottom-4 w-1 rounded-full"
-        style={{ backgroundColor: event.color ?? theme.accent }}
-      />
       <div className={`font-semibold text-white leading-snug line-clamp-2 ${grow ? 'text-2xl' : 'text-xl'}`}>
         {event.title}
       </div>
       <div className={`opacity-90 flex items-center gap-3 mt-2 flex-shrink-0 min-w-0 ${grow ? 'text-lg' : 'text-base'}`}>
         {event.date && (
-          <span
-            className={`font-bold px-3 py-1 rounded ${grow ? 'text-lg' : 'text-base'}`}
-            style={{ backgroundColor: `${theme.accent}20`, color: theme.accent }}
-          >
+          <Badge theme={theme} className={grow ? 'text-lg' : 'text-base'}>
             {event.date}
-          </span>
+          </Badge>
         )}
         {event.time && <span className="text-white/70">{event.time}</span>}
         {event.location && (
@@ -227,37 +160,22 @@ export default function EventsList({ config, theme }: WidgetComponentProps) {
           </span>
         )}
       </div>
-    </div>
+    </ThemedCard>
   );
 
   const renderDots = (count: number, active: number) => (
-    <div className="flex items-center justify-center gap-2 mt-4">
-      {Array.from({ length: count }).map((_, i) => (
-        <button
-          key={i}
-          className="w-2.5 h-2.5 rounded-full transition-all duration-300"
-          style={{
-            backgroundColor: i === active ? theme.accent : `${theme.accent}30`,
-            transform: i === active ? 'scale(1.3)' : 'scale(1)',
-          }}
-          onClick={() => setCurrentIndex(displayMode === 'paginate' ? i * itemsPerPage : i)}
-        />
-      ))}
-    </div>
+    <DotIndicator
+      theme={theme}
+      count={count}
+      active={active}
+      onSelect={(i) => setCurrentIndex(displayMode === 'paginate' ? i * itemsPerPage : i)}
+      className="mt-4"
+    />
   );
 
   const renderProgressBar = () =>
     displayMode !== 'scroll' && totalEvents > 1 && (displayMode !== 'paginate' || totalPages > 1) ? (
-      <div className="mt-3 h-1 rounded-full overflow-hidden" style={{ backgroundColor: `${theme.accent}15` }}>
-        <div
-          ref={progressRef}
-          className="h-full rounded-full"
-          style={{
-            backgroundColor: `${theme.accent}60`,
-            animation: `events-progress ${rotationSeconds}s linear infinite`,
-          }}
-        />
-      </div>
+      <ProgressBar theme={theme} durationSeconds={rotationSeconds} className="mt-3" />
     ) : null;
 
   /* ---------- render ---------- */
@@ -265,34 +183,36 @@ export default function EventsList({ config, theme }: WidgetComponentProps) {
   return (
     <div ref={containerRef} className="w-full h-full overflow-hidden flex flex-col min-h-0 p-6">
       {/* Header */}
-      <h3
-        className="flex-shrink-0 text-3xl font-bold mb-5 flex items-center gap-4"
-        style={{ color: theme.accent }}
-      >
-        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-          />
-        </svg>
-        <span className="font-display">{title}</span>
-        <div className="flex-1 h-px ml-2" style={{ backgroundColor: `${theme.accent}30` }} />
-        {displayMode !== 'scroll' && totalEvents > 1 && (
-          <span className="text-sm font-normal opacity-60 whitespace-nowrap">
-            {displayMode === 'ticker'
-              ? `${currentIndex + 1} / ${totalEvents}`
-              : `Page ${currentPage + 1} / ${totalPages}`}
-          </span>
-        )}
-      </h3>
+      <SectionHeader
+        theme={theme}
+        title={title}
+        className="mb-5"
+        icon={
+          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+            />
+          </svg>
+        }
+        trailing={
+          displayMode !== 'scroll' && totalEvents > 1 ? (
+            <span className="text-sm font-normal opacity-60 whitespace-nowrap">
+              {displayMode === 'ticker'
+                ? `${currentIndex + 1} / ${totalEvents}`
+                : `Page ${currentPage + 1} / ${totalPages}`}
+            </span>
+          ) : undefined
+        }
+      />
 
       {/* Scroll mode – original scrollable list */}
       {displayMode === 'scroll' && (
-        <div className="flex-1 space-y-3 overflow-y-auto min-h-0 hide-scrollbar pr-1">
+        <ScrollableList>
           {displayEvents.map((event, index) => renderEventCard(event, index))}
-        </div>
+        </ScrollableList>
       )}
 
       {/* Ticker mode – one event at a time, vertical slide */}

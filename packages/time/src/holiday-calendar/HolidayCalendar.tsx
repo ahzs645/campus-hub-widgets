@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, registerWidget, DarkContainer } from '@firstform/campus-hub-widget-sdk';
 import { useFitScale } from '@firstform/campus-hub-widget-sdk';
 import { DotMatrixText, textToChars, type DotChar } from '@firstform/campus-hub-widget-sdk';
 import HolidayCalendarOptions from './HolidayCalendarOptions';
@@ -164,11 +164,7 @@ export default function HolidayCalendar({ config }: WidgetComponentProps) {
     });
 
     return (
-      <div
-        ref={containerRef}
-        className="w-full h-full flex items-center justify-center overflow-hidden"
-        style={{ backgroundColor: '#E2E3E8', borderRadius: 22 }}
-      >
+      <DarkContainer ref={containerRef} bg="#E2E3E8" className="flex items-center justify-center">
         <div
           style={{ transform: `scale(${scale})`, transformOrigin: 'center center', width: 220, height: 220 }}
           className="flex flex-col items-center justify-center gap-3 px-3"
@@ -180,7 +176,7 @@ export default function HolidayCalendar({ config }: WidgetComponentProps) {
             ))}
           </div>
         </div>
-      </div>
+      </DarkContainer>
     );
   }
 
@@ -188,11 +184,7 @@ export default function HolidayCalendar({ config }: WidgetComponentProps) {
   const emojis = getEmojis(holiday, month);
 
   return (
-    <div
-      ref={containerRef}
-      className="w-full h-full flex items-center justify-center overflow-hidden"
-      style={{ backgroundColor: '#1B1B1D', borderRadius: 22 }}
-    >
+    <DarkContainer ref={containerRef} className="flex items-center justify-center">
       <div
         style={{ transform: `scale(${scale})`, transformOrigin: 'center center', width: 220, height: 220 }}
         className="flex flex-col items-center justify-center gap-2 px-3"
@@ -228,7 +220,7 @@ export default function HolidayCalendar({ config }: WidgetComponentProps) {
           />
         </div>
       </div>
-    </div>
+    </DarkContainer>
   );
 }
 

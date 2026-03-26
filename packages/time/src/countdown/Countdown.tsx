@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, registerWidget, ThemedContainer, PillIndicator } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale } from '@firstform/campus-hub-widget-sdk';
 import CountdownOptions from './CountdownOptions';
 
@@ -266,10 +266,11 @@ export default function Countdown({ config, theme }: WidgetComponentProps) {
   const eventEmoji = currentMilestone?.emoji || '';
 
   return (
-    <div
+    <ThemedContainer
       ref={containerRef}
-      className="w-full h-full overflow-hidden"
-      style={{ backgroundColor: `${theme.primary}20` }}
+      theme={theme}
+      color="primary"
+      opacity="20"
     >
       <div
         style={{
@@ -340,21 +341,15 @@ export default function Countdown({ config, theme }: WidgetComponentProps) {
 
         {/* Dot indicators for multiple milestones */}
         {activeMilestones.length > 1 && (
-          <div className="flex gap-1.5 mt-3">
-            {activeMilestones.map((_, i) => (
-              <div
-                key={i}
-                className="h-1.5 rounded-full transition-all duration-300"
-                style={{
-                  width: i === normalizedActiveIndex ? 20 : 8,
-                  backgroundColor: i === normalizedActiveIndex ? theme.accent : 'rgba(255,255,255,0.3)',
-                }}
-              />
-            ))}
-          </div>
+          <PillIndicator
+            theme={theme}
+            count={activeMilestones.length}
+            active={normalizedActiveIndex}
+            className="mt-3"
+          />
         )}
       </div>
-    </div>
+    </ThemedContainer>
   );
 }
 

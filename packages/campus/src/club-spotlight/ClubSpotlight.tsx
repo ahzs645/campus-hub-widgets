@@ -1,9 +1,9 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import QRCodeLib from 'qrcode';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, registerWidget, PillIndicator } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, buildProxyUrl, fetchJsonWithCache, fetchTextWithCache } from '@firstform/campus-hub-widget-sdk';
-import { useAdaptiveFitScale } from '@firstform/campus-hub-widget-sdk';
+import { useAdaptiveFitScale, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
 import ClubSpotlightOptions from './ClubSpotlightOptions';
 
 interface ClubItem {
@@ -279,10 +279,11 @@ export default function ClubSpotlight({ config, theme }: WidgetComponentProps) {
   });
 
   return (
-    <div
+    <ThemedContainer
       ref={containerRef}
-      className="w-full h-full overflow-hidden"
-      style={{ backgroundColor: `${theme.primary}20` }}
+      theme={theme}
+      color="primary"
+      opacity="20"
     >
       <div
         style={{
@@ -342,18 +343,12 @@ export default function ClubSpotlight({ config, theme }: WidgetComponentProps) {
 
           {/* Progress dots */}
           {clubs.length > 1 && (
-            <div className={`flex gap-1.5 mt-2 ${!isLandscape ? 'justify-center' : ''}`}>
-              {clubs.map((_, i) => (
-                <div
-                  key={i}
-                  className="h-1.5 rounded-full transition-all duration-300"
-                  style={{
-                    width: i === activeIndex ? 20 : 8,
-                    backgroundColor: i === activeIndex ? theme.accent : 'rgba(255,255,255,0.3)',
-                  }}
-                />
-              ))}
-            </div>
+            <PillIndicator
+              theme={theme}
+              count={clubs.length}
+              active={activeIndex}
+              className={`mt-2 ${!isLandscape ? 'justify-center' : ''}`}
+            />
           )}
 
           {/* Error / defaults notice */}
@@ -377,7 +372,7 @@ export default function ClubSpotlight({ config, theme }: WidgetComponentProps) {
           </div>
         )}
       </div>
-    </div>
+    </ThemedContainer>
   );
 }
 

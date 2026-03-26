@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { FormInput, FormSelect, FormSwitch } from '@firstform/campus-hub-widget-sdk';
+import { FormInput, FormSelect, FormSwitch, OptionsPanel, OptionsSection } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
 interface TableData {
@@ -48,10 +48,9 @@ export default function SimpleTableOptions({ data, onChange }: WidgetOptionsProp
   };
 
   return (
-    <div className="space-y-6">
+    <OptionsPanel>
       {/* Data Source */}
-      <div className="space-y-4">
-        <h3 className="font-semibold text-[var(--ui-text)]">Data Source</h3>
+      <OptionsSection title="Data Source">
 
         <FormSelect
           label="Source"
@@ -105,11 +104,10 @@ export default function SimpleTableOptions({ data, onChange }: WidgetOptionsProp
           placeholder="No title"
           onChange={handleChange}
         />
-      </div>
+      </OptionsSection>
 
       {/* Appearance */}
-      <div className="space-y-4 border-t border-[color:var(--ui-item-border)] pt-6">
-        <h3 className="font-semibold text-[var(--ui-text)]">Appearance</h3>
+      <OptionsSection title="Appearance" divider>
 
         <FormSelect
           label="Header Style"
@@ -129,12 +127,11 @@ export default function SimpleTableOptions({ data, onChange }: WidgetOptionsProp
           checked={state.striped}
           onChange={handleChange}
         />
-      </div>
+      </OptionsSection>
 
       {/* Refresh (URL source only) */}
       {state.source === 'url' && (
-        <div className="space-y-4 border-t border-[color:var(--ui-item-border)] pt-6">
-          <h3 className="font-semibold text-[var(--ui-text)]">Refresh</h3>
+        <OptionsSection title="Refresh" divider>
 
           <FormSelect
             label="Auto-refresh every"
@@ -155,8 +152,8 @@ export default function SimpleTableOptions({ data, onChange }: WidgetOptionsProp
           checked={state.useCorsProxy}
           onChange={handleChange}
         />
-        </div>
+        </OptionsSection>
       )}
-    </div>
+    </OptionsPanel>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, registerWidget, PillIndicator } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, buildProxyUrl, fetchJsonWithCache, fetchTextWithCache } from '@firstform/campus-hub-widget-sdk';
 import ConfessionsOptions from './ConfessionsOptions';
 
@@ -330,21 +330,18 @@ export default function Confessions({ config, theme }: WidgetComponentProps) {
         </div>
 
         <div className={`${isCompact ? 'px-4 pb-3' : 'px-5 pb-4'} flex items-end justify-between gap-3`}>
-          <div className="flex gap-1.5 min-w-0">
-            {items.length > 1 && items.map((item, index) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setActiveIndex(index)}
-                aria-label={`Show confession ${index + 1}`}
-                className="h-1.5 rounded-full transition-all shrink-0"
-                style={{
-                  width: index === activeIndex ? '26px' : '10px',
-                  backgroundColor: index === activeIndex ? theme.accent : `${theme.accent}55`,
-                }}
-              />
-            ))}
-          </div>
+          {items.length > 1 && (
+            <PillIndicator
+              theme={theme}
+              count={items.length}
+              active={activeIndex}
+              onSelect={(index) => setActiveIndex(index)}
+              activeWidth={26}
+              inactiveWidth={10}
+              inactiveColor={`${theme.accent}55`}
+              className="min-w-0"
+            />
+          )}
 
           <div className="flex items-end gap-3 shrink-0">
             {showByline && current?.by && (

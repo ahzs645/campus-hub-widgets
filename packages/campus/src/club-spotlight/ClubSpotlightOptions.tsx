@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { FormInput, FormSwitch } from '@firstform/campus-hub-widget-sdk';
+import { FormInput, FormSwitch, OptionsPanel, OptionsSection, OptionsPreview } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
 const DEFAULT_API_URL = 'https://overtheedge.unbc.ca/wp-json/wp/v2/organization?per_page=100&_embed=wp:featuredmedia&org_status=181,183,182';
@@ -47,9 +47,8 @@ export default function ClubSpotlightOptions({ data, onChange }: WidgetOptionsPr
   };
 
   return (
-    <div className="space-y-6 w-full max-w-xl mx-auto">
-      <div className="space-y-4">
-        <h3 className="font-semibold text-[var(--ui-text)] text-center">Data Source</h3>
+    <OptionsPanel>
+      <OptionsSection title="Data Source">
 
         <FormInput
           label="WP REST API URL"
@@ -83,10 +82,9 @@ export default function ClubSpotlightOptions({ data, onChange }: WidgetOptionsPr
           onChange={handleChange}
         />
 
-      </div>
+      </OptionsSection>
 
-      <div className="space-y-4 border-t border-[color:var(--ui-item-border)] pt-6">
-        <h3 className="font-semibold text-[var(--ui-text)] text-center">Display Settings</h3>
+      <OptionsSection title="Display Settings" divider>
 
         <FormInput
           label="Rotation Speed (seconds)"
@@ -107,11 +105,10 @@ export default function ClubSpotlightOptions({ data, onChange }: WidgetOptionsPr
           max={1440}
           onChange={handleChange}
         />
-      </div>
+      </OptionsSection>
 
       {/* QR Code */}
-      <div className="space-y-4 border-t border-[color:var(--ui-item-border)] pt-6">
-        <h3 className="font-semibold text-[var(--ui-text)] text-center">QR Code</h3>
+      <OptionsSection title="QR Code" divider>
 
         <FormSwitch
           label="Show QR Code"
@@ -134,12 +131,10 @@ export default function ClubSpotlightOptions({ data, onChange }: WidgetOptionsPr
             onChange={handleChange}
           />
         )}
-      </div>
+      </OptionsSection>
 
       {/* Preview */}
-      <div className="border-t border-[color:var(--ui-item-border)] pt-6">
-        <h4 className="font-semibold text-[var(--ui-text)] mb-4 text-center">Preview</h4>
-        <div className="bg-[var(--ui-item-bg)] rounded-xl p-6 flex flex-col items-center">
+      <OptionsPreview>
           <div className="text-xs font-semibold tracking-wide uppercase mb-3" style={{ color: 'var(--color-accent)' }}>
             Club Spotlight
           </div>
@@ -160,8 +155,7 @@ export default function ClubSpotlightOptions({ data, onChange }: WidgetOptionsPr
               />
             ))}
           </div>
-        </div>
-      </div>
-    </div>
+      </OptionsPreview>
+    </OptionsPanel>
   );
 }

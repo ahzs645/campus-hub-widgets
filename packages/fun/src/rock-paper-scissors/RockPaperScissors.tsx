@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, registerWidget, DarkContainer } from '@firstform/campus-hub-widget-sdk';
 import { useFitScale } from '@firstform/campus-hub-widget-sdk';
 import RockPaperScissorsOptions from './RockPaperScissorsOptions';
 
@@ -70,11 +70,7 @@ export default function RockPaperScissors({ config }: WidgetComponentProps) {
   const choice = CHOICES[currentIndex];
 
   return (
-    <div
-      ref={containerRef}
-      className="w-full h-full overflow-hidden flex items-center justify-center"
-      style={{ backgroundColor: '#1B1B1D', borderRadius: 22, padding: 16 }}
-    >
+    <DarkContainer ref={containerRef} className="flex items-center justify-center" style={{ padding: 16 }}>
       <style>{`
         @keyframes rpsShake {
           0%, 100% { transform: translateY(0); }
@@ -124,7 +120,7 @@ export default function RockPaperScissors({ config }: WidgetComponentProps) {
           {choice.name}
         </div>
       </div>
-    </div>
+    </DarkContainer>
   );
 }
 

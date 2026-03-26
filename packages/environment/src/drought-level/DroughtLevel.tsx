@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, buildProxyUrl, fetchJsonWithCache, getCorsProxyUrl } from '@firstform/campus-hub-widget-sdk';
-import { useAdaptiveFitScale } from '@firstform/campus-hub-widget-sdk';
+import { useAdaptiveFitScale, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
 import DroughtLevelOptions from './DroughtLevelOptions';
 
 interface DroughtLevelConfig {
@@ -360,10 +360,11 @@ export default function DroughtLevel({
   };
 
   return (
-    <div
+    <ThemedContainer
       ref={containerRef}
-      className="w-full h-full overflow-hidden"
-      style={{ backgroundColor: `${theme.primary}20` }}
+      theme={theme}
+      color="primary"
+      opacity="20"
     >
       <div
         style={{
@@ -402,7 +403,7 @@ export default function DroughtLevel({
           </div>
         )}
       </div>
-    </div>
+    </ThemedContainer>
   );
 }
 

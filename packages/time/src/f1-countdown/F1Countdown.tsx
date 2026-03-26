@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, registerWidget, DarkContainer } from '@firstform/campus-hub-widget-sdk';
 import { useFitScale } from '@firstform/campus-hub-widget-sdk';
 import F1CountdownOptions from './F1CountdownOptions';
 
@@ -136,11 +136,7 @@ export default function F1Countdown({ config }: WidgetComponentProps) {
   }
 
   return (
-    <div
-      ref={containerRef}
-      className="w-full h-full overflow-hidden"
-      style={{ backgroundColor: '#1B1B1D' }}
-    >
+    <DarkContainer ref={containerRef}>
       <div
         style={{
           width: DESIGN_W,
@@ -243,7 +239,7 @@ export default function F1Countdown({ config }: WidgetComponentProps) {
           </>
         )}
       </div>
-    </div>
+    </DarkContainer>
   );
 }
 

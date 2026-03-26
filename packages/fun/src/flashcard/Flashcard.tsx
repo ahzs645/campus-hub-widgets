@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, registerWidget, DarkContainer } from '@firstform/campus-hub-widget-sdk';
 import { useFitScale } from '@firstform/campus-hub-widget-sdk';
 import FlashcardOptions from './FlashcardOptions';
 
@@ -217,11 +217,7 @@ export default function Flashcard({ config }: WidgetComponentProps) {
   }, [mode, cycleInterval, words.length]);
 
   return (
-    <div
-      ref={containerRef}
-      className="w-full h-full overflow-hidden flex items-center justify-center"
-      style={{ backgroundColor: '#1B1B1D', borderRadius: 22 }}
-    >
+    <DarkContainer ref={containerRef} className="flex items-center justify-center">
       <div
         style={{
           width: 200,
@@ -340,7 +336,7 @@ export default function Flashcard({ config }: WidgetComponentProps) {
           {mode === 'daily' ? 'WORD OF THE DAY' : `${String(((cardIndex % words.length) + 1)).padStart(2, '0')}/${String(words.length).padStart(2, '0')}`}
         </div>
       </div>
-    </div>
+    </DarkContainer>
   );
 }
 

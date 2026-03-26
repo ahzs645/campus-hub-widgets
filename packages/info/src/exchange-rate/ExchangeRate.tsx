@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, registerWidget, Skeleton } from '@firstform/campus-hub-widget-sdk';
 import { useFitScale } from '@firstform/campus-hub-widget-sdk';
 import ExchangeRateOptions from './ExchangeRateOptions';
 
@@ -127,10 +127,7 @@ export default function ExchangeRate({ config }: WidgetComponentProps) {
             Unable to load rates
           </div>
         ) : !rates ? (
-          <div
-            className="flex-1 rounded-2xl animate-pulse"
-            style={{ backgroundColor: '#2A2A2E' }}
-          />
+          <Skeleton width="w-full" height="h-full" rounded="rounded-2xl" className="flex-1" />
         ) : (
           <div
             className="flex-1 flex items-stretch gap-2 transition-all duration-300 ease-in-out"

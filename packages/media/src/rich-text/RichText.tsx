@@ -1,6 +1,6 @@
 'use client';
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, registerWidget, FadeOverlay } from '@firstform/campus-hub-widget-sdk';
 import RichTextOptions from './RichTextOptions';
 
 interface RichTextConfig {
@@ -133,22 +133,7 @@ export default function RichText({ config, theme }: WidgetComponentProps) {
       )}
 
       {/* Top and bottom fade gradients */}
-      {needsScroll && (
-        <>
-          <div
-            className="absolute top-0 left-0 right-0 h-8 pointer-events-none"
-            style={{
-              background: `linear-gradient(to bottom, ${theme.background || '#1a1a2e'}, transparent)`,
-            }}
-          />
-          <div
-            className="absolute bottom-0 left-0 right-0 h-8 pointer-events-none"
-            style={{
-              background: `linear-gradient(to top, ${theme.background || '#1a1a2e'}, transparent)`,
-            }}
-          />
-        </>
-      )}
+      {needsScroll && <FadeOverlay theme={theme} height="h-8" />}
     </div>
   );
 }

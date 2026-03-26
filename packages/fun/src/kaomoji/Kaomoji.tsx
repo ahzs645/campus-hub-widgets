@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, registerWidget, DarkContainer } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale } from '@firstform/campus-hub-widget-sdk';
 import KaomojiOptions from './KaomojiOptions';
 
@@ -75,11 +75,7 @@ export default function Kaomoji({ config: rawConfig }: WidgetComponentProps) {
   const moodColor = MOOD_COLORS[current.mood] ?? '#FDFBFF';
 
   return (
-    <div
-      ref={containerRef}
-      className="w-full h-full overflow-hidden"
-      style={{ backgroundColor: '#1B1B1D', borderRadius: 22 }}
-    >
+    <DarkContainer ref={containerRef}>
       <div
         style={{
           width: DESIGN_W,
@@ -115,7 +111,7 @@ export default function Kaomoji({ config: rawConfig }: WidgetComponentProps) {
           {current.mood}
         </div>
       </div>
-    </div>
+    </DarkContainer>
   );
 }
 

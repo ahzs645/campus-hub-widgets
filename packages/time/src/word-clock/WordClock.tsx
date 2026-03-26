@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, registerWidget, ThemedContainer, Skeleton } from '@firstform/campus-hub-widget-sdk';
 import { useFitScale } from '@firstform/campus-hub-widget-sdk';
 import WordClockOptions from './WordClockOptions';
 
@@ -134,7 +134,7 @@ export default function WordClock({ config, theme }: WidgetComponentProps) {
   if (!time) {
     return (
       <div ref={containerRef} className="w-full h-full flex items-center justify-center">
-        <div className="w-20 h-20 rounded animate-pulse" style={{ backgroundColor: `${theme.accent}20` }} />
+        <Skeleton theme={theme} />
       </div>
     );
   }
@@ -148,10 +148,12 @@ export default function WordClock({ config, theme }: WidgetComponentProps) {
   const extraMinutes = minutes % 5;
 
   return (
-    <div
+    <ThemedContainer
       ref={containerRef}
-      className="w-full h-full overflow-hidden flex items-center justify-center"
-      style={{ backgroundColor: `${theme.primary}08` }}
+      theme={theme}
+      color="primary"
+      opacity="08"
+      className="flex items-center justify-center"
     >
       <div
         style={{
@@ -198,7 +200,7 @@ export default function WordClock({ config, theme }: WidgetComponentProps) {
           </div>
         )}
       </div>
-    </div>
+    </ThemedContainer>
   );
 }
 

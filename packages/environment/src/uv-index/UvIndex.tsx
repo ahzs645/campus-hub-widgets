@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, fetchJsonWithCache } from '@firstform/campus-hub-widget-sdk';
-import { useAdaptiveFitScale } from '@firstform/campus-hub-widget-sdk';
+import { useAdaptiveFitScale, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
 import UvIndexOptions from './UvIndexOptions';
 
 interface UvIndexConfig {
@@ -182,10 +182,11 @@ export default function UvIndex({ config, theme }: WidgetComponentProps) {
   const markerPercent = Math.min(100, (data.value / 14) * 100);
 
   return (
-    <div
+    <ThemedContainer
       ref={containerRef}
-      className="w-full h-full overflow-hidden"
-      style={{ backgroundColor: `${theme.primary}20` }}
+      theme={theme}
+      color="primary"
+      opacity="20"
     >
       <div
         style={{
@@ -266,7 +267,7 @@ export default function UvIndex({ config, theme }: WidgetComponentProps) {
           </div>
         )}
       </div>
-    </div>
+    </ThemedContainer>
   );
 }
 

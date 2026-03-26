@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, buildProxyUrl, fetchJsonWithCache, fetchTextWithCache } from '@firstform/campus-hub-widget-sdk';
-import { useAdaptiveFitScale } from '@firstform/campus-hub-widget-sdk';
+import { useAdaptiveFitScale, ThemedContainer, IconText } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon } from '@firstform/campus-hub-widget-sdk';
 import type { IconName } from '@firstform/campus-hub-widget-sdk';
 import WeatherOptions from './WeatherOptions';
@@ -331,10 +331,11 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
   });
 
   return (
-    <div
+    <ThemedContainer
       ref={containerRef}
-      className="w-full h-full overflow-hidden"
-      style={{ backgroundColor: `${theme.primary}20` }}
+      theme={theme}
+      color="primary"
+      opacity="20"
     >
       <div
         style={{
@@ -399,37 +400,32 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
         {(show.humidity || (show.wind && show.temperature) || show.pressure || show.dewPoint || show.precipitation) && (
           <div className={`mt-4 flex flex-wrap gap-x-5 gap-y-1 text-base text-white/60 ${!isLandscape ? 'justify-center' : ''}`}>
             {show.humidity && (
-              <div className="flex items-center gap-1.5">
-                <AppIcon name="droplets" className="w-4 h-4" />
+              <IconText icon={<AppIcon name="droplets" className="w-4 h-4" />} gap="1.5">
                 <span>{weather.humidity}%</span>
-              </div>
+              </IconText>
             )}
             {show.wind && show.temperature && (
-              <div className="flex items-center gap-1.5">
-                <AppIcon name="wind" className="w-4 h-4" />
+              <IconText icon={<AppIcon name="wind" className="w-4 h-4" />} gap="1.5">
                 <span>{weather.wind} {windUnit}</span>
                 {show.windGust && weather.windGust != null && (
                   <span className="text-white/40">(gust {weather.windGust})</span>
                 )}
-              </div>
+              </IconText>
             )}
             {show.pressure && weather.pressure != null && (
-              <div className="flex items-center gap-1.5">
-                <AppIcon name="gauge" className="w-4 h-4" />
+              <IconText icon={<AppIcon name="gauge" className="w-4 h-4" />} gap="1.5">
                 <span>{weather.pressure} hPa</span>
-              </div>
+              </IconText>
             )}
             {show.dewPoint && weather.dewPoint != null && (
-              <div className="flex items-center gap-1.5">
-                <AppIcon name="droplets" className="w-4 h-4" />
+              <IconText icon={<AppIcon name="droplets" className="w-4 h-4" />} gap="1.5">
                 <span>Dew {weather.dewPoint}{tempUnit}</span>
-              </div>
+              </IconText>
             )}
             {show.precipitation && weather.precip != null && (
-              <div className="flex items-center gap-1.5">
-                <AppIcon name="cloudRain" className="w-4 h-4" />
+              <IconText icon={<AppIcon name="cloudRain" className="w-4 h-4" />} gap="1.5">
                 <span>{weather.precip} mm</span>
-              </div>
+              </IconText>
             )}
           </div>
         )}
@@ -448,7 +444,7 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
           </div>
         )}
       </div>
-    </div>
+    </ThemedContainer>
   );
 }
 

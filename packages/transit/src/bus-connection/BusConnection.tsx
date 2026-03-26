@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { usePixelDisplay } from 'react-pixel-display';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, registerWidget, DarkContainer } from '@firstform/campus-hub-widget-sdk';
 import { renderTransitDisplay, loadPixollettaFont } from './transit/renderer';
 import { createLiveTripProvider, getScheduledTrips, type Trip } from './transit/gtfsService';
 import { SERVICE_DATES } from './transit/gtfsData';
@@ -171,15 +171,7 @@ export default function BusConnection({ config, theme }: WidgetComponentProps) {
   }, [fontReady, displaySize, displayW, displayH, glow, scrollHeadsigns, departureTimeOnly, hideStationPrefix, entrySpacing, rendererRef]);
 
   return (
-    <div
-      className="w-full h-full"
-      style={{
-        background: '#0a0a0a',
-        borderRadius: '4px',
-        overflow: 'hidden',
-        padding: padding > 0 ? `${padding}px` : undefined,
-      }}
-    >
+    <DarkContainer bg="#0a0a0a" radius={4} style={{ padding: padding > 0 ? `${padding}px` : undefined }}>
       <div
         ref={wrapperRef}
         className="w-full h-full"
@@ -194,7 +186,7 @@ export default function BusConnection({ config, theme }: WidgetComponentProps) {
           }}
         />
       </div>
-    </div>
+    </DarkContainer>
   );
 }
 

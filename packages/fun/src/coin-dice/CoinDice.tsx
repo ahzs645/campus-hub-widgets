@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, registerWidget, DarkContainer } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale } from '@firstform/campus-hub-widget-sdk';
 import CoinDiceOptions from './CoinDiceOptions';
 
@@ -101,11 +101,7 @@ export default function CoinDice({ config, theme }: WidgetComponentProps) {
   const barHeight = isLandscape ? Math.max(30, ACTUAL_H * 0.2) : 40;
 
   return (
-    <div
-      ref={containerRef}
-      className="w-full h-full overflow-hidden"
-      style={{ backgroundColor: '#111113', borderRadius: 22 }}
-    >
+    <DarkContainer ref={containerRef} bg="#111113">
       <div
         style={{
           width: DESIGN_W,
@@ -311,7 +307,7 @@ export default function CoinDice({ config, theme }: WidgetComponentProps) {
           </>
         )}
       </div>
-    </div>
+    </DarkContainer>
   );
 }
 

@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, registerWidget, DarkContainer } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale } from '@firstform/campus-hub-widget-sdk';
 import ISSTrackerOptions from './ISSTrackerOptions';
 
@@ -163,11 +163,7 @@ export default function ISSTracker({ config }: WidgetComponentProps) {
   );
 
   return (
-    <div
-      ref={containerRef}
-      className="w-full h-full overflow-hidden"
-      style={{ backgroundColor: '#1B1B1D', borderRadius: 22 }}
-    >
+    <DarkContainer ref={containerRef}>
       <style>{`
         @keyframes iss-pulse {
           0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
@@ -221,7 +217,7 @@ export default function ISSTracker({ config }: WidgetComponentProps) {
           )
         )}
       </div>
-    </div>
+    </DarkContainer>
   );
 }
 

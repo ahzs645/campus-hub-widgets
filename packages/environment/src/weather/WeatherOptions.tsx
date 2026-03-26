@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { FormInput, FormSelect, FormSwitch } from '@firstform/campus-hub-widget-sdk';
+import { FormInput, FormSelect, FormSwitch, OptionsPanel, OptionsSection, OptionsPreview } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
@@ -112,10 +112,9 @@ export default function WeatherOptions({ data, onChange }: WidgetOptionsProps) {
   const isUNBC = state.dataSource === 'unbc-rooftop';
 
   return (
-    <div className="space-y-6">
+    <OptionsPanel>
       {/* Data Source */}
-      <div className="space-y-4">
-        <h3 className="font-semibold text-[var(--ui-text)]">Data Source</h3>
+      <OptionsSection title="Data Source">
 
         <FormSelect
           label="Weather Source"
@@ -134,11 +133,10 @@ export default function WeatherOptions({ data, onChange }: WidgetOptionsProps) {
             Provides 1-minute averaged readings including temperature, humidity, wind, and pressure.
           </div>
         )}
-      </div>
+      </OptionsSection>
 
       {/* Settings */}
-      <div className="space-y-4 border-t border-[color:var(--ui-item-border)] pt-6">
-        <h3 className="font-semibold text-[var(--ui-text)]">Weather Settings</h3>
+      <OptionsSection title="Weather Settings" divider>
 
         {!isUNBC && (
           <FormInput
@@ -161,11 +159,10 @@ export default function WeatherOptions({ data, onChange }: WidgetOptionsProps) {
           ]}
           onChange={handleChange}
         />
-      </div>
+      </OptionsSection>
 
       {/* Display Mode */}
-      <div className="space-y-4 border-t border-[color:var(--ui-item-border)] pt-6">
-        <h3 className="font-semibold text-[var(--ui-text)]">Display Mode</h3>
+      <OptionsSection title="Display Mode" divider>
 
         <FormSelect
           label="What to show"
@@ -220,11 +217,10 @@ export default function WeatherOptions({ data, onChange }: WidgetOptionsProps) {
             {state.displayMode === 'minimal' && 'Shows just the weather icon and temperature — nothing else.'}
           </div>
         )}
-      </div>
+      </OptionsSection>
 
       {/* Refresh Interval */}
-      <div className="space-y-4 border-t border-[color:var(--ui-item-border)] pt-6">
-        <h3 className="font-semibold text-[var(--ui-text)]">Refresh Interval</h3>
+      <OptionsSection title="Refresh Interval" divider>
 
         <FormSelect
           label="Auto-refresh every"
@@ -240,22 +236,21 @@ export default function WeatherOptions({ data, onChange }: WidgetOptionsProps) {
           ]}
           onChange={(name, value) => handleChange(name, Number(value))}
         />
-      </div>
+      </OptionsSection>
 
       {/* CORS Proxy */}
-      <div className="space-y-4 border-t border-[color:var(--ui-item-border)] pt-6">
+      <OptionsSection title="CORS Proxy" divider>
         <FormSwitch
           label="Use CORS Proxy"
           name="useCorsProxy"
           checked={state.useCorsProxy}
           onChange={handleChange}
         />
-      </div>
+      </OptionsSection>
 
       {/* API Configuration - only for OpenWeatherMap */}
       {!isUNBC && (
-        <div className="space-y-4 border-t border-[color:var(--ui-item-border)] pt-6">
-          <h3 className="font-semibold text-[var(--ui-text)]">API Configuration</h3>
+        <OptionsSection title="API Configuration" divider>
 
           <FormInput
             label="Weather API Key (optional)"
@@ -269,13 +264,11 @@ export default function WeatherOptions({ data, onChange }: WidgetOptionsProps) {
           <div className="text-sm text-[var(--ui-text-muted)]">
             Leave empty to use demo data. Supports OpenWeatherMap API.
           </div>
-        </div>
+        </OptionsSection>
       )}
 
       {/* Preview */}
-      <div className="border-t border-[color:var(--ui-item-border)] pt-6">
-        <h4 className="font-semibold text-[var(--ui-text)] mb-4">Preview</h4>
-        <div className="bg-[var(--ui-item-bg)] rounded-xl p-4">
+      <OptionsPreview>
           <div className="text-xs text-[var(--color-accent)] mb-1">
             {isUNBC ? 'UNBC Rooftop' : state.location}
           </div>
@@ -315,8 +308,7 @@ export default function WeatherOptions({ data, onChange }: WidgetOptionsProps) {
               )}
             </div>
           )}
-        </div>
-      </div>
-    </div>
+      </OptionsPreview>
+    </OptionsPanel>
   );
 }

@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, buildProxyUrl, fetchTextWithCache } from '@firstform/campus-hub-widget-sdk';
 import { useFitScale } from '@firstform/campus-hub-widget-sdk';
-import { AppIcon } from '@firstform/campus-hub-widget-sdk';
+import { AppIcon, FadeOverlay } from '@firstform/campus-hub-widget-sdk';
 import RSSReaderOptions from './RSSReaderOptions';
 
 interface FeedItem {
@@ -208,18 +208,7 @@ export default function RSSReader({ config, theme }: WidgetComponentProps) {
           </div>
 
           {/* Fade edges */}
-          {scrollNeeded && (
-            <>
-              <div
-                className="absolute top-0 left-0 right-0 h-6 pointer-events-none"
-                style={{ background: `linear-gradient(to bottom, ${theme.background || '#1a1a2e'}, transparent)` }}
-              />
-              <div
-                className="absolute bottom-0 left-0 right-0 h-6 pointer-events-none"
-                style={{ background: `linear-gradient(to top, ${theme.background || '#1a1a2e'}, transparent)` }}
-              />
-            </>
-          )}
+          {scrollNeeded && <FadeOverlay theme={theme} />}
         </div>
       </div>
     </div>

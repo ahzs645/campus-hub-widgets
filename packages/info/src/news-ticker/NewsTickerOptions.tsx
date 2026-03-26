@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { FormInput, FormSelect, FormSwitch } from '@firstform/campus-hub-widget-sdk';
+import { FormInput, FormSelect, FormSwitch, OptionsPanel, OptionsSection, OptionsPreview } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
 interface NewsTickerData {
@@ -104,10 +104,9 @@ export default function NewsTickerOptions({ data, onChange }: WidgetOptionsProps
   const isSimCityTemplate = state.sourceType === 'simcity-template';
 
   return (
-    <div className="space-y-6 w-full max-w-xl mx-auto">
+    <OptionsPanel>
       {/* Settings */}
-      <div className="space-y-4">
-        <h3 className="font-semibold text-[var(--ui-text)] text-center">Ticker Settings</h3>
+      <OptionsSection title="Ticker Settings">
 
         <FormSelect
           label="Data Source"
@@ -158,13 +157,10 @@ export default function NewsTickerOptions({ data, onChange }: WidgetOptionsProps
         <div className="text-sm text-[var(--ui-text-muted)] text-center">
           Scale {state.scale.toFixed(2)}x. Use 1.00x for default sizing.
         </div>
-      </div>
+      </OptionsSection>
 
       {/* Data Source Configuration */}
-      <div className="space-y-4 border-t border-[color:var(--ui-item-border)] pt-6">
-        <h3 className="font-semibold text-[var(--ui-text)] text-center">
-          {isEvents ? 'Events Source' : 'Data Source'}
-        </h3>
+      <OptionsSection title={isEvents ? 'Events Source' : 'Data Source'} divider>
 
         {isEvents ? (
           <>
@@ -367,11 +363,10 @@ export default function NewsTickerOptions({ data, onChange }: WidgetOptionsProps
             </div>
           </>
         )}
-      </div>
+      </OptionsSection>
 
       {/* Network */}
-      <div className="space-y-4 border-t border-[color:var(--ui-item-border)] pt-6">
-        <h3 className="font-semibold text-[var(--ui-text)] text-center">Network</h3>
+      <OptionsSection title="Network" divider>
 
         <FormSwitch
           label="Use CORS Proxy"
@@ -379,12 +374,10 @@ export default function NewsTickerOptions({ data, onChange }: WidgetOptionsProps
           checked={state.useCorsProxy}
           onChange={handleChange}
         />
-      </div>
+      </OptionsSection>
 
       {/* Preview */}
-      <div className="border-t border-[color:var(--ui-item-border)] pt-6">
-        <h4 className="font-semibold text-[var(--ui-text)] mb-4 text-center">Preview</h4>
-        <div className="bg-[var(--color-accent)] rounded-xl overflow-hidden max-w-lg mx-auto">
+      <OptionsPreview>
           <div className="flex items-center">
             <div className="bg-[var(--color-primary)] text-[var(--color-accent)] px-4 py-2 font-bold text-sm uppercase tracking-wider flex items-center gap-2 flex-shrink-0">
               <span className="animate-pulse">●</span>
@@ -420,8 +413,7 @@ export default function NewsTickerOptions({ data, onChange }: WidgetOptionsProps
               </div>
             )}
           </div>
-        </div>
-      </div>
-    </div>
+      </OptionsPreview>
+    </OptionsPanel>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
-import { useAdaptiveFitScale } from '@firstform/campus-hub-widget-sdk';
+import { useAdaptiveFitScale, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
 import SatelliteViewOptions from './SatelliteViewOptions';
 
 interface SatelliteViewConfig {
@@ -125,10 +125,11 @@ export default function SatelliteView({ config, theme }: WidgetComponentProps) {
   }, [lat, lon, zoom, year]);
 
   return (
-    <div
+    <ThemedContainer
       ref={containerRef}
-      className="w-full h-full overflow-hidden"
-      style={{ backgroundColor: `${theme.primary}30` }}
+      theme={theme}
+      color="primary"
+      opacity="30"
     >
       <div
         style={{
@@ -223,7 +224,7 @@ export default function SatelliteView({ config, theme }: WidgetComponentProps) {
           </div>
         )}
       </div>
-    </div>
+    </ThemedContainer>
   );
 }
 

@@ -4,6 +4,7 @@ import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widg
 import { buildCacheKey, fetchJsonWithCache, fetchTextWithCache } from '@firstform/campus-hub-widget-sdk';
 import { parseRss } from '@firstform/campus-hub-widget-sdk';
 import { useEvents, buildProxyUrl, type CalendarEvent } from '@firstform/campus-hub-widget-sdk';
+import { PulsingDot } from '@firstform/campus-hub-widget-sdk';
 import NewsTickerOptions from './NewsTickerOptions';
 
 interface TickerItem {
@@ -485,16 +486,7 @@ export default function NewsTicker({ config, theme }: WidgetComponentProps) {
           className="absolute left-0 top-0 bottom-0 z-10 flex items-center px-8 font-bold text-lg uppercase tracking-widest"
           style={{ backgroundColor: theme.primary, color: theme.accent }}
         >
-          <span className="relative flex h-3 w-3 mr-3">
-            <span
-              className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
-              style={{ backgroundColor: theme.accent }}
-            />
-            <span
-              className="relative inline-flex rounded-full h-3 w-3"
-              style={{ backgroundColor: theme.accent }}
-            />
-          </span>
+          <PulsingDot theme={theme} className="mr-3" />
           {label}
         </div>
 

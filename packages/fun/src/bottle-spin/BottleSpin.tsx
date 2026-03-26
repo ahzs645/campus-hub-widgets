@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, registerWidget, DarkContainer } from '@firstform/campus-hub-widget-sdk';
 import { useFitScale } from '@firstform/campus-hub-widget-sdk';
 import BottleSpinOptions from './BottleSpinOptions';
 
@@ -72,11 +72,7 @@ export default function BottleSpin({ config }: WidgetComponentProps) {
   };
 
   return (
-    <div
-      ref={containerRef}
-      className="w-full h-full overflow-hidden flex items-center justify-center"
-      style={{ backgroundColor: '#1B1B1D', borderRadius: 22 }}
-    >
+    <DarkContainer ref={containerRef} className="flex items-center justify-center">
       <style>{`
         @keyframes bottlePulse {
           0%, 100% { transform: rotate(${rotation}deg) scale(1); }
@@ -111,7 +107,7 @@ export default function BottleSpin({ config }: WidgetComponentProps) {
           {phase === 'spinning' ? 'SPINNING...' : phase === 'pulse' ? 'LANDED' : 'SPIN THE BOTTLE'}
         </div>
       </div>
-    </div>
+    </DarkContainer>
   );
 }
 

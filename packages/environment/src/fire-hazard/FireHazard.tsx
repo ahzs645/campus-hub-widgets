@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, buildProxyUrl, fetchTextWithCache, getCorsProxyUrl } from '@firstform/campus-hub-widget-sdk';
-import { useAdaptiveFitScale } from '@firstform/campus-hub-widget-sdk';
+import { useAdaptiveFitScale, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
 import FireHazardOptions from './FireHazardOptions';
 
 interface FireHazardConfig {
@@ -239,10 +239,11 @@ export default function FireHazard({
   const centreShort = fireCentre.replace(' Fire Centre', '');
 
   return (
-    <div
+    <ThemedContainer
       ref={containerRef}
-      className="w-full h-full overflow-hidden"
-      style={{ backgroundColor: `${theme.primary}20` }}
+      theme={theme}
+      color="primary"
+      opacity="20"
     >
       <div
         style={{
@@ -335,7 +336,7 @@ export default function FireHazard({
           </div>
         )}
       </div>
-    </div>
+    </ThemedContainer>
   );
 }
 

@@ -4,8 +4,10 @@ import { registerWidgetLoader } from '@firstform/campus-hub-widget-sdk';
 import './qrcode/QRCode';
 import './widget-stack/WidgetStack';
 import './simple-table/SimpleTable';
+import './wifi-share/WiFiShare';
 
 // Register lazy loaders for display mode
 registerWidgetLoader('qrcode', () => import('./qrcode/QRCode'));
 registerWidgetLoader('widget-stack', () => import('./widget-stack/WidgetStack'));
 registerWidgetLoader('simple-table', () => import('./simple-table/SimpleTable'));
+registerWidgetLoader('wifi-share', () => import('./wifi-share/WiFiShare'));

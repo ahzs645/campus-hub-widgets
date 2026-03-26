@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { FormSelect, FormSwitch } from '@firstform/campus-hub-widget-sdk';
+import { FormSelect, FormSwitch, FormInput, OptionsPanel, OptionsSection, OptionsPreview } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
 type ClockAlignment = 'left' | 'center' | 'right';
@@ -14,6 +14,7 @@ interface ClockData {
   alignment: ClockAlignment;
   verticalAlignment: ClockVerticalAlignment;
   style: ClockStyle;
+  customFormat: string;
 }
 
 function normalizeAlignment(value: unknown): ClockAlignment {
@@ -39,6 +40,7 @@ export default function ClockOptions({ data, onChange }: WidgetOptionsProps) {
     alignment: normalizeAlignment(data?.alignment),
     verticalAlignment: normalizeVerticalAlignment(data?.verticalAlignment),
     style: normalizeStyle(data?.style),
+    customFormat: (data?.customFormat as string) ?? '',
   });
 
   useEffect(() => {
@@ -50,11 +52,12 @@ export default function ClockOptions({ data, onChange }: WidgetOptionsProps) {
         alignment: normalizeAlignment(data.alignment),
         verticalAlignment: normalizeVerticalAlignment(data.verticalAlignment),
         style: normalizeStyle(data.style),
+        customFormat: (data.customFormat as string) ?? '',
       });
     }
   }, [data]);
 
-  const handleChange = (name: string, value: string | boolean) => {
+  const handleChange = (name: string, value: string | number | boolean) => {
     const newState = { ...state, [name]: value };
     setState(newState);
     onChange(newState);
@@ -93,10 +96,9 @@ export default function ClockOptions({ data, onChange }: WidgetOptionsProps) {
   const secondAngle = seconds * 6;
 
   return (
-    <div className="space-y-6">
+    <OptionsPanel>
       {/* Settings */}
-      <div className="space-y-4">
-        <h3 className="font-semibold text-[var(--ui-text)]">Display Options</h3>
+      <OptionsSection title="Display Options">
 
         <FormSelect
           label="Clock Style"
@@ -133,6 +135,22 @@ export default function ClockOptions({ data, onChange }: WidgetOptionsProps) {
           />
         )}
 
+        {!isAnalog && !isMosaic && (
+          <FormInput
+            label="Custom Format (optional)"
+            name="customFormat"
+            type="text"
+            value={state.customFormat}
+            placeholder="e.g. h:mm a{br}EEEE, MMM d"
+            onChange={handleChange}
+          />
+        )}
+        {!isAnalog && !isMosaic && state.customFormat && (
+          <div className="text-xs text-[var(--ui-text-muted)]">
+            Use {'{br}'} for multi-line display. Overrides the standard format when set.
+          </div>
+        )}
+
         <FormSelect
           label="Alignment"
           name="alignment"
@@ -156,14 +174,10 @@ export default function ClockOptions({ data, onChange }: WidgetOptionsProps) {
           ]}
           onChange={handleChange}
         />
-      </div>
+      </OptionsSection>
 
       {/* Preview */}
-      <div className="border-t border-[color:var(--ui-item-border)] pt-6">
-        <h4 className="font-semibold text-[var(--ui-text)] mb-4">Preview</h4>
-        <div
-          className={`bg-[var(--ui-item-bg)] rounded-xl p-6 h-32 flex flex-col ${previewAlignmentClass} ${previewVerticalAlignmentClass}`}
-        >
+      <OptionsPreview>
           {isMosaic ? (
             <div className="flex flex-col items-center">
               <svg viewBox="0 0 200 200" className="w-24 h-24">
@@ -247,8 +261,7 @@ export default function ClockOptions({ data, onChange }: WidgetOptionsProps) {
               )}
             </>
           )}
-        </div>
-      </div>
-    </div>
+      </OptionsPreview>
+    </OptionsPanel>
   );
 }

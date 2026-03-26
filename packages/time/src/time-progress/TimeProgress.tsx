@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, registerWidget, DarkContainer } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale } from '@firstform/campus-hub-widget-sdk';
 import TimeProgressOptions from './TimeProgressOptions';
 
@@ -191,11 +191,7 @@ export default function TimeProgress({ config }: WidgetComponentProps) {
   const dotsTotal = Math.max(20, Math.min(60, Math.round(DESIGN_W * 0.1)));
 
   return (
-    <div
-      ref={containerRef}
-      className="w-full h-full overflow-hidden"
-      style={{ backgroundColor: COLOR_BG, borderRadius: 22 }}
-    >
+    <DarkContainer ref={containerRef}>
       <div
         style={{
           width: DESIGN_W,
@@ -214,7 +210,7 @@ export default function TimeProgress({ config }: WidgetComponentProps) {
           )
         )}
       </div>
-    </div>
+    </DarkContainer>
   );
 }
 

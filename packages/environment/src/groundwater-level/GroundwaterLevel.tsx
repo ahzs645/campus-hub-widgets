@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, buildProxyUrl, fetchJsonWithCache, fetchTextWithCache, getCorsProxyUrl } from '@firstform/campus-hub-widget-sdk';
-import { useAdaptiveFitScale } from '@firstform/campus-hub-widget-sdk';
+import { useAdaptiveFitScale, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
 import GroundwaterLevelOptions from './GroundwaterLevelOptions';
 
 interface GroundwaterConfig {
@@ -344,10 +344,11 @@ export default function GroundwaterLevel({
   const showHistory = displayMode === 'history' && historyValues.length >= 2;
 
   return (
-    <div
+    <ThemedContainer
       ref={containerRef}
-      className="w-full h-full overflow-hidden"
-      style={{ backgroundColor: `${theme.primary}20` }}
+      theme={theme}
+      color="primary"
+      opacity="20"
     >
       <div
         style={{
@@ -463,7 +464,7 @@ export default function GroundwaterLevel({
           </div>
         )}
       </div>
-    </div>
+    </ThemedContainer>
   );
 }
 

@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, registerWidget, Skeleton } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale } from '@firstform/campus-hub-widget-sdk';
 import ClockOptions from './ClockOptions';
 
@@ -11,6 +11,10 @@ interface ClockConfig {
   alignment?: 'left' | 'center' | 'right';
   verticalAlignment?: 'top' | 'center' | 'bottom';
   style?: 'digital' | 'analog' | 'mosaic';
+  /** Custom format string using Intl.DateTimeFormat tokens.
+   *  Supports {br} delimiter for multi-line display (from Concerto).
+   *  Examples: "h:mm a", "EEEE{br}MMM d{br}h:mm a" */
+  customFormat?: string;
 }
 
 function AnalogClock({ time, theme, showSeconds }: { time: Date; theme: { primary: string; accent: string }; showSeconds: boolean }) {
@@ -163,6 +167,40 @@ function MosaicClock({ time, theme, showSeconds }: { time: Date; theme: { primar
   );
 }
 
+/**
+ * Format a Date using a simple token string.  Supports a subset of common
+ * tokens so users can specify custom clock formats without adding date-fns.
+ *
+ * Supports multi-line via {br} delimiter (inspired by Concerto's ConcertoClock).
+ */
+function formatCustom(date: Date, formatStr: string, hour12: boolean): string[] {
+  const segments = formatStr.split('{br}');
+  return segments.map((seg) => {
+    const trimmed = seg.trim();
+    if (!trimmed) return '';
+
+    // Build Intl options from common tokens
+    const opts: Intl.DateTimeFormatOptions = {};
+    if (/EEEE/.test(trimmed)) opts.weekday = 'long';
+    else if (/EEE/.test(trimmed)) opts.weekday = 'short';
+    if (/MMMM/.test(trimmed)) opts.month = 'long';
+    else if (/MMM/.test(trimmed)) opts.month = 'short';
+    else if (/MM/.test(trimmed) || /M\//.test(trimmed)) opts.month = '2-digit';
+    if (/dd/.test(trimmed) || /d/.test(trimmed)) opts.day = 'numeric';
+    if (/yyyy/.test(trimmed)) opts.year = 'numeric';
+    if (/h:|H:/.test(trimmed)) { opts.hour = '2-digit'; opts.hour12 = hour12; }
+    if (/mm/.test(trimmed) && /:/m.test(trimmed)) opts.minute = '2-digit';
+    if (/ss/.test(trimmed)) opts.second = '2-digit';
+    if (/\ba\b|am|pm/i.test(trimmed)) { opts.hour12 = true; }
+
+    // If we parsed at least one option, use Intl; otherwise return the raw segment
+    if (Object.keys(opts).length > 0) {
+      return new Intl.DateTimeFormat([], opts).format(date);
+    }
+    return trimmed;
+  });
+}
+
 export default function Clock({ config, theme }: WidgetComponentProps) {
   const [time, setTime] = useState<Date | null>(null);
   const clockConfig = config as ClockConfig | undefined;
@@ -170,6 +208,7 @@ export default function Clock({ config, theme }: WidgetComponentProps) {
   const showDate = clockConfig?.showDate ?? true;
   const format24h = clockConfig?.format24h ?? false;
   const clockStyle = clockConfig?.style ?? 'digital';
+  const customFormat = clockConfig?.customFormat ?? '';
   const rawAlignment = clockConfig?.alignment;
   const alignment =
     rawAlignment === 'left' || rawAlignment === 'center' || rawAlignment === 'right'
@@ -239,10 +278,7 @@ export default function Clock({ config, theme }: WidgetComponentProps) {
         ref={containerRef}
         className={`h-full flex flex-col p-4 ${verticalLayout.containerClass}`}
       >
-        <div
-          className={`h-12 w-32 rounded animate-pulse ${horizontalLayout.containerClass}`}
-          style={{ backgroundColor: `${theme.accent}20` }}
-        />
+        <Skeleton theme={theme} width="w-32" height="h-12" rounded="rounded" className={horizontalLayout.containerClass} />
       </div>
     );
   }
@@ -303,20 +339,36 @@ export default function Clock({ config, theme }: WidgetComponentProps) {
         }}
         className={`flex flex-col justify-center font-clock px-4 ${horizontalLayout.containerClass}`}
       >
-        <div
-          className="text-5xl font-bold tracking-tight tabular-nums"
-          style={{ color: theme.accent }}
-        >
-          {time.toLocaleTimeString([], timeOptions)}
-        </div>
-        {showDate && (
-          <div className="text-base opacity-80 mt-1 font-medium tracking-wide text-white/80">
-            {time.toLocaleDateString([], {
-              weekday: 'long',
-              month: 'long',
-              day: 'numeric',
-            })}
+        {customFormat ? (
+          /* Custom format mode (inspired by Concerto's ConcertoClock) */
+          <div className="flex flex-col" style={{ color: theme.accent }}>
+            {formatCustom(time, customFormat, !format24h).map((line, i) => (
+              <div
+                key={i}
+                className={`font-bold tracking-tight tabular-nums whitespace-nowrap ${i === 0 ? 'text-5xl' : 'text-2xl opacity-80'}`}
+              >
+                {line}
+              </div>
+            ))}
           </div>
+        ) : (
+          <>
+            <div
+              className="text-5xl font-bold tracking-tight tabular-nums"
+              style={{ color: theme.accent }}
+            >
+              {time.toLocaleTimeString([], timeOptions)}
+            </div>
+            {showDate && (
+              <div className="text-base opacity-80 mt-1 font-medium tracking-wide text-white/80">
+                {time.toLocaleDateString([], {
+                  weekday: 'long',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -342,5 +394,6 @@ registerWidget({
     alignment: 'right',
     verticalAlignment: 'top',
     style: 'digital',
+    customFormat: '',
   },
 });

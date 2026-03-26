@@ -11,7 +11,9 @@ interface YouTubeConfig {
 
 function extractVideoId(url: string): string | null {
   const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\s?]+)/,
+    // Full YouTube URLs: watch, shorts, embed, youtu.be (from Concerto's video model)
+    /(?:youtube\.com\/(?:shorts\/|[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/i,
+    // Bare 11-char ID
     /^([a-zA-Z0-9_-]{11})$/,
   ];
 

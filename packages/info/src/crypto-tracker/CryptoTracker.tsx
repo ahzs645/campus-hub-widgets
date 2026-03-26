@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, registerWidget, DarkContainer } from '@firstform/campus-hub-widget-sdk';
 import { useFitScale } from '@firstform/campus-hub-widget-sdk';
 import { DotMatrixText, textToChars } from '@firstform/campus-hub-widget-sdk';
 import CryptoTrackerOptions from './CryptoTrackerOptions';
@@ -126,11 +126,7 @@ export default function CryptoTracker({ config }: WidgetComponentProps) {
   }, [coin]);
 
   return (
-    <div
-      ref={containerRef}
-      className="relative w-full h-full overflow-hidden"
-      style={{ backgroundColor: '#1B1B1D', borderRadius: 22 }}
-    >
+    <DarkContainer ref={containerRef} className="relative">
       <div
         style={{
           transform: `scale(${scale})`,
@@ -228,7 +224,7 @@ export default function CryptoTracker({ config }: WidgetComponentProps) {
           </div>
         )}
       </div>
-    </div>
+    </DarkContainer>
   );
 }
 
