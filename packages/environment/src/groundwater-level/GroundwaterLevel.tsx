@@ -1,42 +1,22 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
-import { buildCacheKey, buildProxyUrl, fetchJsonWithCache, fetchTextWithCache, getCorsProxyUrl } from '@firstform/campus-hub-widget-sdk';
+import { buildCacheKey, buildProxyUrl, fetchJsonWithCache, getCorsProxyUrl } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
 import GroundwaterLevelOptions from './GroundwaterLevelOptions';
 
 interface GroundwaterConfig {
   locationId?: string;
-  dataSet?: string;
+  datasetId?: string;
   displayMode?: 'current' | 'history';
   refreshInterval?: number;
   useCorsProxy?: boolean;
 }
 
-interface TimeSeriesPoint {
-  Timestamp: string;
-  Value: { Numeric?: number; Display?: string };
-}
-
-interface TimeSeriesDescription {
-  UniqueId: string;
-  Identifier: string;
-  Parameter: string;
-  Label: string;
-  Unit: string;
-  LastModified?: string;
-}
-
-interface TimeSeriesDescriptionListResponse {
-  TimeSeriesDescriptions?: TimeSeriesDescription[];
-}
-
-interface TimeSeriesCorrectedDataResponse {
-  Points?: TimeSeriesPoint[];
-  Unit?: string;
-  Parameter?: string;
-  LocationIdentifier?: string;
-  NumPoints?: number;
+/** Response shape from the WebPortal DatasetGrid endpoint. */
+interface DatasetGridResponse {
+  Data?: { TimeStamp: string; Value: number; DisplayValue?: string }[];
+  Total?: number;
 }
 
 interface GwData {
@@ -46,58 +26,31 @@ interface GwData {
   unit: string;
   timestamp: string | null;
   history: { time: string; value: number }[];
-  availableDataSets: { id: string; label: string; parameter: string; unit: string }[];
 }
 
-const AQUARIUS_BASE =
-  'https://bcmoe-prod.aquaticinformatics.net/AQUARIUS/Publish/v2';
+const WEBPORTAL_BASE = 'https://bcmoe-prod.aquaticinformatics.net';
+
+/** Known dataset IDs — maps locationId to the numeric DatasetGrid id. */
+const KNOWN_DATASETS: Record<string, number> = {
+  OW378: 11130,
+};
 
 const MOCK_DATA: GwData = {
   locationId: 'OW378',
   dataSetLabel: 'Groundwater Level (SGWL)',
-  currentLevel: 5.234,
+  currentLevel: 35.105,
   unit: 'm',
   timestamp: new Date().toISOString(),
   history: Array.from({ length: 24 }, (_, i) => ({
     time: new Date(Date.now() - (23 - i) * 3600000).toISOString(),
-    value: 5.0 + Math.sin(i / 4) * 0.5 + Math.random() * 0.1,
+    value: 35.0 + Math.sin(i / 4) * 0.3 + Math.random() * 0.05,
   })),
-  availableDataSets: [
-    { id: 'mock-sgwl', label: 'SGWL.Working', parameter: 'SGWL', unit: 'm' },
-  ],
 };
 
 /**
  * Parse the WebPortal HTML page for the latest groundwater reading.
  * This is a fallback when the Publish API is not accessible.
  */
-const parseWebPortalHtml = (html: string, locationId: string): Partial<GwData> | null => {
-  // Look for data values in the HTML — the Summary page shows the latest reading
-  // in a table or data element.
-  const valueMatch =
-    html.match(/(?:Latest|Value|Level)[^<]*?(-?\d+\.?\d*)\s*(m\b|metres?|masl)?/i) ||
-    html.match(/<td[^>]*>\s*(-?\d+\.\d{1,4})\s*<\/td>/i);
-
-  if (!valueMatch) return null;
-
-  const val = parseFloat(valueMatch[1]);
-  if (isNaN(val)) return null;
-
-  const unit = valueMatch[2] ? 'm' : 'm';
-
-  // Try to extract timestamp
-  const timeMatch = html.match(
-    /(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2})?)/
-  );
-
-  return {
-    locationId,
-    currentLevel: val,
-    unit,
-    timestamp: timeMatch ? timeMatch[1] : null,
-    dataSetLabel: 'Groundwater Level',
-  };
-};
 
 /** Build a simple SVG sparkline from data points. */
 function Sparkline({
@@ -170,7 +123,7 @@ export default function GroundwaterLevel({
 }: WidgetComponentProps) {
   const cfg = config as GroundwaterConfig | undefined;
   const locationId = cfg?.locationId?.trim() || 'OW378';
-  const selectedDataSet = cfg?.dataSet?.trim() || '';
+  const datasetId = cfg?.datasetId?.trim() || '';
   const displayMode = cfg?.displayMode ?? 'current';
   const refreshInterval = cfg?.refreshInterval ?? 30;
   const useCorsProxy = cfg?.useCorsProxy ?? true;
@@ -181,106 +134,6 @@ export default function GroundwaterLevel({
 
   const refreshMs = refreshInterval * 60 * 1000;
 
-  const fetchViaPublishApi = useCallback(async (): Promise<GwData | null> => {
-    if (!useCorsProxy || !getCorsProxyUrl()) return null;
-
-    // Step 1: Get available time series for this location
-    const descUrl = `${AQUARIUS_BASE}/GetTimeSeriesDescriptionList?LocationIdentifier=${encodeURIComponent(locationId)}`;
-    const descFetchUrl = buildProxyUrl(descUrl);
-
-    const { data: descResp } = await fetchJsonWithCache<TimeSeriesDescriptionListResponse>(
-      descFetchUrl,
-      {
-        cacheKey: buildCacheKey('gw-desc', locationId),
-        ttlMs: 60 * 60 * 1000, // 1 hour for metadata
-      }
-    );
-
-    const descriptions = descResp?.TimeSeriesDescriptions ?? [];
-    if (descriptions.length === 0) return null;
-
-    const availableDataSets = descriptions.map((d) => ({
-      id: d.UniqueId,
-      label: d.Identifier,
-      parameter: d.Parameter,
-      unit: d.Unit,
-    }));
-
-    // Step 2: Pick the dataset — prefer user selection, then SGWL, then first
-    let chosen = descriptions[0];
-    if (selectedDataSet) {
-      const match = descriptions.find(
-        (d) =>
-          d.UniqueId === selectedDataSet ||
-          d.Identifier.toLowerCase().includes(selectedDataSet.toLowerCase())
-      );
-      if (match) chosen = match;
-    } else {
-      const sgwl = descriptions.find(
-        (d) =>
-          d.Parameter?.toLowerCase().includes('gwl') ||
-          d.Identifier?.toLowerCase().includes('sgwl') ||
-          d.Identifier?.toLowerCase().includes('groundwater')
-      );
-      if (sgwl) chosen = sgwl;
-    }
-
-    // Step 3: Fetch corrected data for the chosen time series
-    const now = new Date();
-    const queryFrom = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); // last 7 days
-    const dataUrl =
-      `${AQUARIUS_BASE}/GetTimeSeriesCorrectedData` +
-      `?TimeSeriesUniqueId=${encodeURIComponent(chosen.UniqueId)}` +
-      `&QueryFrom=${queryFrom.toISOString()}` +
-      `&QueryTo=${now.toISOString()}`;
-    const dataFetchUrl = buildProxyUrl(dataUrl);
-
-    const { data: tsResp } = await fetchJsonWithCache<TimeSeriesCorrectedDataResponse>(
-      dataFetchUrl,
-      {
-        cacheKey: buildCacheKey('gw-data', `${locationId}-${chosen.UniqueId}`),
-        ttlMs: refreshMs,
-      }
-    );
-
-    const points = tsResp?.Points ?? [];
-    const history = points
-      .filter((p) => p.Value?.Numeric != null)
-      .map((p) => ({
-        time: p.Timestamp,
-        value: p.Value.Numeric!,
-      }));
-
-    const latest = history.length > 0 ? history[history.length - 1] : null;
-
-    return {
-      locationId,
-      dataSetLabel: chosen.Label || chosen.Identifier || chosen.Parameter,
-      currentLevel: latest?.value ?? null,
-      unit: chosen.Unit || tsResp?.Unit || 'm',
-      timestamp: latest?.time ?? null,
-      history,
-      availableDataSets,
-    };
-  }, [locationId, selectedDataSet, refreshMs, useCorsProxy]);
-
-  const fetchViaWebPortal = useCallback(async (): Promise<Partial<GwData> | null> => {
-    if (!useCorsProxy || !getCorsProxyUrl()) return null;
-
-    const portalUrl =
-      `https://bcmoe-prod.aquaticinformatics.net/Data/DataSet/Summary` +
-      `/Location/${encodeURIComponent(locationId)}` +
-      `/DataSet/SGWL/Working/Interval/Latest`;
-    const fetchUrl = buildProxyUrl(portalUrl);
-
-    const { text } = await fetchTextWithCache(fetchUrl, {
-      cacheKey: buildCacheKey('gw-portal', locationId),
-      ttlMs: refreshMs,
-    });
-
-    return parseWebPortalHtml(text, locationId);
-  }, [locationId, refreshMs, useCorsProxy]);
-
   const fetchData = useCallback(async () => {
     if (!useCorsProxy || !getCorsProxyUrl()) {
       setData({ ...MOCK_DATA, locationId });
@@ -290,32 +143,60 @@ export default function GroundwaterLevel({
     try {
       setError(null);
 
-      // Try the Publish API first
-      let apiData: GwData | null = null;
-      try {
-        apiData = await fetchViaPublishApi();
-      } catch {
-        // Publish API may require auth — fall through to WebPortal scrape
-      }
-      if (apiData) {
-        setData(apiData);
-        setLastUpdated(new Date());
+      // Resolve the numeric dataset ID
+      const numericId = datasetId
+        ? Number(datasetId)
+        : KNOWN_DATASETS[locationId.toUpperCase()];
+
+      if (!numericId) {
+        setError(`Unknown well ${locationId} — set a dataset ID in config`);
         return;
       }
 
-      // Fallback to WebPortal HTML parsing
-      const portalData = await fetchViaWebPortal();
-      if (portalData && portalData.currentLevel != null) {
-        setData((prev) => ({ ...prev, ...portalData, locationId }));
-        setLastUpdated(new Date());
-        return;
-      }
+      const today = new Date().toISOString().slice(0, 10);
 
-      setError('No data available for this location');
+      // Fetch latest reading (single row)
+      const latestUrl =
+        `${WEBPORTAL_BASE}/Data/DatasetGrid` +
+        `?dataset=${numericId}&sort=TimeStamp-desc&page=1&pageSize=1` +
+        `&interval=Latest&timezone=0&date=${today}&alldata=false`;
+
+      const { data: latestResp } = await fetchJsonWithCache<DatasetGridResponse>(
+        buildProxyUrl(latestUrl),
+        { cacheKey: buildCacheKey('gw-latest', `${numericId}`), ttlMs: refreshMs },
+      );
+
+      const latestRow = latestResp?.Data?.[0];
+
+      // Fetch recent history (last 168 points ≈ 7 days hourly)
+      const histUrl =
+        `${WEBPORTAL_BASE}/Data/DatasetGrid` +
+        `?dataset=${numericId}&sort=TimeStamp-desc&page=1&pageSize=168` +
+        `&interval=Latest&timezone=0&date=${today}&alldata=false`;
+
+      const { data: histResp } = await fetchJsonWithCache<DatasetGridResponse>(
+        buildProxyUrl(histUrl),
+        { cacheKey: buildCacheKey('gw-hist', `${numericId}`), ttlMs: refreshMs },
+      );
+
+      const history = (histResp?.Data ?? [])
+        .filter((r) => r.Value != null)
+        .map((r) => ({ time: r.TimeStamp, value: r.Value }))
+        .reverse(); // oldest first for sparkline
+
+      setData({
+        locationId,
+        dataSetLabel: 'Groundwater Level (SGWL)',
+        currentLevel: latestRow?.Value ?? null,
+        unit: 'm',
+        timestamp: latestRow?.TimeStamp ?? null,
+        history,
+      });
+      setLastUpdated(new Date());
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [locationId, fetchViaPublishApi, fetchViaWebPortal]);
+  }, [locationId, datasetId, refreshMs, useCorsProxy]);
 
   useEffect(() => {
     let isMounted = true;
@@ -486,7 +367,7 @@ registerWidget({
   OptionsComponent: GroundwaterLevelOptions,
   defaultProps: {
     locationId: 'OW378',
-    dataSet: '',
+    datasetId: '',
     displayMode: 'current',
     refreshInterval: 30,
     useCorsProxy: true,
