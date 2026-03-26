@@ -254,6 +254,7 @@ registerWidget({
   defaultH: 4,
   component: GoogleCalendar,
   OptionsComponent: GoogleCalendarOptions,
+  acceptsSources: [{ propName: 'calendarId', types: ['calendar'] }],
   defaultProps: {
     calendarId: '',
     apiKey: '',

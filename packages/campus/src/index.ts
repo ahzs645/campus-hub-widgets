@@ -10,6 +10,7 @@ import './job-board/JobBoard';
 import './events-list/EventsList';
 import './climbing-gym/ClimbingGym';
 import './google-calendar/GoogleCalendar';
+import './calendar/Calendar';
 
 // Register lazy loaders for display mode
 registerWidgetLoader('cafeteria-menu', () => import('./cafeteria-menu/CafeteriaMenu'));
@@ -21,3 +22,4 @@ registerWidgetLoader('job-board', () => import('./job-board/JobBoard'));
 registerWidgetLoader('events-list', () => import('./events-list/EventsList'));
 registerWidgetLoader('climbing-gym', () => import('./climbing-gym/ClimbingGym'));
 registerWidgetLoader('google-calendar', () => import('./google-calendar/GoogleCalendar'));
+registerWidgetLoader('calendar', () => import('./calendar/Calendar'));

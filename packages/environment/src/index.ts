@@ -10,6 +10,7 @@ import './drought-level/DroughtLevel';
 import './groundwater-level/GroundwaterLevel';
 import './satellite-view/SatelliteView';
 import './sunset-sunrise/SunsetSunrise';
+import './gas-prices/GasPrices';
 
 // Register lazy loaders for display mode
 registerWidgetLoader('weather', () => import('./weather/Weather'));
@@ -21,3 +22,4 @@ registerWidgetLoader('drought-level', () => import('./drought-level/DroughtLevel
 registerWidgetLoader('groundwater-level', () => import('./groundwater-level/GroundwaterLevel'));
 registerWidgetLoader('satellite-view', () => import('./satellite-view/SatelliteView'));
 registerWidgetLoader('sunset-sunrise', () => import('./sunset-sunrise/SunsetSunrise'));
+registerWidgetLoader('gas-prices', () => import('./gas-prices/GasPrices'));
