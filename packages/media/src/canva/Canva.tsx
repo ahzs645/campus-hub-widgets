@@ -101,6 +101,7 @@ registerWidget({
   defaultH: 4,
   component: CanvaWidget,
   OptionsComponent: CanvaOptions,
+  acceptsSources: [{ propName: 'url', types: ['embed'] }],
   defaultProps: {
     url: '',
     refreshInterval: 0,

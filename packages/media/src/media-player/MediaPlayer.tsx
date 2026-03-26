@@ -82,6 +82,7 @@ registerWidget({
   defaultH: 4,
   component: MediaPlayer,
   OptionsComponent: MediaPlayerOptions,
+  acceptsSources: [{ propName: 'url', types: ['video'] }],
   defaultProps: {
     url: '',
     type: 'video',

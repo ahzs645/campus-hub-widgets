@@ -115,6 +115,7 @@ registerWidget({
   defaultH: 4,
   component: Slideshow,
   OptionsComponent: SlideshowOptions,
+  acceptsSources: [{ propName: 'slides', types: ['image'], multiple: true }],
   defaultProps: {
     slides: [],
     duration: 5,

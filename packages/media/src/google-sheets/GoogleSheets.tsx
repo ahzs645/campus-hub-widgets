@@ -148,6 +148,7 @@ registerWidget({
   defaultH: 4,
   component: GoogleSheetsWidget,
   OptionsComponent: GoogleSheetsOptions,
+  acceptsSources: [{ propName: 'url', types: ['embed'] }],
   defaultProps: {
     url: '',
     sheetName: '',

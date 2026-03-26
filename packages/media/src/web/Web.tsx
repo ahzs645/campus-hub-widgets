@@ -108,6 +108,7 @@ registerWidget({
   defaultH: 4,
   component: Web,
   OptionsComponent: WebOptions,
+  acceptsSources: [{ propName: 'url', types: ['embed'] }],
   defaultProps: {
     url: '',
     refreshInterval: 0,

@@ -226,6 +226,7 @@ registerWidget({
   defaultH: 4,
   component: RSSReader,
   OptionsComponent: RSSReaderOptions,
+  acceptsSources: [{ propName: 'feedUrl', types: ['feed'] }],
   defaultProps: {
     feedUrl: '',
     maxItems: 10,

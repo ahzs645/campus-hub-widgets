@@ -51,6 +51,7 @@ registerWidget({
   defaultH: 3,
   component: ImageWidget,
   OptionsComponent: ImageOptions,
+  acceptsSources: [{ propName: 'url', types: ['image'] }],
   defaultProps: {
     url: '',
     alt: 'Image',

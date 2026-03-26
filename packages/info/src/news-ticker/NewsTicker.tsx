@@ -573,6 +573,7 @@ registerWidget({
   defaultH: 1,
   component: NewsTicker,
   OptionsComponent: NewsTickerOptions,
+  acceptsSources: [{ propName: 'apiUrl', types: ['feed'] }],
   defaultProps: {
     speed: 30,
     scale: 1,

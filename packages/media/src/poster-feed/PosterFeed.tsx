@@ -449,6 +449,7 @@ registerWidget({
   defaultH: 4,
   component: PosterFeed,
   OptionsComponent: PosterFeedOptions,
+  acceptsSources: [{ propName: 'feedUrl', types: ['feed'] }],
   defaultProps: {
     rotationSeconds: 8,
     animationMode: 'stack',

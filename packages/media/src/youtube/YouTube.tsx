@@ -79,6 +79,7 @@ registerWidget({
   defaultH: 4,
   component: YouTube,
   OptionsComponent: YouTubeOptions,
+  acceptsSources: [{ propName: 'videoId', types: ['video'] }],
   defaultProps: {
     videoId: '',
     autoplay: false,
