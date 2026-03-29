@@ -47,7 +47,7 @@ export default function HomeAssistantOptions({ data, onChange }: WidgetOptionsPr
       {mode === 'signaling' ? (
         <>
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-white/60">Signaling Server URL</label>
+            <label className="text-xs font-medium text-white/60">Home Assistant Bridge URL</label>
             <input
               type="url"
               value={signalUrl}
@@ -55,7 +55,9 @@ export default function HomeAssistantOptions({ data, onChange }: WidgetOptionsPr
               placeholder="ws://localhost:3030"
               className="w-full px-3 py-2 bg-black/30 border border-white/10 rounded-lg text-sm text-white placeholder:text-white/20 outline-none focus:border-white/30"
             />
-            <p className="text-[10px] text-white/30">Leave empty to use the display&apos;s ?signal= URL param</p>
+            <p className="text-[10px] text-white/30">
+              Point this at the Socket.IO bridge that relays Home Assistant entity updates, or leave it empty to use the display&apos;s ?signal= URL param.
+            </p>
           </div>
 
           <div className="space-y-1.5">
@@ -138,7 +140,7 @@ export default function HomeAssistantOptions({ data, onChange }: WidgetOptionsPr
           </div>
         )}
         <p className="text-[10px] text-white/30">
-          Examples: sensor.room_temperature, sensor.3d_printer_progress, media_player.living_room, camera.front_door
+          Examples: sensor.room_temperature, sensor.bambu_lab_print_progress, media_player.living_room, camera.front_door
         </p>
       </div>
     </div>
