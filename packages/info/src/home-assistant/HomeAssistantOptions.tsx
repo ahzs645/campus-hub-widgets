@@ -3,8 +3,11 @@ import { useState } from 'react';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
 export default function HomeAssistantOptions({ data, onChange }: WidgetOptionsProps) {
+  const mode = (data.mode as 'signaling' | 'http') === 'http' ? 'http' : 'signaling';
   const signalUrl = (data.signalUrl as string) || '';
   const displayId = (data.displayId as string) || '';
+  const httpUrl = (data.httpUrl as string) || '';
+  const pollIntervalSeconds = Number(data.pollIntervalSeconds as number) || 30;
   const entityIds = (data.entityIds as string[]) || [];
   const [newEntityId, setNewEntityId] = useState('');
 
@@ -27,28 +30,76 @@ export default function HomeAssistantOptions({ data, onChange }: WidgetOptionsPr
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        <label className="text-xs font-medium text-white/60">Signaling Server URL</label>
-        <input
-          type="url"
-          value={signalUrl}
-          onChange={(e) => update({ signalUrl: e.target.value })}
-          placeholder="ws://homeassistant.local:3030"
-          className="w-full px-3 py-2 bg-black/30 border border-white/10 rounded-lg text-sm text-white placeholder:text-white/20 outline-none focus:border-white/30"
-        />
-        <p className="text-[10px] text-white/30">Leave empty to use the display&apos;s ?signal= URL param</p>
+        <label className="text-xs font-medium text-white/60">Connection Mode</label>
+        <select
+          value={mode}
+          onChange={(e) => update({ mode: e.target.value })}
+          className="w-full px-3 py-2 bg-black/30 border border-white/10 rounded-lg text-sm text-white outline-none focus:border-white/30"
+        >
+          <option value="signaling">Live signaling bridge</option>
+          <option value="http">HTTP proxy</option>
+        </select>
+        <p className="text-[10px] text-white/30">
+          Use signaling for the existing Socket.IO bridge, or HTTP when your app proxies the Campus Hub Home Assistant plugin.
+        </p>
       </div>
 
-      <div className="space-y-1.5">
-        <label className="text-xs font-medium text-white/60">Display ID</label>
-        <input
-          type="text"
-          value={displayId}
-          onChange={(e) => update({ displayId: e.target.value })}
-          placeholder="lobby-tv-1"
-          className="w-full px-3 py-2 bg-black/30 border border-white/10 rounded-lg text-sm text-white placeholder:text-white/20 outline-none focus:border-white/30"
-        />
-        <p className="text-[10px] text-white/30">Leave empty to use the display&apos;s ?displayId= URL param</p>
-      </div>
+      {mode === 'signaling' ? (
+        <>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-white/60">Home Assistant Bridge URL</label>
+            <input
+              type="url"
+              value={signalUrl}
+              onChange={(e) => update({ signalUrl: e.target.value })}
+              placeholder="ws://localhost:3030"
+              className="w-full px-3 py-2 bg-black/30 border border-white/10 rounded-lg text-sm text-white placeholder:text-white/20 outline-none focus:border-white/30"
+            />
+            <p className="text-[10px] text-white/30">Point this at the Socket.IO bridge that relays Home Assistant entity updates.</p>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-white/60">Display ID</label>
+            <input
+              type="text"
+              value={displayId}
+              onChange={(e) => update({ displayId: e.target.value })}
+              placeholder="lobby-tv-1"
+              className="w-full px-3 py-2 bg-black/30 border border-white/10 rounded-lg text-sm text-white placeholder:text-white/20 outline-none focus:border-white/30"
+            />
+            <p className="text-[10px] text-white/30">Leave empty to use the display&apos;s ?displayId= URL param</p>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-white/60">HTTP Proxy URL</label>
+            <input
+              type="url"
+              value={httpUrl}
+              onChange={(e) => update({ httpUrl: e.target.value })}
+              placeholder="http://localhost:3030/ha/state"
+              className="w-full px-3 py-2 bg-black/30 border border-white/10 rounded-lg text-sm text-white placeholder:text-white/20 outline-none focus:border-white/30"
+            />
+            <p className="text-[10px] text-white/30">
+              Leave empty to use `/api/ha/state` on the current Campus Hub origin.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-white/60">Poll Interval (seconds)</label>
+            <input
+              type="number"
+              min={5}
+              max={3600}
+              value={pollIntervalSeconds}
+              onChange={(e) => update({ pollIntervalSeconds: Number(e.target.value) || 30 })}
+              className="w-full px-3 py-2 bg-black/30 border border-white/10 rounded-lg text-sm text-white placeholder:text-white/20 outline-none focus:border-white/30"
+            />
+            <p className="text-[10px] text-white/30">HTTP mode polls the proxy on this interval.</p>
+          </div>
+        </>
+      )}
 
       <div className="space-y-1.5">
         <label className="text-xs font-medium text-white/60">Entity IDs</label>
@@ -87,7 +138,7 @@ export default function HomeAssistantOptions({ data, onChange }: WidgetOptionsPr
           </div>
         )}
         <p className="text-[10px] text-white/30">
-          Examples: sensor.room_temperature, sensor.3d_printer_progress, media_player.living_room, camera.front_door
+          Examples: sensor.room_temperature, sensor.bambu_lab_print_progress, media_player.living_room, camera.front_door
         </p>
       </div>
     </div>
