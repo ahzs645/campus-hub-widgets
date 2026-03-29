@@ -13,8 +13,11 @@ interface HAEntityState {
 }
 
 interface HAWidgetConfig {
+  mode?: 'signaling' | 'http';
   signalUrl?: string;
   displayId?: string;
+  httpUrl?: string;
+  pollIntervalSeconds?: number;
   entityIds?: string[];
   layout?: 'auto' | 'list' | 'grid' | 'single';
   showEntityName?: boolean;
@@ -249,6 +252,13 @@ function EntityRenderer({ entity, theme }: { entity: HAEntityState; theme: Widge
 
 // --- Main Widget ---
 
+function resolveHttpStateUrl(configuredUrl: string): string {
+  if (configuredUrl) return configuredUrl;
+  if (typeof window === 'undefined') return '';
+
+  return new URL('/api/ha/state', window.location.origin).toString();
+}
+
 function HomeAssistantWidget({ config, theme }: WidgetComponentProps) {
   const cfg = config as unknown as HAWidgetConfig;
   const [entities, setEntities] = useState<Map<string, HAEntityState>>(new Map());
@@ -256,9 +266,12 @@ function HomeAssistantWidget({ config, theme }: WidgetComponentProps) {
   const [error, setError] = useState<string | null>(null);
   const clientRef = useRef<SignalingClient | null>(null);
 
+  const mode = cfg?.mode === 'http' ? 'http' : 'signaling';
   // Read signal URL from widget config, falling back to URL params
   const signalUrl = cfg?.signalUrl || (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('signal') : null) || '';
   const displayId = cfg?.displayId || (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('displayId') : null) || '';
+  const httpUrl = resolveHttpStateUrl(cfg?.httpUrl || '');
+  const pollIntervalMs = Math.max(5, Number(cfg?.pollIntervalSeconds) || 30) * 1000;
   const entityIds = cfg?.entityIds || [];
 
   const handleState = useCallback((data: Record<string, unknown>) => {
@@ -272,9 +285,13 @@ function HomeAssistantWidget({ config, theme }: WidgetComponentProps) {
   }, []);
 
   useEffect(() => {
+    if (mode !== 'signaling') return;
     if (!signalUrl || !displayId || entityIds.length === 0) return;
 
     let client: SignalingClient | null = null;
+    setEntities(new Map());
+    setConnected(false);
+    setError(null);
 
     const setup = async () => {
       client = createSignalingClient(signalUrl, 'display', displayId, {
@@ -303,19 +320,80 @@ function HomeAssistantWidget({ config, theme }: WidgetComponentProps) {
       client?.disconnect();
       clientRef.current = null;
     };
-  }, [signalUrl, displayId, entityIds.join(','), handleState]);
+  }, [mode, signalUrl, displayId, entityIds.join(','), handleState]);
+
+  useEffect(() => {
+    if (mode !== 'http') return;
+    if (!httpUrl || entityIds.length === 0) return;
+
+    let cancelled = false;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
+    setEntities(new Map());
+    setConnected(false);
+    setError(null);
+
+    const fetchStates = async () => {
+      try {
+        const url = new URL(httpUrl, window.location.origin);
+        url.search = '';
+        for (const entityId of entityIds) {
+          url.searchParams.append('entity_id', entityId);
+        }
+
+        const response = await fetch(url.toString(), {
+          headers: { Accept: 'application/json' },
+          cache: 'no-store',
+        });
+
+        const payload = await response.json() as { error?: string; states?: HAEntityState[] };
+        if (!response.ok) {
+          throw new Error(payload.error || `HTTP ${response.status}`);
+        }
+
+        const next = new Map<string, HAEntityState>();
+        for (const entity of payload.states || []) {
+          next.set(entity.entity_id, entity);
+        }
+
+        if (!cancelled) {
+          setEntities(next);
+          setConnected(true);
+          setError(null);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setConnected(false);
+          setError(err instanceof Error ? err.message : 'Failed to load Home Assistant state');
+        }
+      }
+    };
+
+    void fetchStates();
+    intervalId = setInterval(() => {
+      void fetchStates();
+    }, pollIntervalMs);
+
+    return () => {
+      cancelled = true;
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [mode, httpUrl, entityIds.join(','), pollIntervalMs]);
 
   // No config
-  if (!signalUrl || !displayId || entityIds.length === 0) {
+  if ((mode === 'signaling' && (!signalUrl || !displayId || entityIds.length === 0))
+    || (mode === 'http' && entityIds.length === 0)) {
     return (
       <div className="h-full w-full flex items-center justify-center p-4">
         <div className="text-center space-y-2">
           <div className="text-3xl">🏠</div>
           <div className="text-sm text-white/40">Home Assistant</div>
           <div className="text-xs text-white/25">
-            {!signalUrl ? 'Set signaling server URL' :
-             !displayId ? 'Set display ID' :
-             'Add entity IDs to watch'}
+            {mode === 'http'
+              ? 'Add entity IDs to watch'
+              : !signalUrl ? 'Set signaling server URL'
+                : !displayId ? 'Set display ID'
+                  : 'Add entity IDs to watch'}
           </div>
         </div>
       </div>
@@ -329,7 +407,7 @@ function HomeAssistantWidget({ config, theme }: WidgetComponentProps) {
         <div className="text-center space-y-2">
           <div className="text-2xl animate-pulse">🏠</div>
           <div className="text-xs text-white/40">
-            {error || 'Connecting to Home Assistant...'}
+            {error || (mode === 'http' ? 'Loading Home Assistant data...' : 'Connecting to Home Assistant...')}
           </div>
         </div>
       </div>
@@ -385,8 +463,11 @@ registerWidget({
   component: HomeAssistantWidget,
   OptionsComponent: HomeAssistantOptions,
   defaultProps: {
+    mode: 'signaling',
     signalUrl: '',
     displayId: '',
+    httpUrl: '',
+    pollIntervalSeconds: 30,
     entityIds: [],
     layout: 'auto',
   },
