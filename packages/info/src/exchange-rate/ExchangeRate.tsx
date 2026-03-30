@@ -87,6 +87,7 @@ export default function ExchangeRate({ config }: WidgetComponentProps) {
           transform: `scale(${scale})`,
           transformOrigin: 'center center',
           backgroundColor: '#1B1B1D',
+          backgroundImage: 'linear-gradient(var(--widget-theme-tint, transparent), var(--widget-theme-tint, transparent))',
           borderRadius: 22,
           padding: 12,
         }}

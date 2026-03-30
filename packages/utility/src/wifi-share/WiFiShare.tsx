@@ -34,7 +34,7 @@ export default function WiFiShareWidget({ config, theme }: WidgetComponentProps)
   const message = c?.message ?? 'Scan to Connect to WiFi!';
   const showNetworkName = c?.showNetworkName ?? true;
   const showPassword = c?.showPassword ?? true;
-  const bgColor = c?.bgColor ?? theme.primary;
+  const bgColor = c?.bgColor || theme.primary;
   const textColor = c?.textColor ?? '#ffffff';
   const qrFgColor = c?.qrFgColor ?? '#000000';
   const qrBgColor = c?.qrBgColor ?? '#ffffff';
