@@ -53,6 +53,9 @@ const formatDuration = (seconds: number): string => {
   return `${h}h ${m}m`;
 };
 
+const clamp = (value: number, min: number, max: number): number =>
+  Math.max(min, Math.min(max, value));
+
 /** Calculate sun progress (0-1) through the day based on sunrise/sunset */
 const getSunProgress = (sunrise: string, sunset: string): number => {
   const now = Date.now();
@@ -224,10 +227,29 @@ export default function SunsetSunrise({ config, theme }: WidgetComponentProps) {
   );
   const isDaytime = progress > 0 && progress < 1;
 
-  const { containerRef, scale, designWidth, designHeight, isLandscape } = useAdaptiveFitScale({
+  const { containerRef, containerWidth, containerHeight, isLandscape } = useAdaptiveFitScale({
     landscape: { w: 360, h: 260 },
     portrait: { w: 240, h: 360 },
   });
+  const resolvedWidth = containerWidth || (isLandscape ? 360 : 240);
+  const resolvedHeight = containerHeight || (isLandscape ? 260 : 360);
+  const compact = resolvedHeight < 210 || resolvedWidth < 310;
+  const showCompactDetails = showDetails && !compact;
+  const padX = clamp(resolvedWidth * 0.065, 12, 24);
+  const padY = clamp(resolvedHeight * 0.07, 10, 20);
+  const titleSize = clamp(Math.min(resolvedWidth * 0.048, resolvedHeight * 0.11), 11, 16);
+  const statusSize = clamp(Math.min(resolvedWidth * 0.055, resolvedHeight * 0.12), 12, 18);
+  const labelSize = clamp(Math.min(resolvedWidth * 0.042, resolvedHeight * 0.1), 11, 14);
+  const valueSize = clamp(Math.min(resolvedWidth * 0.072, resolvedHeight * 0.18), 20, 32);
+  const metaSize = clamp(Math.min(resolvedWidth * 0.038, resolvedHeight * 0.09), 10, 13);
+  const twilightSize = clamp(metaSize * 0.92, 9, 12);
+  const contentGap = clamp(resolvedHeight * 0.025, 6, 12);
+  const arcWidth = clamp(resolvedWidth - padX * 2 - (compact ? 8 : 20), 160, 280);
+  const arcHeight = clamp(resolvedHeight * (compact ? 0.2 : 0.24), 54, 84);
+  const timesGap = clamp(resolvedWidth * (compact ? 0.035 : 0.06), 12, 30);
+  const detailGapX = clamp(resolvedWidth * 0.045, 10, 20);
+  const detailGapY = clamp(resolvedHeight * 0.02, 4, 10);
+  const primaryMetaSize = clamp(metaSize * 1.02, 10, 14);
 
   const timeUntil = useMemo(() => {
     const now = Date.now();
@@ -246,63 +268,88 @@ export default function SunsetSunrise({ config, theme }: WidgetComponentProps) {
   }, [sunData.sunrise, sunData.sunset, Math.floor(Date.now() / 60_000)]);
 
   return (
-    <ThemedContainer ref={containerRef} theme={theme} color="primary" opacity="20">
+    <ThemedContainer
+      ref={containerRef}
+      theme={theme}
+      color="primary"
+      opacity="20"
+      className="flex items-center justify-center"
+    >
       <div
-        style={{
-          width: designWidth,
-          height: designHeight,
-          transform: `scale(${scale})`,
-          transformOrigin: 'top left',
-        }}
-        className={`flex flex-col ${isLandscape ? 'justify-center' : 'items-center justify-center'} p-5`}
+        className="flex h-full w-full flex-col items-center justify-center text-center"
+        style={{ padding: `${padY}px ${padX}px`, gap: contentGap }}
       >
         {/* Location */}
         <div
-          className={`text-sm font-medium opacity-70 mb-1 ${!isLandscape ? 'text-center' : ''}`}
-          style={{ color: theme.accent }}
+          className="font-medium opacity-70"
+          style={{ color: theme.accent, fontSize: titleSize, lineHeight: 1.05 }}
         >
           {locationName}
         </div>
 
         {/* Status line */}
-        <div className={`text-base text-white/60 mb-2 ${!isLandscape ? 'text-center' : ''}`}>
+        <div
+          className="text-white/60"
+          style={{ fontSize: statusSize, lineHeight: 1.08, maxWidth: '100%' }}
+        >
           {timeUntil}
         </div>
 
         {/* Sun arc */}
-        <div className={`${!isLandscape ? 'flex justify-center' : ''} mb-2`}>
+        <div className="flex w-full justify-center">
           <SunArc
             progress={progress}
             isDaytime={isDaytime}
             theme={theme}
-            width={isLandscape ? 280 : 200}
-            height={isLandscape ? 80 : 70}
+            width={arcWidth}
+            height={arcHeight}
           />
         </div>
 
         {/* Sunrise / Sunset times */}
-        <div className={`flex ${isLandscape ? 'gap-8' : 'gap-6'} ${!isLandscape ? 'justify-center' : ''}`}>
+        <div
+          className="flex w-full flex-wrap justify-center"
+          style={{ gap: timesGap }}
+        >
           <div className="flex flex-col items-center">
             <IconText icon={<AppIcon name="sunrise" className="w-5 h-5 text-amber-400" />} gap="1.5">
-              <span className="text-white/80 text-sm font-medium">Sunrise</span>
+              <span className="font-medium text-white/80" style={{ fontSize: labelSize, lineHeight: 1.1 }}>
+                Sunrise
+              </span>
             </IconText>
-            <span className="text-white text-xl font-bold mt-0.5">
+            <span className="font-bold text-white" style={{ fontSize: valueSize, lineHeight: 1, marginTop: 2 }}>
               {formatTime(sunData.sunrise, timeFormat)}
             </span>
           </div>
           <div className="flex flex-col items-center">
             <IconText icon={<AppIcon name="sunset" className="w-5 h-5 text-orange-400" />} gap="1.5">
-              <span className="text-white/80 text-sm font-medium">Sunset</span>
+              <span className="font-medium text-white/80" style={{ fontSize: labelSize, lineHeight: 1.1 }}>
+                Sunset
+              </span>
             </IconText>
-            <span className="text-white text-xl font-bold mt-0.5">
+            <span className="font-bold text-white" style={{ fontSize: valueSize, lineHeight: 1, marginTop: 2 }}>
               {formatTime(sunData.sunset, timeFormat)}
             </span>
           </div>
         </div>
 
         {/* Details */}
-        {showDetails && (
-          <div className={`mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm text-white/50 ${!isLandscape ? 'justify-center' : ''}`}>
+        {showDetails && compact && (
+          <div
+            className="flex w-full justify-center text-white/55"
+            style={{ fontSize: primaryMetaSize, lineHeight: 1.15 }}
+          >
+            <IconText icon={<AppIcon name="clock" className="w-3.5 h-3.5" />} gap="1.5">
+              <span>{sunData.dayLength} daylight</span>
+            </IconText>
+          </div>
+        )}
+
+        {showCompactDetails && (
+          <div
+            className="flex w-full flex-wrap justify-center text-white/50"
+            style={{ columnGap: detailGapX, rowGap: detailGapY, fontSize: metaSize, lineHeight: 1.15 }}
+          >
             <IconText icon={<AppIcon name="clock" className="w-3.5 h-3.5" />} gap="1.5">
               <span>{sunData.dayLength} daylight</span>
             </IconText>
@@ -318,9 +365,14 @@ export default function SunsetSunrise({ config, theme }: WidgetComponentProps) {
         )}
 
         {/* Twilight */}
-        {showDetails && (
-          <div className={`mt-1 flex flex-wrap gap-x-5 gap-y-1 text-xs text-white/35 ${!isLandscape ? 'justify-center' : ''}`}>
-            <span>Twilight {formatTime(sunData.civilTwilightBegin, timeFormat)} – {formatTime(sunData.civilTwilightEnd, timeFormat)}</span>
+        {showCompactDetails && (
+          <div
+            className="flex w-full justify-center text-white/35"
+            style={{ fontSize: twilightSize, lineHeight: 1.1 }}
+          >
+            <span className="max-w-full text-center">
+              Twilight {formatTime(sunData.civilTwilightBegin, timeFormat)} – {formatTime(sunData.civilTwilightEnd, timeFormat)}
+            </span>
           </div>
         )}
 

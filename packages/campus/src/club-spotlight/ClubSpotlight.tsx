@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import QRCodeLib from 'qrcode';
-import { WidgetComponentProps, registerWidget, PillIndicator } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, buildProxyUrl, fetchJsonWithCache, fetchTextWithCache } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
 import ClubSpotlightOptions from './ClubSpotlightOptions';
@@ -292,11 +292,11 @@ export default function ClubSpotlight({ config, theme }: WidgetComponentProps) {
           transform: `scale(${scale})`,
           transformOrigin: 'top left',
         }}
-        className={`flex ${isLandscape ? 'items-center gap-6' : 'flex-col items-center justify-center'} p-6`}
+        className={`flex ${isLandscape ? 'items-center gap-8' : 'flex-col items-center justify-center'} p-6`}
       >
         {/* Club Image */}
         <div
-          className={`${isLandscape ? 'w-32 h-32' : 'w-40 h-40'} rounded-full overflow-hidden border-4 ${isLandscape ? '' : 'mb-4'} transition-all duration-700 flex-shrink-0`}
+          className={`${isLandscape ? 'w-36 h-36' : 'w-40 h-40'} rounded-full overflow-hidden border-4 ${isLandscape ? '' : 'mb-4'} transition-all duration-700 flex-shrink-0`}
           style={{ borderColor: theme.accent }}
         >
           {current?.image ? (
@@ -317,11 +317,11 @@ export default function ClubSpotlight({ config, theme }: WidgetComponentProps) {
         </div>
 
         {/* Club details */}
-        <div className={isLandscape ? 'flex flex-col min-w-0' : ''}>
+        <div className={isLandscape ? 'flex min-w-0 flex-1 flex-col justify-center' : 'flex w-full flex-col items-center'}>
           {/* Header */}
           {isLandscape && (
             <div
-              className="text-sm font-semibold tracking-wide uppercase mb-2"
+              className="mb-2 text-sm font-semibold uppercase tracking-wide"
               style={{ color: theme.accent }}
             >
               Club Spotlight
@@ -329,7 +329,7 @@ export default function ClubSpotlight({ config, theme }: WidgetComponentProps) {
           )}
           {!isLandscape && (
             <div
-              className="text-sm font-semibold tracking-wide uppercase mb-4"
+              className="mb-4 text-sm font-semibold uppercase tracking-wide"
               style={{ color: theme.accent }}
             >
               Club Spotlight
@@ -337,19 +337,11 @@ export default function ClubSpotlight({ config, theme }: WidgetComponentProps) {
           )}
 
           {/* Club Name */}
-          <div className={`text-2xl font-bold text-white ${isLandscape ? 'text-left' : 'text-center'} leading-tight mb-2`}>
+          <div
+            className={`${isLandscape ? 'text-left text-[2rem]' : 'text-center text-2xl'} font-bold leading-tight text-white`}
+          >
             {current?.name || 'Loading...'}
           </div>
-
-          {/* Progress dots */}
-          {clubs.length > 1 && (
-            <PillIndicator
-              theme={theme}
-              count={clubs.length}
-              active={activeIndex}
-              className={`mt-2 ${!isLandscape ? 'justify-center' : ''}`}
-            />
-          )}
 
           {/* Error / defaults notice */}
           {error && usingDefaults && (

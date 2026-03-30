@@ -11,6 +11,36 @@ interface StationPrice {
   address: string;
 }
 
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const normalized = hex.trim().replace('#', '');
+  const expanded =
+    normalized.length === 3
+      ? normalized.split('').map((char) => char + char).join('')
+      : normalized;
+
+  if (!/^[0-9a-fA-F]{6}$/.test(expanded)) return null;
+
+  const value = Number.parseInt(expanded, 16);
+  return {
+    r: (value >> 16) & 255,
+    g: (value >> 8) & 255,
+    b: value & 255,
+  };
+}
+
+function mixColors(base: string, target: string, weight: number): string {
+  const baseRgb = hexToRgb(base);
+  const targetRgb = hexToRgb(target);
+
+  if (!baseRgb || !targetRgb) return target;
+
+  const clampedWeight = Math.max(0, Math.min(1, weight));
+  const mix = (start: number, end: number) =>
+    Math.round(start + (end - start) * clampedWeight);
+
+  return `rgb(${mix(baseRgb.r, targetRgb.r)}, ${mix(baseRgb.g, targetRgb.g)}, ${mix(baseRgb.b, targetRgb.b)})`;
+}
+
 const DEFAULT_URL =
   'https://www.gasbuddy.com/gasprices/british-columbia/prince-george';
 
@@ -110,34 +140,62 @@ export default function GasPrices({ config: cfg, theme }: WidgetComponentProps) 
     ? Math.max(...stations.map((s) => s.price))
     : 0;
 
+  const panelBg = theme.background;
+  const headlineColor = mixColors(theme.background, '#ffffff', 0.96);
+  const secondaryText = mixColors(theme.background, '#ffffff', 0.68);
+  const tertiaryText = mixColors(theme.background, '#ffffff', 0.42);
+  const bannerBg = mixColors(theme.background, theme.accent, 0.16);
+  const bannerBorder = mixColors(theme.background, theme.accent, 0.28);
+  const rowBg = mixColors(theme.background, '#ffffff', 0.05);
+  const rowHoverBg = mixColors(theme.background, '#ffffff', 0.1);
+  const lowPriceColor = theme.accent;
+  const highPriceColor = mixColors(theme.accent, '#ffffff', 0.42);
+  const neutralPriceColor = headlineColor;
+
   return (
-    <ThemedContainer theme={theme} className="flex flex-col h-full p-4 gap-2 overflow-hidden">
+    <ThemedContainer
+      theme={theme}
+      color="background"
+      className="flex flex-col h-full p-4 gap-2 overflow-hidden"
+      style={{
+        backgroundColor: panelBg,
+        backgroundImage: 'linear-gradient(var(--widget-theme-tint, transparent), var(--widget-theme-tint, transparent))',
+      }}
+    >
       {/* Header */}
       <div className="flex items-center gap-2">
         <span className="text-2xl">⛽</span>
         <div>
-          <h2 className="text-lg font-bold leading-tight text-white">Gas Prices</h2>
-          <p className="text-xs text-white/50">Prince George, BC</p>
+          <h2 className="text-lg font-bold leading-tight" style={{ color: headlineColor }}>Gas Prices</h2>
+          <p className="text-xs" style={{ color: tertiaryText }}>Prince George, BC</p>
         </div>
       </div>
 
       {loading && !stations.length && (
-        <div className="flex-1 flex items-center justify-center text-white/50 text-sm">
+        <div className="flex-1 flex items-center justify-center text-sm" style={{ color: tertiaryText }}>
           Loading...
         </div>
       )}
 
       {error && (
-        <div className="text-sm text-red-400">{error}</div>
+        <div className="text-sm" style={{ color: theme.accent }}>{error}</div>
       )}
 
       {stations.length > 0 && (
         <>
           {/* Average price banner */}
-          <div className="rounded-lg bg-white/10 p-3 text-center">
-            <div className="text-xs text-white/50 uppercase tracking-wide">Average Price</div>
-            <div className="text-3xl font-bold text-white">{avgPrice.toFixed(1)}<span className="text-lg">¢/L</span></div>
-            <div className="flex justify-center gap-4 mt-1 text-xs text-white/60">
+          <div
+            className="rounded-lg p-3 text-center"
+            style={{
+              backgroundColor: bannerBg,
+              border: `1px solid ${bannerBorder}`,
+            }}
+          >
+            <div className="text-xs uppercase tracking-wide" style={{ color: secondaryText }}>Average Price</div>
+            <div className="text-3xl font-bold" style={{ color: headlineColor }}>
+              {avgPrice.toFixed(1)}<span className="text-lg">¢/L</span>
+            </div>
+            <div className="flex justify-center gap-4 mt-1 text-xs" style={{ color: secondaryText }}>
               <span>Low: {lowestPrice.toFixed(1)}¢</span>
               <span>High: {highestPrice.toFixed(1)}¢</span>
             </div>
@@ -148,20 +206,29 @@ export default function GasPrices({ config: cfg, theme }: WidgetComponentProps) 
             {stations.map((st, i) => (
               <div
                 key={i}
-                className="flex items-center justify-between rounded px-2 py-1.5 bg-white/5 hover:bg-white/10 transition-colors"
+                className="flex items-center justify-between rounded px-2 py-1.5 transition-colors"
+                style={{ backgroundColor: rowBg }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = rowHoverBg;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = rowBg;
+                }}
               >
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium text-white truncate">{st.name}</div>
-                  <div className="text-xs text-white/40 truncate">{st.address}</div>
+                  <div className="text-sm font-medium truncate" style={{ color: headlineColor }}>{st.name}</div>
+                  <div className="text-xs truncate" style={{ color: tertiaryText }}>{st.address}</div>
                 </div>
                 <div
-                  className={`text-sm font-bold ml-2 whitespace-nowrap ${
-                    st.price === lowestPrice
-                      ? 'text-green-400'
-                      : st.price === highestPrice
-                        ? 'text-red-400'
-                        : 'text-white'
-                  }`}
+                  className="text-sm font-bold ml-2 whitespace-nowrap"
+                  style={{
+                    color:
+                      st.price === lowestPrice
+                        ? lowPriceColor
+                        : st.price === highestPrice
+                          ? highPriceColor
+                          : neutralPriceColor,
+                  }}
                 >
                   {st.price.toFixed(1)}¢
                 </div>
@@ -172,7 +239,7 @@ export default function GasPrices({ config: cfg, theme }: WidgetComponentProps) 
       )}
 
       {lastUpdated && (
-        <div className="text-xs text-white/40 text-right">
+        <div className="text-xs text-right" style={{ color: tertiaryText }}>
           Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </div>
       )}

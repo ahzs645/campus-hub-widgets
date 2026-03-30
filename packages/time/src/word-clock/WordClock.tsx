@@ -30,6 +30,10 @@ interface WordMatch {
   end: number; // exclusive
 }
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
 function getTimeWords(hours: number, minutes: number): WordMatch[] {
   const matches: WordMatch[] = [];
 
@@ -123,7 +127,7 @@ export default function WordClock({ config, theme }: WidgetComponentProps) {
 
   const [time, setTime] = useState<Date | null>(null);
 
-  const { containerRef, scale } = useFitScale(340, 360);
+  const { containerRef, containerWidth, containerHeight } = useFitScale(340, 360);
 
   useEffect(() => {
     setTime(new Date());
@@ -146,6 +150,25 @@ export default function WordClock({ config, theme }: WidgetComponentProps) {
 
   // Show dots for the remaining minutes (0-4 dots for minutes not captured by 5-min rounding)
   const extraMinutes = minutes % 5;
+  const resolvedWidth = containerWidth || 340;
+  const resolvedHeight = containerHeight || 360;
+  const cols = GRID[0]?.length ?? 11;
+  const rows = GRID.length;
+  const showMinuteDots = accentMinutes && extraMinutes > 0;
+  const padX = clamp(resolvedWidth * 0.08, 10, 22);
+  const padY = clamp(resolvedHeight * 0.06, 10, 20);
+  const dotSize = clamp(Math.min(resolvedWidth, resolvedHeight) * 0.022, 4, 8);
+  const dotGap = clamp(dotSize * 0.75, 4, 8);
+  const dotArea = showMinuteDots ? dotSize + clamp(resolvedHeight * 0.045, 8, 16) : 0;
+  const availableWidth = Math.max(resolvedWidth - padX * 2, 80);
+  const availableHeight = Math.max(resolvedHeight - padY * 2 - dotArea, 100);
+  const colGap = clamp(availableWidth * 0.005, 1, 3);
+  const rowGap = clamp(availableHeight * 0.015, 2, 7);
+  const cellWidth = Math.max((availableWidth - colGap * (cols - 1)) / cols, 10);
+  const cellHeight = Math.max((availableHeight - rowGap * (rows - 1)) / rows, 10);
+  const fontSize = clamp(Math.min(cellWidth * 0.8, cellHeight * 0.8), 10, 22);
+  const inactiveColor = `${theme.accent}18`;
+  const glowRadius = clamp(fontSize * 0.7, 6, 14);
 
   return (
     <ThemedContainer
@@ -156,27 +179,39 @@ export default function WordClock({ config, theme }: WidgetComponentProps) {
       className="flex items-center justify-center"
     >
       <div
+        className="flex h-full w-full flex-col items-center justify-center"
         style={{
-          width: 340,
-          height: 360,
-          transform: `scale(${scale})`,
-          transformOrigin: 'center center',
+          padding: `${padY}px ${padX}px`,
         }}
-        className="flex flex-col items-center justify-center"
       >
         {/* Grid */}
-        <div className="font-mono tracking-[0.35em] leading-[2.2] text-center select-none">
+        <div
+          className="select-none font-mono text-center"
+          style={{
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: rowGap,
+          }}
+        >
           {GRID.map((row, ri) => (
-            <div key={ri} className="flex justify-center gap-[2px]">
+            <div key={ri} className="flex justify-center" style={{ gap: colGap }}>
               {row.split('').map((char, ci) => {
                 const isActive = active.has(`${ri}-${ci}`);
                 return (
                   <span
                     key={ci}
-                    className="inline-block w-[26px] text-center text-[17px] font-bold transition-all duration-700"
+                    className="inline-flex items-center justify-center font-bold transition-all duration-700"
                     style={{
-                      color: isActive ? theme.accent : `${theme.accent}15`,
-                      textShadow: isActive ? `0 0 12px ${theme.accent}60` : 'none',
+                      width: cellWidth,
+                      height: cellHeight,
+                      fontSize,
+                      lineHeight: 1,
+                      letterSpacing: '0.04em',
+                      color: isActive ? theme.accent : inactiveColor,
+                      textShadow: isActive ? `0 0 ${glowRadius}px ${theme.accent}60` : 'none',
                     }}
                   >
                     {char}
@@ -188,13 +223,24 @@ export default function WordClock({ config, theme }: WidgetComponentProps) {
         </div>
 
         {/* Minute dots */}
-        {accentMinutes && extraMinutes > 0 && (
-          <div className="flex gap-2 mt-4">
+        {showMinuteDots && (
+          <div
+            className="flex justify-center"
+            style={{
+              gap: dotGap,
+              marginTop: clamp(resolvedHeight * 0.04, 8, 16),
+            }}
+          >
             {Array.from({ length: extraMinutes }).map((_, i) => (
               <div
                 key={i}
-                className="w-2 h-2 rounded-full"
-                style={{ backgroundColor: theme.accent, boxShadow: `0 0 6px ${theme.accent}60` }}
+                className="rounded-full"
+                style={{
+                  width: dotSize,
+                  height: dotSize,
+                  backgroundColor: theme.accent,
+                  boxShadow: `0 0 ${clamp(dotSize * 1.5, 4, 8)}px ${theme.accent}60`,
+                }}
               />
             ))}
           </div>

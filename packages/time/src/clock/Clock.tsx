@@ -201,6 +201,36 @@ function formatCustom(date: Date, formatStr: string, hour12: boolean): string[] 
   });
 }
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function formatDigitalTime(date: Date, showSeconds: boolean, format24h: boolean): {
+  main: string;
+  dayPeriod: string;
+} {
+  const formatter = new Intl.DateTimeFormat([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    ...(showSeconds ? { second: '2-digit' } : {}),
+    hour12: !format24h,
+  });
+
+  const parts = formatter.formatToParts(date);
+  const getPart = (type: Intl.DateTimeFormatPartTypes) =>
+    parts
+      .filter((part) => part.type === type)
+      .map((part) => part.value)
+      .join('');
+
+  return {
+    main: [getPart('hour'), getPart('minute'), showSeconds ? getPart('second') : '']
+      .filter(Boolean)
+      .join(':'),
+    dayPeriod: getPart('dayPeriod').toUpperCase(),
+  };
+}
+
 export default function Clock({ config, theme }: WidgetComponentProps) {
   const [time, setTime] = useState<Date | null>(null);
   const clockConfig = config as ClockConfig | undefined;
@@ -227,7 +257,15 @@ export default function Clock({ config, theme }: WidgetComponentProps) {
 
   // Adaptive dimensions: analog clock adapts between landscape/portrait,
   // digital clock swaps between wide banner and tall stacked layout
-  const { containerRef, scale, designWidth: DESIGN_W, designHeight: DESIGN_H, isLandscape } = useAdaptiveFitScale(
+  const {
+    containerRef,
+    scale,
+    designWidth: DESIGN_W,
+    designHeight: DESIGN_H,
+    isLandscape,
+    containerWidth,
+    containerHeight,
+  } = useAdaptiveFitScale(
     isAnalog || isMosaic
       ? { landscape: { w: 300, h: 260 }, portrait: { w: 240, h: 300 } }
       : { landscape: { w: 320, h: 100 }, portrait: { w: 200, h: 140 } },
@@ -283,12 +321,13 @@ export default function Clock({ config, theme }: WidgetComponentProps) {
     );
   }
 
-  const timeOptions: Intl.DateTimeFormatOptions = {
-    hour: '2-digit',
-    minute: '2-digit',
-    ...(showSeconds ? { second: '2-digit' } : {}),
-    hour12: !format24h,
-  };
+  const resolvedWidth = containerWidth || DESIGN_W;
+  const resolvedHeight = containerHeight || DESIGN_H;
+  const dateText = time.toLocaleDateString([], {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  });
 
   if (isAnalog || isMosaic) {
     return (
@@ -313,11 +352,7 @@ export default function Clock({ config, theme }: WidgetComponentProps) {
           </div>
           {showDate && (
             <div className="text-sm opacity-80 mt-1 font-medium tracking-wide text-white/80 text-center">
-              {time.toLocaleDateString([], {
-                weekday: 'long',
-                month: 'long',
-                day: 'numeric',
-              })}
+              {dateText}
             </div>
           )}
         </div>
@@ -332,43 +367,94 @@ export default function Clock({ config, theme }: WidgetComponentProps) {
     >
       <div
         style={{
-          width: DESIGN_W,
-          height: DESIGN_H,
-          transform: `scale(${scale})`,
-          transformOrigin: `${horizontalLayout.transformOriginX} ${verticalLayout.transformOriginY}`,
+          width: '100%',
+          height: '100%',
+          padding: `${clamp(resolvedHeight * 0.1, 8, 16)}px ${clamp(resolvedWidth * 0.06, 12, 22)}px`,
         }}
-        className={`flex flex-col justify-center font-clock px-4 ${horizontalLayout.containerClass}`}
+        className={`flex flex-col font-clock ${verticalLayout.containerClass} ${horizontalLayout.containerClass}`}
       >
         {customFormat ? (
           /* Custom format mode (inspired by Concerto's ConcertoClock) */
           <div className="flex flex-col" style={{ color: theme.accent }}>
-            {formatCustom(time, customFormat, !format24h).map((line, i) => (
+            {(() => {
+              const lines = formatCustom(time, customFormat, !format24h).filter(Boolean);
+              const lineCount = Math.max(lines.length, 1);
+              const longestLine = Math.max(...lines.map((line) => line.length), 6);
+              const availableHeight = resolvedHeight - clamp(resolvedHeight * 0.1, 8, 16) * 2;
+              const primaryFontSize = clamp(
+                Math.min(resolvedWidth / Math.max(3.8, longestLine * 0.56), availableHeight / (lineCount > 1 ? 1.8 : 1.15)),
+                16,
+                56,
+              );
+              const secondaryFontSize = clamp(primaryFontSize * 0.52, 12, 28);
+
+              return lines.map((line, i) => (
               <div
                 key={i}
-                className={`font-bold tracking-tight tabular-nums whitespace-nowrap ${i === 0 ? 'text-5xl' : 'text-2xl opacity-80'}`}
+                className="font-bold tracking-tight tabular-nums whitespace-nowrap"
+                style={{
+                  fontSize: i === 0 ? primaryFontSize : secondaryFontSize,
+                  opacity: i === 0 ? 1 : 0.8,
+                  lineHeight: i === 0 ? 0.95 : 1.05,
+                }}
               >
                 {line}
               </div>
-            ))}
+              ));
+            })()}
           </div>
         ) : (
-          <>
-            <div
-              className="text-5xl font-bold tracking-tight tabular-nums"
-              style={{ color: theme.accent }}
-            >
-              {time.toLocaleTimeString([], timeOptions)}
-            </div>
-            {showDate && (
-              <div className="text-base opacity-80 mt-1 font-medium tracking-wide text-white/80">
-                {time.toLocaleDateString([], {
-                  weekday: 'long',
-                  month: 'long',
-                  day: 'numeric',
-                })}
-              </div>
-            )}
-          </>
+          (() => {
+            const digitalTime = formatDigitalTime(time, showSeconds, format24h);
+            const showDayPeriod = Boolean(digitalTime.dayPeriod) && !format24h;
+            const availableHeight =
+              resolvedHeight
+              - clamp(resolvedHeight * 0.1, 8, 16) * 2
+              - (showDate ? clamp(resolvedHeight * 0.2, 14, 24) : 0);
+            const timeFontSize = clamp(
+              Math.min(
+                resolvedWidth / (showSeconds ? (showDayPeriod ? 7.2 : 6.1) : (showDayPeriod ? 5.8 : 4.9)),
+                availableHeight * (showDayPeriod ? 0.95 : 1.05),
+              ),
+              20,
+              72,
+            );
+            const dayPeriodFontSize = clamp(timeFontSize * 0.42, 11, 28);
+            const dateFontSize = clamp(
+              Math.min(resolvedWidth * 0.07, resolvedHeight * 0.18),
+              10,
+              20,
+            );
+
+            return (
+              <>
+                <div className="flex items-end gap-2 flex-wrap">
+                  <div
+                    className="font-bold tracking-tight tabular-nums whitespace-nowrap"
+                    style={{ color: theme.accent, fontSize: timeFontSize, lineHeight: 0.92 }}
+                  >
+                    {digitalTime.main}
+                  </div>
+                  {showDayPeriod && (
+                    <div
+                      className="font-semibold tracking-[0.18em] whitespace-nowrap"
+                      style={{ color: theme.accent, fontSize: dayPeriodFontSize, lineHeight: 1, paddingBottom: 2 }}
+                    >
+                      {digitalTime.dayPeriod}
+                    </div>
+                  )}
+                </div>
+                {showDate && (
+                  <div
+                    className="mt-1 font-medium tracking-wide text-white/80"
+                    style={{ fontSize: dateFontSize, lineHeight: 1.05 }}
+                  >
+                    {dateText}
+                  </div>
+                )}
+              </>
+            );
+          })()
         )}
       </div>
     </div>

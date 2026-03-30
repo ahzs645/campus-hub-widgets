@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, buildProxyUrl, fetchTextWithCache } from '@firstform/campus-hub-widget-sdk';
 import { useFitScale } from '@firstform/campus-hub-widget-sdk';
@@ -22,6 +22,10 @@ interface RSSConfig {
   scrollSpeed?: number;
   title?: string;
   useCorsProxy?: boolean;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
 }
 
 const DEMO_ITEMS: FeedItem[] = [
@@ -91,9 +95,11 @@ export default function RSSReader({ config, theme }: WidgetComponentProps) {
   const [items, setItems] = useState<FeedItem[]>(DEMO_ITEMS);
   const [feedTitle, setFeedTitle] = useState(customTitle || 'Campus News');
   const [error, setError] = useState<string | null>(null);
-  const [scrollNeeded, setScrollNeeded] = useState(false);
+  const [scrollMetrics, setScrollMetrics] = useState({ viewportHeight: 0, contentHeight: 0 });
 
-  const { containerRef, scale } = useFitScale(480, 600);
+  const { containerRef, containerWidth, containerHeight } = useFitScale(480, 600);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   const fetchFeed = useCallback(async () => {
     if (!feedUrl) {
@@ -128,87 +134,166 @@ export default function RSSReader({ config, theme }: WidgetComponentProps) {
     }
   }, [fetchFeed, feedUrl, refreshInterval]);
 
-  // Check if scrolling is needed
-  const contentRef = useCallback((node: HTMLDivElement | null) => {
-    if (!node) return;
-    const ro = new ResizeObserver(() => {
-      setScrollNeeded(node.scrollHeight > node.clientHeight + 4);
-    });
-    ro.observe(node);
-    return () => ro.disconnect();
-  }, []);
+  useEffect(() => {
+    const measure = () => {
+      const viewportHeight = viewportRef.current?.clientHeight ?? 0;
+      const contentHeight = contentRef.current?.scrollHeight ?? 0;
+      setScrollMetrics((prev) => (
+        prev.viewportHeight === viewportHeight && prev.contentHeight === contentHeight
+          ? prev
+          : { viewportHeight, contentHeight }
+      ));
+    };
 
-  const totalHeight = items.length * (showDescription ? 100 : 50);
-  const duration = totalHeight > 0 ? (totalHeight / 30) * (scrollSpeed / 10) : 30;
+    measure();
+    const frame = requestAnimationFrame(measure);
+    const observer = new ResizeObserver(measure);
+    if (viewportRef.current) observer.observe(viewportRef.current);
+    if (contentRef.current) observer.observe(contentRef.current);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, [items, showDescription, showDate, feedTitle, containerWidth, containerHeight, error]);
+
+  const resolvedWidth = containerWidth || 400;
+  const resolvedHeight = containerHeight || 400;
+  const padX = clamp(resolvedWidth * 0.045, 12, 22);
+  const padY = clamp(resolvedHeight * 0.035, 10, 18);
+  const headerGap = clamp(resolvedWidth * 0.02, 8, 14);
+  const iconSize = clamp(Math.min(resolvedWidth, resolvedHeight) * 0.055, 16, 22);
+  const titleSize = clamp(Math.min(resolvedWidth * 0.06, resolvedHeight * 0.065), 16, 24);
+  const badgeSize = clamp(Math.min(resolvedWidth * 0.028, resolvedHeight * 0.03), 10, 12);
+  const itemPadY = clamp(resolvedHeight * 0.028, 10, 16);
+  const itemGap = clamp(resolvedWidth * 0.025, 8, 12);
+  const dotSize = clamp(Math.min(resolvedWidth, resolvedHeight) * 0.0055, 4, 7);
+  const headlineSize = clamp(Math.min(resolvedWidth * 0.045, resolvedHeight * 0.05), 14, 19);
+  const descriptionSize = clamp(Math.min(resolvedWidth * 0.036, resolvedHeight * 0.038), 11, 15);
+  const metaSize = clamp(Math.min(resolvedWidth * 0.028, resolvedHeight * 0.032), 10, 12);
+  const shouldLoop =
+    scrollSpeed > 0
+    && items.length > 1
+    && scrollMetrics.contentHeight > scrollMetrics.viewportHeight + 4;
+  const duration = shouldLoop
+    ? clamp(
+      (scrollMetrics.contentHeight / Math.max(descriptionSize * 1.8, 1)) * (scrollSpeed / 10),
+      8,
+      180,
+    )
+    : 0;
+
+  const renderItems = (keyPrefix: string, ariaHidden = false) => (
+    <div ref={ariaHidden ? undefined : contentRef} aria-hidden={ariaHidden || undefined}>
+      {items.map((item, i) => (
+        <div
+          key={`${keyPrefix}-${item.title}-${i}`}
+          style={{
+            padding: `${itemPadY}px ${padX}px`,
+            borderBottom: `1px solid ${theme.accent}10`,
+          }}
+        >
+          <div className="flex items-start" style={{ gap: itemGap }}>
+            <div
+              className="rounded-full shrink-0"
+              style={{
+                width: dotSize,
+                height: dotSize,
+                marginTop: Math.max(4, headlineSize * 0.45),
+                backgroundColor: theme.accent,
+              }}
+            />
+            <div className="min-w-0 flex-1">
+              <div
+                className="font-medium leading-snug"
+                style={{ fontSize: headlineSize, color: 'white' }}
+              >
+                {item.title}
+              </div>
+              {showDescription && item.description && (
+                <div
+                  className="mt-1 line-clamp-2 leading-relaxed"
+                  style={{ fontSize: descriptionSize, color: 'rgba(255,255,255,0.58)' }}
+                >
+                  {item.description}
+                </div>
+              )}
+              {showDate && item.pubDate && (
+                <div className="mt-1" style={{ fontSize: metaSize, color: `${theme.accent}90` }}>
+                  {timeAgo(item.pubDate)}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div
       ref={containerRef}
       className="w-full h-full overflow-hidden"
-      style={{ backgroundColor: `${theme.primary}10` }}
+      style={{
+        backgroundColor: theme.background,
+        backgroundImage: 'linear-gradient(var(--widget-theme-tint, transparent), var(--widget-theme-tint, transparent))',
+      }}
     >
-      <div
-        style={{
-          width: 480,
-          height: 600,
-          transform: `scale(${scale})`,
-          transformOrigin: 'top left',
-        }}
-        className="flex flex-col h-full"
-      >
+      <style>{`
+        @keyframes rssTickerLoop {
+          0% { transform: translateY(0); }
+          100% { transform: translateY(calc(-1 * var(--rss-loop-distance, 0px))); }
+        }
+      `}</style>
+      <div className="flex flex-col h-full">
         {/* Header */}
-        <div className="flex items-center gap-3 px-5 py-4 shrink-0" style={{ borderBottom: `1px solid ${theme.accent}20` }}>
-          <span style={{ color: theme.accent }}><AppIcon name="rss" className="w-5 h-5" /></span>
-          <span className="text-lg font-semibold text-white truncate">{feedTitle}</span>
+        <div
+          className="flex items-center shrink-0"
+          style={{
+            gap: headerGap,
+            padding: `${padY}px ${padX}px`,
+            borderBottom: `1px solid ${theme.accent}20`,
+          }}
+        >
+          <span style={{ color: theme.accent }}><AppIcon name="rss" style={{ width: iconSize, height: iconSize }} /></span>
+          <span className="font-semibold text-white truncate" style={{ fontSize: titleSize }}>{feedTitle}</span>
           {!feedUrl && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/50 ml-auto">Demo</span>
+            <span
+              className="rounded-full ml-auto"
+              style={{
+                padding: '2px 8px',
+                fontSize: badgeSize,
+                backgroundColor: 'rgba(255,255,255,0.1)',
+                color: 'rgba(255,255,255,0.5)',
+              }}
+            >
+              Demo
+            </span>
           )}
         </div>
 
         {/* Error */}
         {error && (
-          <div className="px-5 py-3 text-sm text-red-400 shrink-0">
+          <div className="shrink-0" style={{ padding: `${itemPadY}px ${padX}px`, fontSize: descriptionSize, color: theme.accent }}>
             {error}
           </div>
         )}
 
         {/* Items */}
-        <div ref={contentRef} className="flex-1 overflow-hidden relative">
+        <div ref={viewportRef} className="flex-1 overflow-hidden relative">
           <div
-            className={scrollNeeded ? 'rss-scroll' : ''}
-            style={scrollNeeded ? { animationDuration: `${duration}s` } : undefined}
+            className={shouldLoop ? 'will-change-transform' : ''}
+            style={shouldLoop ? {
+              animation: `rssTickerLoop ${duration}s linear infinite`,
+              ['--rss-loop-distance' as string]: `${scrollMetrics.contentHeight}px`,
+            } : undefined}
           >
-            {items.map((item, i) => (
-              <div
-                key={`${item.title}-${i}`}
-                className="px-5 py-3"
-                style={{ borderBottom: `1px solid ${theme.accent}10` }}
-              >
-                <div className="flex items-start gap-2">
-                  <div
-                    className="w-1.5 h-1.5 rounded-full mt-2 shrink-0"
-                    style={{ backgroundColor: theme.accent }}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="text-base font-medium text-white leading-snug">{item.title}</div>
-                    {showDescription && item.description && (
-                      <div className="text-sm text-white/50 mt-1 line-clamp-2 leading-relaxed">
-                        {item.description}
-                      </div>
-                    )}
-                    {showDate && item.pubDate && (
-                      <div className="text-xs mt-1" style={{ color: `${theme.accent}90` }}>
-                        {timeAgo(item.pubDate)}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
+            {renderItems('primary')}
+            {shouldLoop && renderItems('loop', true)}
           </div>
 
           {/* Fade edges */}
-          {scrollNeeded && <FadeOverlay theme={theme} />}
+          {shouldLoop && <FadeOverlay theme={theme} />}
         </div>
       </div>
     </div>

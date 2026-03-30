@@ -12,6 +12,8 @@ interface TableData {
   striped: boolean;
   refreshInterval: number;
   useCorsProxy: boolean;
+  autoScroll: boolean;
+  scrollSpeed: number;
 }
 
 export default function SimpleTableOptions({ data, onChange }: WidgetOptionsProps) {
@@ -24,6 +26,8 @@ export default function SimpleTableOptions({ data, onChange }: WidgetOptionsProp
     striped: (data?.striped as boolean) ?? true,
     refreshInterval: (data?.refreshInterval as number) ?? 30,
     useCorsProxy: (data?.useCorsProxy as boolean) ?? true,
+    autoScroll: (data?.autoScroll as boolean) ?? true,
+    scrollSpeed: (data?.scrollSpeed as number) ?? 40,
   });
 
   useEffect(() => {
@@ -37,6 +41,8 @@ export default function SimpleTableOptions({ data, onChange }: WidgetOptionsProp
         striped: (data.striped as boolean) ?? true,
         refreshInterval: (data.refreshInterval as number) ?? 30,
         useCorsProxy: (data.useCorsProxy as boolean) ?? true,
+        autoScroll: (data.autoScroll as boolean) ?? true,
+        scrollSpeed: (data.scrollSpeed as number) ?? 40,
       });
     }
   }, [data]);
@@ -127,6 +133,26 @@ export default function SimpleTableOptions({ data, onChange }: WidgetOptionsProp
           checked={state.striped}
           onChange={handleChange}
         />
+
+        <FormSwitch
+          label="Auto-scroll Overflow"
+          name="autoScroll"
+          checked={state.autoScroll}
+          onChange={handleChange}
+        />
+
+        <FormInput
+          label="Scroll Speed"
+          name="scrollSpeed"
+          type="number"
+          value={state.scrollSpeed}
+          min={10}
+          max={120}
+          onChange={handleChange}
+        />
+        <div className="text-sm text-[var(--ui-text-muted)]">
+          Higher = slower scrolling. The table only loops when the rows exceed the available height.
+        </div>
       </OptionsSection>
 
       {/* Refresh (URL source only) */}

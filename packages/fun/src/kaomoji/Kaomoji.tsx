@@ -8,6 +8,9 @@ interface KaomojiConfig {
   cycleInterval?: number;
 }
 
+const clamp = (value: number, min: number, max: number): number =>
+  Math.max(min, Math.min(max, value));
+
 const KAOMOJI = [
   { face: '(◕‿◕)', mood: 'Happy' },
   { face: '(ﾉ◕ヮ◕)ﾉ*:・ﾟ✧', mood: 'Excited' },
@@ -31,18 +34,31 @@ export default function Kaomoji({ config: rawConfig, theme }: WidgetComponentPro
   const [visible, setVisible] = useState(true);
 
   const {
-    containerRef, scale, designWidth: BASE_W, designHeight: DESIGN_H,
+    containerRef,
     containerWidth, containerHeight,
   } = useAdaptiveFitScale({
     landscape: { w: 320, h: 140 },
     portrait: { w: 200, h: 200 },
   });
 
-  const DESIGN_W = containerWidth > 0 ? Math.max(BASE_W, containerWidth / scale) : BASE_W;
-  const ACTUAL_H = containerHeight > 0 ? Math.max(DESIGN_H, containerHeight / scale) : DESIGN_H;
-
-  // Scale face size to available space
-  const faceFontSize = Math.min(DESIGN_W * 0.14, ACTUAL_H * 0.3, 64);
+  const resolvedWidth = containerWidth || 200;
+  const resolvedHeight = containerHeight || 200;
+  const padX = clamp(resolvedWidth * 0.08, 10, 22);
+  const padY = clamp(resolvedHeight * 0.08, 10, 22);
+  const innerWidth = Math.max(resolvedWidth - padX * 2, 80);
+  const innerHeight = Math.max(resolvedHeight - padY * 2, 80);
+  const current = KAOMOJI[index];
+  const faceLength = Math.max(Array.from(current.face.replace(/\s+/g, '')).length, 4);
+  const faceFontSize = clamp(
+    Math.min(
+      innerWidth / Math.max(faceLength * 0.48, 2.5),
+      innerHeight * 0.46,
+    ),
+    18,
+    64,
+  );
+  const moodFontSize = clamp(Math.min(faceFontSize * 0.24, innerHeight * 0.1), 9, 15);
+  const gap = clamp(resolvedHeight * 0.04, 6, 12);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -56,16 +72,14 @@ export default function Kaomoji({ config: rawConfig, theme }: WidgetComponentPro
     return () => clearInterval(timer);
   }, [cycleInterval]);
 
-  const current = KAOMOJI[index];
-
   return (
     <DarkContainer ref={containerRef} bg={theme.background}>
       <div
         style={{
-          width: DESIGN_W,
-          height: ACTUAL_H,
-          transform: `scale(${scale})`,
-          transformOrigin: 'top left',
+          width: resolvedWidth,
+          height: resolvedHeight,
+          padding: `${padY}px ${padX}px`,
+          boxSizing: 'border-box',
         }}
         className="flex flex-col items-center justify-center"
       >
@@ -75,7 +89,8 @@ export default function Kaomoji({ config: rawConfig, theme }: WidgetComponentPro
             opacity: visible ? 1 : 0,
             color: theme.accent,
             fontSize: faceFontSize,
-            lineHeight: 1.1,
+            lineHeight: 1.05,
+            maxWidth: innerWidth,
           }}
         >
           {current.face}
@@ -86,10 +101,10 @@ export default function Kaomoji({ config: rawConfig, theme }: WidgetComponentPro
             opacity: visible ? 1 : 0,
             color: theme.accent,
             fontFamily: 'var(--font-ndot, monospace)',
-            fontSize: Math.max(9, faceFontSize * 0.22),
+            fontSize: moodFontSize,
             letterSpacing: '0.15em',
             textTransform: 'uppercase',
-            marginTop: 8,
+            marginTop: gap,
             filter: 'opacity(0.6)',
           }}
         >
