@@ -16,6 +16,42 @@ interface HistoryEntry {
   timestamp: number;
 }
 
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const normalized = hex.trim().replace('#', '');
+  const expanded =
+    normalized.length === 3
+      ? normalized.split('').map((char) => char + char).join('')
+      : normalized;
+
+  if (!/^[0-9a-fA-F]{6}$/.test(expanded)) return null;
+
+  const value = Number.parseInt(expanded, 16);
+  return {
+    r: (value >> 16) & 255,
+    g: (value >> 8) & 255,
+    b: value & 255,
+  };
+}
+
+function mixColors(base: string, target: string, weight: number): string {
+  const baseRgb = hexToRgb(base);
+  const targetRgb = hexToRgb(target);
+
+  if (!baseRgb || !targetRgb) return target;
+
+  const clampedWeight = Math.max(0, Math.min(1, weight));
+  const mix = (start: number, end: number) =>
+    Math.round(start + (end - start) * clampedWeight);
+
+  return `rgb(${mix(baseRgb.r, targetRgb.r)}, ${mix(baseRgb.g, targetRgb.g)}, ${mix(baseRgb.b, targetRgb.b)})`;
+}
+
+function withAlpha(hex: string, alpha: number): string {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return hex;
+  return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${Math.max(0, Math.min(1, alpha))})`;
+}
+
 function getDayKey(): string {
   const d = new Date();
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
@@ -99,9 +135,17 @@ export default function CoinDice({ config, theme }: WidgetComponentProps) {
   const iconSize = isLandscape ? Math.min(64, ACTUAL_H * 0.35) : Math.min(72, DESIGN_W * 0.28);
   const iconFontSize = iconSize * 0.4;
   const barHeight = isLandscape ? Math.max(30, ACTUAL_H * 0.2) : 40;
+  const headlineColor = mixColors(theme.background, '#ffffff', 0.9);
+  const mutedColor = mixColors(theme.background, '#ffffff', 0.56);
+  const subtleColor = mixColors(theme.background, '#ffffff', 0.34);
+  const surfaceColor = mixColors(theme.background, '#ffffff', 0.08);
+  const headsColor = theme.accent;
+  const tailsColor = mixColors(theme.background, '#ffffff', 0.55);
+  const accentGlow = withAlpha(theme.accent, 0.24);
+  const neutralGlow = withAlpha(theme.primary, 0.24);
 
   return (
-    <DarkContainer ref={containerRef} bg="#111113">
+    <DarkContainer ref={containerRef} bg={theme.background}>
       <div
         style={{
           width: DESIGN_W,
@@ -127,7 +171,7 @@ export default function CoinDice({ config, theme }: WidgetComponentProps) {
           </span>
           <span
             style={{
-              color: '#5E5E62',
+              color: mutedColor,
               fontFamily: 'monospace',
               fontSize: '0.5rem',
             }}
@@ -148,16 +192,16 @@ export default function CoinDice({ config, theme }: WidgetComponentProps) {
                     className="rounded-full flex items-center justify-center font-bold"
                     style={{
                       width: iconSize, height: iconSize, fontSize: iconFontSize,
-                      backgroundColor: currentCoin === 0 ? '#FFD700' : '#C0C0C0',
-                      color: currentCoin === 0 ? '#1A1A1A' : '#2A2A2A',
+                      backgroundColor: currentCoin === 0 ? headsColor : tailsColor,
+                      color: theme.background,
                       transform: animating ? 'rotateY(720deg) scale(0.8)' : 'rotateY(0deg) scale(1)',
                       transition: 'transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-                      boxShadow: `0 4px 20px ${currentCoin === 0 ? '#FFD70040' : '#C0C0C040'}`,
+                      boxShadow: `0 4px 20px ${currentCoin === 0 ? accentGlow : neutralGlow}`,
                     }}
                   >
                     {currentCoin === null ? '?' : currentCoin === 0 ? 'H' : 'T'}
                   </div>
-                  <span className="text-xs mt-1.5 font-medium" style={{ color: '#DDDDE1' }}>
+                  <span className="text-xs mt-1.5 font-medium" style={{ color: headlineColor }}>
                     {currentCoin === null ? '...' : currentCoin === 0 ? 'Heads' : 'Tails'}
                   </span>
                 </div>
@@ -168,7 +212,7 @@ export default function CoinDice({ config, theme }: WidgetComponentProps) {
                     className="rounded-xl flex items-center justify-center font-bold"
                     style={{
                       width: iconSize, height: iconSize, fontSize: iconFontSize,
-                      backgroundColor: '#2A2A2D',
+                      backgroundColor: surfaceColor,
                       color: theme.accent,
                       border: `2px solid ${theme.accent}60`,
                       transform: animating ? 'rotate(360deg) scale(0.8)' : 'rotate(0deg) scale(1)',
@@ -178,7 +222,7 @@ export default function CoinDice({ config, theme }: WidgetComponentProps) {
                   >
                     {currentDice ?? '?'}
                   </div>
-                  <span className="text-xs mt-1.5 font-medium" style={{ color: '#DDDDE1' }}>
+                  <span className="text-xs mt-1.5 font-medium" style={{ color: headlineColor }}>
                     {diceType.toUpperCase()}
                   </span>
                 </div>
@@ -190,20 +234,20 @@ export default function CoinDice({ config, theme }: WidgetComponentProps) {
               {showCoin && coinHistory.length > 0 && (
                 <div>
                   <div className="flex items-center justify-between text-xs mb-1">
-                    <span style={{ color: '#8E8E93', fontFamily: 'monospace', fontSize: '0.55rem' }}>HEADS vs TAILS</span>
-                    <span style={{ color: '#5E5E62', fontFamily: 'monospace', fontSize: '0.55rem' }}>{heads} : {tails}</span>
+                    <span style={{ color: mutedColor, fontFamily: 'monospace', fontSize: '0.55rem' }}>HEADS vs TAILS</span>
+                    <span style={{ color: subtleColor, fontFamily: 'monospace', fontSize: '0.55rem' }}>{heads} : {tails}</span>
                   </div>
-                  <div className="flex h-3 rounded-full overflow-hidden" style={{ backgroundColor: '#2A2A2D' }}>
-                    <div className="h-full transition-all duration-500" style={{ width: `${(heads / coinHistory.length) * 100}%`, backgroundColor: '#FFD700', minWidth: heads > 0 ? 4 : 0 }} />
-                    <div className="h-full transition-all duration-500" style={{ width: `${(tails / coinHistory.length) * 100}%`, backgroundColor: '#C0C0C0', minWidth: tails > 0 ? 4 : 0 }} />
+                  <div className="flex h-3 rounded-full overflow-hidden" style={{ backgroundColor: surfaceColor }}>
+                    <div className="h-full transition-all duration-500" style={{ width: `${(heads / coinHistory.length) * 100}%`, backgroundColor: headsColor, minWidth: heads > 0 ? 4 : 0 }} />
+                    <div className="h-full transition-all duration-500" style={{ width: `${(tails / coinHistory.length) * 100}%`, backgroundColor: tailsColor, minWidth: tails > 0 ? 4 : 0 }} />
                   </div>
                 </div>
               )}
               {showDice && diceHistory.length > 0 && (
                 <div>
                   <div className="flex items-center justify-between text-xs mb-1">
-                    <span style={{ color: '#8E8E93', fontFamily: 'monospace', fontSize: '0.55rem' }}>DISTRIBUTION</span>
-                    <span style={{ color: '#5E5E62', fontFamily: 'monospace', fontSize: '0.55rem' }}>
+                    <span style={{ color: mutedColor, fontFamily: 'monospace', fontSize: '0.55rem' }}>DISTRIBUTION</span>
+                    <span style={{ color: subtleColor, fontFamily: 'monospace', fontSize: '0.55rem' }}>
                       avg {(diceHistory.reduce((s, h) => s + h.value, 0) / diceHistory.length).toFixed(1)}
                     </span>
                   </div>
@@ -211,13 +255,13 @@ export default function CoinDice({ config, theme }: WidgetComponentProps) {
                     {diceDist.map((count, i) => (
                       <div key={i} className="flex-1 flex flex-col items-center justify-end h-full">
                         <div className="w-full rounded-t transition-all duration-500" style={{ height: `${(count / maxCount) * 100}%`, minHeight: count > 0 ? 3 : 0, backgroundColor: theme.accent, opacity: count > 0 ? 0.5 + (count / maxCount) * 0.5 : 0.15 }} />
-                        {maxFace <= 12 && <span className="text-center mt-0.5" style={{ color: '#5E5E62', fontFamily: 'monospace', fontSize: maxFace <= 8 ? '0.5rem' : '0.4rem' }}>{i + 1}</span>}
+                        {maxFace <= 12 && <span className="text-center mt-0.5" style={{ color: subtleColor, fontFamily: 'monospace', fontSize: maxFace <= 8 ? '0.5rem' : '0.4rem' }}>{i + 1}</span>}
                       </div>
                     ))}
                   </div>
                 </div>
               )}
-              <div className="text-center" style={{ color: '#3A3A3D', fontFamily: 'monospace', fontSize: '0.5rem', letterSpacing: '0.1em' }}>
+              <div className="text-center" style={{ color: subtleColor, fontFamily: 'monospace', fontSize: '0.5rem', letterSpacing: '0.1em' }}>
                 {interval >= 60 ? `EVERY ${Math.round(interval / 60)} MIN` : `EVERY ${interval}S`}
               </div>
             </div>
@@ -232,16 +276,16 @@ export default function CoinDice({ config, theme }: WidgetComponentProps) {
                     className="rounded-full flex items-center justify-center font-bold"
                     style={{
                       width: iconSize, height: iconSize, fontSize: iconFontSize,
-                      backgroundColor: currentCoin === 0 ? '#FFD700' : '#C0C0C0',
-                      color: currentCoin === 0 ? '#1A1A1A' : '#2A2A2A',
+                      backgroundColor: currentCoin === 0 ? headsColor : tailsColor,
+                      color: theme.background,
                       transform: animating ? 'rotateY(720deg) scale(0.8)' : 'rotateY(0deg) scale(1)',
                       transition: 'transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-                      boxShadow: `0 4px 20px ${currentCoin === 0 ? '#FFD70040' : '#C0C0C040'}`,
+                      boxShadow: `0 4px 20px ${currentCoin === 0 ? accentGlow : neutralGlow}`,
                     }}
                   >
                     {currentCoin === null ? '?' : currentCoin === 0 ? 'H' : 'T'}
                   </div>
-                  <span className="text-xs mt-2 font-medium" style={{ color: '#DDDDE1' }}>
+                  <span className="text-xs mt-2 font-medium" style={{ color: headlineColor }}>
                     {currentCoin === null ? '...' : currentCoin === 0 ? 'Heads' : 'Tails'}
                   </span>
                 </div>
@@ -252,7 +296,7 @@ export default function CoinDice({ config, theme }: WidgetComponentProps) {
                     className="rounded-xl flex items-center justify-center font-bold"
                     style={{
                       width: iconSize, height: iconSize, fontSize: iconFontSize,
-                      backgroundColor: '#2A2A2D',
+                      backgroundColor: surfaceColor,
                       color: theme.accent,
                       border: `2px solid ${theme.accent}60`,
                       transform: animating ? 'rotate(360deg) scale(0.8)' : 'rotate(0deg) scale(1)',
@@ -262,7 +306,7 @@ export default function CoinDice({ config, theme }: WidgetComponentProps) {
                   >
                     {currentDice ?? '?'}
                   </div>
-                  <span className="text-xs mt-2 font-medium" style={{ color: '#DDDDE1' }}>
+                  <span className="text-xs mt-2 font-medium" style={{ color: headlineColor }}>
                     {diceType.toUpperCase()}
                   </span>
                 </div>
@@ -273,20 +317,20 @@ export default function CoinDice({ config, theme }: WidgetComponentProps) {
               {showCoin && coinHistory.length > 0 && (
                 <div>
                   <div className="flex items-center justify-between text-xs mb-1">
-                    <span style={{ color: '#8E8E93', fontFamily: 'monospace', fontSize: '0.55rem' }}>HEADS vs TAILS</span>
-                    <span style={{ color: '#5E5E62', fontFamily: 'monospace', fontSize: '0.55rem' }}>{heads} : {tails}</span>
+                    <span style={{ color: mutedColor, fontFamily: 'monospace', fontSize: '0.55rem' }}>HEADS vs TAILS</span>
+                    <span style={{ color: subtleColor, fontFamily: 'monospace', fontSize: '0.55rem' }}>{heads} : {tails}</span>
                   </div>
-                  <div className="flex h-3 rounded-full overflow-hidden" style={{ backgroundColor: '#2A2A2D' }}>
-                    <div className="h-full transition-all duration-500" style={{ width: `${(heads / coinHistory.length) * 100}%`, backgroundColor: '#FFD700', minWidth: heads > 0 ? 4 : 0 }} />
-                    <div className="h-full transition-all duration-500" style={{ width: `${(tails / coinHistory.length) * 100}%`, backgroundColor: '#C0C0C0', minWidth: tails > 0 ? 4 : 0 }} />
+                  <div className="flex h-3 rounded-full overflow-hidden" style={{ backgroundColor: surfaceColor }}>
+                    <div className="h-full transition-all duration-500" style={{ width: `${(heads / coinHistory.length) * 100}%`, backgroundColor: headsColor, minWidth: heads > 0 ? 4 : 0 }} />
+                    <div className="h-full transition-all duration-500" style={{ width: `${(tails / coinHistory.length) * 100}%`, backgroundColor: tailsColor, minWidth: tails > 0 ? 4 : 0 }} />
                   </div>
                 </div>
               )}
               {showDice && diceHistory.length > 0 && (
                 <div>
                   <div className="flex items-center justify-between text-xs mb-1">
-                    <span style={{ color: '#8E8E93', fontFamily: 'monospace', fontSize: '0.55rem' }}>DISTRIBUTION</span>
-                    <span style={{ color: '#5E5E62', fontFamily: 'monospace', fontSize: '0.55rem' }}>
+                    <span style={{ color: mutedColor, fontFamily: 'monospace', fontSize: '0.55rem' }}>DISTRIBUTION</span>
+                    <span style={{ color: subtleColor, fontFamily: 'monospace', fontSize: '0.55rem' }}>
                       avg {(diceHistory.reduce((s, h) => s + h.value, 0) / diceHistory.length).toFixed(1)}
                     </span>
                   </div>
@@ -294,13 +338,13 @@ export default function CoinDice({ config, theme }: WidgetComponentProps) {
                     {diceDist.map((count, i) => (
                       <div key={i} className="flex-1 flex flex-col items-center justify-end h-full">
                         <div className="w-full rounded-t transition-all duration-500" style={{ height: `${(count / maxCount) * 100}%`, minHeight: count > 0 ? 3 : 0, backgroundColor: theme.accent, opacity: count > 0 ? 0.5 + (count / maxCount) * 0.5 : 0.15 }} />
-                        {maxFace <= 12 && <span className="text-center mt-0.5" style={{ color: '#5E5E62', fontFamily: 'monospace', fontSize: maxFace <= 8 ? '0.5rem' : '0.4rem' }}>{i + 1}</span>}
+                        {maxFace <= 12 && <span className="text-center mt-0.5" style={{ color: subtleColor, fontFamily: 'monospace', fontSize: maxFace <= 8 ? '0.5rem' : '0.4rem' }}>{i + 1}</span>}
                       </div>
                     ))}
                   </div>
                 </div>
               )}
-              <div className="text-center" style={{ color: '#3A3A3D', fontFamily: 'monospace', fontSize: '0.5rem', letterSpacing: '0.1em' }}>
+              <div className="text-center" style={{ color: subtleColor, fontFamily: 'monospace', fontSize: '0.5rem', letterSpacing: '0.1em' }}>
                 {interval >= 60 ? `EVERY ${Math.round(interval / 60)} MIN` : `EVERY ${interval}S`}
               </div>
             </div>

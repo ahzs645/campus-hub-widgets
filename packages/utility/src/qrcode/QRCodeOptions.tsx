@@ -13,24 +13,30 @@ interface QRCodeData {
   errorCorrection: 'L' | 'M' | 'Q' | 'H';
 }
 
+function resolveColor(value: string, fallback: string): string {
+  return value.trim() || fallback;
+}
+
 export default function QRCodeOptions({ data, onChange }: WidgetOptionsProps) {
   const [state, setState] = useState<QRCodeData>({
     text: (data?.text as string) ?? '',
     label: (data?.label as string) ?? '',
-    fgColor: (data?.fgColor as string) ?? '#000000',
-    bgColor: (data?.bgColor as string) ?? '#ffffff',
+    fgColor: (data?.fgColor as string) ?? '',
+    bgColor: (data?.bgColor as string) ?? '',
     errorCorrection: (data?.errorCorrection as 'L' | 'M' | 'Q' | 'H') ?? 'M',
   });
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const resolvedFgColor = resolveColor(state.fgColor, '#000000');
+  const resolvedBgColor = resolveColor(state.bgColor, '#ffffff');
 
   useEffect(() => {
     if (data) {
       setState({
         text: (data.text as string) ?? '',
         label: (data.label as string) ?? '',
-        fgColor: (data.fgColor as string) ?? '#000000',
-        bgColor: (data.bgColor as string) ?? '#ffffff',
+        fgColor: (data.fgColor as string) ?? '',
+        bgColor: (data.bgColor as string) ?? '',
         errorCorrection: (data.errorCorrection as 'L' | 'M' | 'Q' | 'H') ?? 'M',
       });
     }
@@ -44,13 +50,13 @@ export default function QRCodeOptions({ data, onChange }: WidgetOptionsProps) {
 
     QRCodeLib.toDataURL(state.text, {
       errorCorrectionLevel: state.errorCorrection,
-      color: { dark: state.fgColor, light: state.bgColor },
+      color: { dark: resolvedFgColor, light: resolvedBgColor },
       margin: 2,
       width: 256,
     })
       .then(setPreviewUrl)
       .catch(() => setPreviewUrl(null));
-  }, [state.text, state.fgColor, state.bgColor, state.errorCorrection]);
+  }, [state.text, resolvedFgColor, resolvedBgColor, state.errorCorrection]);
 
   const handleChange = (name: string, value: string | number | boolean) => {
     const newState = { ...state, [name]: value };
@@ -97,6 +103,9 @@ export default function QRCodeOptions({ data, onChange }: WidgetOptionsProps) {
 
       <div className="space-y-4">
         <h3 className="font-semibold text-[var(--ui-text)]">Colors</h3>
+        <p className="text-xs text-[var(--ui-text-muted)]">
+          Leave a color unset to inherit the active theme preset in the live widget.
+        </p>
 
         <div className="flex gap-4">
           <div className="flex-1 space-y-1">
@@ -104,11 +113,21 @@ export default function QRCodeOptions({ data, onChange }: WidgetOptionsProps) {
             <div className="flex items-center gap-2">
               <input
                 type="color"
-                value={state.fgColor}
+                value={resolvedFgColor}
                 onChange={(e) => handleChange('fgColor', e.target.value)}
                 className="w-8 h-8 rounded cursor-pointer border border-[var(--ui-input-border)]"
               />
-              <span className="text-xs text-[var(--ui-text-muted)]">{state.fgColor}</span>
+              <span className="text-xs text-[var(--ui-text-muted)]">
+                {state.fgColor || 'Theme accent'}
+              </span>
+              <button
+                type="button"
+                onClick={() => handleChange('fgColor', '')}
+                disabled={!state.fgColor}
+                className="rounded-full border border-[color:var(--ui-item-border)] px-2 py-0.5 text-[10px] font-medium text-[var(--ui-text-muted)] transition-colors hover:border-[color:var(--ui-item-border-hover)] hover:text-[var(--ui-text)] disabled:cursor-default disabled:opacity-50"
+              >
+                Use theme
+              </button>
             </div>
           </div>
           <div className="flex-1 space-y-1">
@@ -116,11 +135,21 @@ export default function QRCodeOptions({ data, onChange }: WidgetOptionsProps) {
             <div className="flex items-center gap-2">
               <input
                 type="color"
-                value={state.bgColor}
+                value={resolvedBgColor}
                 onChange={(e) => handleChange('bgColor', e.target.value)}
                 className="w-8 h-8 rounded cursor-pointer border border-[var(--ui-input-border)]"
               />
-              <span className="text-xs text-[var(--ui-text-muted)]">{state.bgColor}</span>
+              <span className="text-xs text-[var(--ui-text-muted)]">
+                {state.bgColor || 'Theme primary'}
+              </span>
+              <button
+                type="button"
+                onClick={() => handleChange('bgColor', '')}
+                disabled={!state.bgColor}
+                className="rounded-full border border-[color:var(--ui-item-border)] px-2 py-0.5 text-[10px] font-medium text-[var(--ui-text-muted)] transition-colors hover:border-[color:var(--ui-item-border-hover)] hover:text-[var(--ui-text)] disabled:cursor-default disabled:opacity-50"
+              >
+                Use theme
+              </button>
             </div>
           </div>
         </div>

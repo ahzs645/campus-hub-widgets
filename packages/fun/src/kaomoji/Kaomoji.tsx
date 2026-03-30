@@ -23,22 +23,7 @@ const KAOMOJI = [
   { face: '(⌐■_■)', mood: 'Cool' },
 ];
 
-const MOOD_COLORS: Record<string, string> = {
-  Happy: '#FDFBFF',
-  Excited: '#FDFBFF',
-  Hug: '#FDFBFF',
-  Love: '#D81921',
-  Shy: '#D81921',
-  Neutral: '#ABABAF',
-  Thinking: '#ABABAF',
-  Sad: '#ABABAF',
-  Surprised: '#FDFBFF',
-  Angry: '#FDFBFF',
-  Cool: '#ABABAF',
-  Content: '#ABABAF',
-};
-
-export default function Kaomoji({ config: rawConfig }: WidgetComponentProps) {
+export default function Kaomoji({ config: rawConfig, theme }: WidgetComponentProps) {
   const config = (rawConfig ?? {}) as KaomojiConfig;
   const cycleInterval = (config.cycleInterval ?? 5) * 1000;
 
@@ -72,10 +57,9 @@ export default function Kaomoji({ config: rawConfig }: WidgetComponentProps) {
   }, [cycleInterval]);
 
   const current = KAOMOJI[index];
-  const moodColor = MOOD_COLORS[current.mood] ?? '#FDFBFF';
 
   return (
-    <DarkContainer ref={containerRef}>
+    <DarkContainer ref={containerRef} bg={theme.background}>
       <div
         style={{
           width: DESIGN_W,
@@ -89,7 +73,7 @@ export default function Kaomoji({ config: rawConfig }: WidgetComponentProps) {
           className="font-medium whitespace-nowrap transition-opacity duration-500 text-center"
           style={{
             opacity: visible ? 1 : 0,
-            color: moodColor,
+            color: theme.accent,
             fontSize: faceFontSize,
             lineHeight: 1.1,
           }}
@@ -100,12 +84,13 @@ export default function Kaomoji({ config: rawConfig }: WidgetComponentProps) {
           className="transition-opacity duration-500"
           style={{
             opacity: visible ? 1 : 0,
-            color: '#5E5E62',
+            color: theme.accent,
             fontFamily: 'var(--font-ndot, monospace)',
             fontSize: Math.max(9, faceFontSize * 0.22),
             letterSpacing: '0.15em',
             textTransform: 'uppercase',
             marginTop: 8,
+            filter: 'opacity(0.6)',
           }}
         >
           {current.mood}

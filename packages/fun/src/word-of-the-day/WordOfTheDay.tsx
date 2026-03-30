@@ -19,6 +19,36 @@ interface WordEntry {
   origin: string;
 }
 
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const normalized = hex.trim().replace('#', '');
+  const expanded =
+    normalized.length === 3
+      ? normalized.split('').map((char) => char + char).join('')
+      : normalized;
+
+  if (!/^[0-9a-fA-F]{6}$/.test(expanded)) return null;
+
+  const value = Number.parseInt(expanded, 16);
+  return {
+    r: (value >> 16) & 255,
+    g: (value >> 8) & 255,
+    b: value & 255,
+  };
+}
+
+function mixColors(base: string, target: string, weight: number): string {
+  const baseRgb = hexToRgb(base);
+  const targetRgb = hexToRgb(target);
+
+  if (!baseRgb || !targetRgb) return target;
+
+  const clampedWeight = Math.max(0, Math.min(1, weight));
+  const mix = (start: number, end: number) =>
+    Math.round(start + (end - start) * clampedWeight);
+
+  return `rgb(${mix(baseRgb.r, targetRgb.r)}, ${mix(baseRgb.g, targetRgb.g)}, ${mix(baseRgb.b, targetRgb.b)})`;
+}
+
 const WORDS: Record<string, WordEntry[]> = {
   academic: [
     { word: 'Ephemeral', pronunciation: '/ɪˈfɛm.ər.əl/', partOfSpeech: 'adj.', definition: 'Lasting for a very short time', example: 'The ephemeral beauty of cherry blossoms.', origin: 'Greek ephēmeros "lasting a day"' },
@@ -141,9 +171,13 @@ export default function WordOfTheDay({ config, theme }: WidgetComponentProps) {
   }, [wordIndex, refreshMode]);
 
   const word = pool[wordIndex % pool.length];
+  const headlineColor = mixColors(theme.background, '#ffffff', 0.97);
+  const definitionColor = mixColors(theme.background, '#ffffff', 0.86);
+  const mutedColor = mixColors(theme.background, '#ffffff', 0.62);
+  const subtleColor = mixColors(theme.background, '#ffffff', 0.42);
 
   return (
-    <DarkContainer ref={containerRef} bg="#111113">
+    <DarkContainer ref={containerRef} bg={theme.background}>
       <div
         style={{
           width: DESIGN_W,
@@ -169,7 +203,7 @@ export default function WordOfTheDay({ config, theme }: WidgetComponentProps) {
           </span>
           <span
             style={{
-              color: '#5E5E62',
+              color: subtleColor,
               fontFamily: 'monospace',
               fontSize: '0.5rem',
               letterSpacing: '0.1em',
@@ -186,7 +220,7 @@ export default function WordOfTheDay({ config, theme }: WidgetComponentProps) {
         <div className="mb-1">
           <span
             className="text-3xl font-bold leading-tight"
-            style={{ color: '#FDFBFF' }}
+            style={{ color: headlineColor }}
           >
             {word.word}
           </span>
@@ -194,7 +228,7 @@ export default function WordOfTheDay({ config, theme }: WidgetComponentProps) {
 
         {/* Pronunciation & part of speech */}
         <div className="flex items-center gap-2 mb-3">
-          <span style={{ color: '#8E8E93', fontSize: '0.75rem', fontStyle: 'italic' }}>
+          <span style={{ color: mutedColor, fontSize: '0.75rem', fontStyle: 'italic' }}>
             {word.pronunciation}
           </span>
           <span
@@ -215,7 +249,7 @@ export default function WordOfTheDay({ config, theme }: WidgetComponentProps) {
         <div
           className="text-sm leading-snug mb-3 transition-opacity duration-700"
           style={{
-            color: '#DDDDE1',
+            color: definitionColor,
             opacity: showDetails ? 1 : 0,
           }}
         >
@@ -226,7 +260,7 @@ export default function WordOfTheDay({ config, theme }: WidgetComponentProps) {
         <div
           className="text-xs italic leading-snug mb-3 transition-opacity duration-700 delay-300"
           style={{
-            color: '#8E8E93',
+            color: mutedColor,
             opacity: showDetails ? 1 : 0,
             borderLeft: `2px solid ${theme.accent}40`,
             paddingLeft: 8,
@@ -240,7 +274,7 @@ export default function WordOfTheDay({ config, theme }: WidgetComponentProps) {
           <span
             className="transition-opacity duration-700 delay-500"
             style={{
-              color: '#5E5E62',
+              color: subtleColor,
               fontFamily: 'monospace',
               fontSize: '0.55rem',
               letterSpacing: '0.05em',

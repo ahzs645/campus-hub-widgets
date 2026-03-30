@@ -83,16 +83,37 @@ const CATEGORY_LABELS: Record<string, string> = {
   food: 'Food & Drink',
 };
 
-const CATEGORY_COLORS: Record<string, string> = {
-  science: '#4FC3F7',
-  history: '#FFB74D',
-  geography: '#81C784',
-  'pop-culture': '#CE93D8',
-  technology: '#90CAF9',
-  food: '#EF9A9A',
-};
-
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const normalized = hex.trim().replace('#', '');
+  const expanded =
+    normalized.length === 3
+      ? normalized.split('').map((char) => char + char).join('')
+      : normalized;
+
+  if (!/^[0-9a-fA-F]{6}$/.test(expanded)) return null;
+
+  const value = Number.parseInt(expanded, 16);
+  return {
+    r: (value >> 16) & 255,
+    g: (value >> 8) & 255,
+    b: value & 255,
+  };
+}
+
+function mixColors(base: string, target: string, weight: number): string {
+  const baseRgb = hexToRgb(base);
+  const targetRgb = hexToRgb(target);
+
+  if (!baseRgb || !targetRgb) return target;
+
+  const clampedWeight = Math.max(0, Math.min(1, weight));
+  const mix = (start: number, end: number) =>
+    Math.round(start + (end - start) * clampedWeight);
+
+  return `rgb(${mix(baseRgb.r, targetRgb.r)}, ${mix(baseRgb.g, targetRgb.g)}, ${mix(baseRgb.b, targetRgb.b)})`;
+}
 
 function shuffleArray<T>(arr: T[]): T[] {
   const shuffled = [...arr];
@@ -128,7 +149,7 @@ const OPTION_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export default function TriviaGame({ config }: WidgetComponentProps) {
+export default function TriviaGame({ config, theme }: WidgetComponentProps) {
   const cfg = config as TriviaConfig | undefined;
   const category = cfg?.category ?? 'all';
   const rotationInterval = cfg?.rotationInterval ?? 15;
@@ -177,12 +198,22 @@ export default function TriviaGame({ config }: WidgetComponentProps) {
   }, [rotationInterval, advance]);
 
   const { containerRef, scale } = useFitScale(340, 300);
+  const accentColor = theme.accent;
+  const headlineColor = mixColors(theme.background, '#ffffff', 0.97);
+  const bodyColor = mixColors(theme.background, '#ffffff', 0.84);
+  const mutedColor = mixColors(theme.background, '#ffffff', 0.44);
+  const subtleColor = mixColors(theme.background, '#ffffff', 0.22);
+  const surfaceColor = mixColors(theme.background, '#ffffff', 0.07);
+  const surfaceBorder = mixColors(theme.background, '#ffffff', 0.14);
+  const badgeColor = mixColors(theme.background, '#ffffff', 0.18);
+  const revealedSurface = mixColors(theme.background, theme.accent, 0.18);
+  const revealedText = mixColors(theme.background, '#ffffff', 0.92);
 
   if (allQuestions.length === 0) {
     return (
-      <DarkContainer ref={containerRef} className="flex items-center justify-center">
+      <DarkContainer ref={containerRef} bg={theme.background} className="flex items-center justify-center">
         <div style={{ transform: `scale(${scale})`, transformOrigin: 'center center' }}>
-          <span style={{ color: '#5E5E62', fontFamily: 'monospace', fontSize: '0.8rem' }}>
+          <span style={{ color: mutedColor, fontFamily: 'monospace', fontSize: '0.8rem' }}>
             No questions available
           </span>
         </div>
@@ -190,10 +221,8 @@ export default function TriviaGame({ config }: WidgetComponentProps) {
     );
   }
 
-  const catColor = CATEGORY_COLORS[question.category ?? ''] ?? '#90A4AE';
-
   return (
-    <DarkContainer ref={containerRef} className="flex items-center justify-center">
+    <DarkContainer ref={containerRef} bg={theme.background} className="flex items-center justify-center">
       <div
         style={{
           width: 340,
@@ -209,7 +238,7 @@ export default function TriviaGame({ config }: WidgetComponentProps) {
         <div className="flex items-center gap-2 mb-2">
           <div
             style={{
-              backgroundColor: catColor,
+              backgroundColor: accentColor,
               width: 8,
               height: 8,
               borderRadius: '50%',
@@ -218,7 +247,7 @@ export default function TriviaGame({ config }: WidgetComponentProps) {
           />
           <span
             style={{
-              color: catColor,
+              color: accentColor,
               fontFamily: 'monospace',
               fontSize: '0.6rem',
               fontWeight: 700,
@@ -231,7 +260,7 @@ export default function TriviaGame({ config }: WidgetComponentProps) {
           <div style={{ flex: 1 }} />
           <span
             style={{
-              color: '#5E5E62',
+              color: mutedColor,
               fontFamily: 'monospace',
               fontSize: '0.55rem',
               letterSpacing: '0.1em',
@@ -244,16 +273,16 @@ export default function TriviaGame({ config }: WidgetComponentProps) {
         {/* Question */}
         <div
           style={{
-            backgroundColor: '#2A2A2D',
+            backgroundColor: surfaceColor,
             borderRadius: 14,
-            border: '1px solid #3A3A3D',
+            border: `1px solid ${surfaceBorder}`,
             padding: '14px 16px',
             marginBottom: 10,
           }}
         >
           <span
             style={{
-              color: '#FDFBFF',
+              color: headlineColor,
               fontSize: '0.85rem',
               fontWeight: 600,
               lineHeight: 1.4,
@@ -274,9 +303,9 @@ export default function TriviaGame({ config }: WidgetComponentProps) {
               <div
                 key={`${index}-${i}`}
                 style={{
-                  backgroundColor: showCorrect ? 'rgba(76, 175, 80, 0.15)' : showWrong ? 'rgba(255,255,255,0.02)' : '#232326',
+                  backgroundColor: showCorrect ? revealedSurface : surfaceColor,
                   borderRadius: 10,
-                  border: `1px solid ${showCorrect ? '#4CAF50' : '#3A3A3D'}`,
+                  border: `1px solid ${showCorrect ? accentColor : surfaceBorder}`,
                   padding: '8px 12px',
                   display: 'flex',
                   alignItems: 'center',
@@ -290,7 +319,7 @@ export default function TriviaGame({ config }: WidgetComponentProps) {
                     width: 22,
                     height: 22,
                     borderRadius: 6,
-                    backgroundColor: showCorrect ? '#4CAF50' : '#3A3A3D',
+                    backgroundColor: showCorrect ? accentColor : badgeColor,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -300,7 +329,7 @@ export default function TriviaGame({ config }: WidgetComponentProps) {
                 >
                   <span
                     style={{
-                      color: showCorrect ? '#1B1B1D' : '#9E9E9E',
+                      color: showCorrect ? theme.background : mutedColor,
                       fontFamily: 'monospace',
                       fontSize: '0.65rem',
                       fontWeight: 700,
@@ -312,7 +341,7 @@ export default function TriviaGame({ config }: WidgetComponentProps) {
 
                 <span
                   style={{
-                    color: showCorrect ? '#A5D6A7' : showWrong ? '#5E5E62' : '#CDCDCD',
+                    color: showCorrect ? revealedText : showWrong ? mutedColor : bodyColor,
                     fontSize: '0.75rem',
                     fontWeight: showCorrect ? 600 : 400,
                     transition: 'color 0.4s ease',
@@ -335,7 +364,7 @@ export default function TriviaGame({ config }: WidgetComponentProps) {
                 height: 5,
                 borderRadius: 3,
                 backgroundColor:
-                  i === index % Math.min(allQuestions.length, 10) ? catColor : '#3A3A3D',
+                  i === index % Math.min(allQuestions.length, 10) ? accentColor : surfaceBorder,
                 transition: 'all 0.3s ease',
               }}
             />

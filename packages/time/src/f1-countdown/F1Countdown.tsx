@@ -59,6 +59,36 @@ const FLAG_EMOJI: Record<string, string> = {
   'United States': '\u{1F1FA}\u{1F1F8}',
 };
 
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const normalized = hex.trim().replace('#', '');
+  const expanded =
+    normalized.length === 3
+      ? normalized.split('').map((char) => char + char).join('')
+      : normalized;
+
+  if (!/^[0-9a-fA-F]{6}$/.test(expanded)) return null;
+
+  const value = Number.parseInt(expanded, 16);
+  return {
+    r: (value >> 16) & 255,
+    g: (value >> 8) & 255,
+    b: value & 255,
+  };
+}
+
+function mixColors(base: string, target: string, weight: number): string {
+  const baseRgb = hexToRgb(base);
+  const targetRgb = hexToRgb(target);
+
+  if (!baseRgb || !targetRgb) return target;
+
+  const clampedWeight = Math.max(0, Math.min(1, weight));
+  const mix = (start: number, end: number) =>
+    Math.round(start + (end - start) * clampedWeight);
+
+  return `rgb(${mix(baseRgb.r, targetRgb.r)}, ${mix(baseRgb.g, targetRgb.g)}, ${mix(baseRgb.b, targetRgb.b)})`;
+}
+
 function computeRemaining(target: Date): TimeRemaining {
   const total = Math.max(0, target.getTime() - Date.now());
   if (total <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0, total: 0 };
@@ -81,7 +111,7 @@ function formatSessionDate(date: string, time?: string): string {
   return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
-export default function F1Countdown({ config }: WidgetComponentProps) {
+export default function F1Countdown({ config, theme }: WidgetComponentProps) {
   const cfg = config as F1CountdownConfig | undefined;
   const showSessions = cfg?.showSessions ?? true;
 
@@ -126,6 +156,10 @@ export default function F1Countdown({ config }: WidgetComponentProps) {
   const country = nextRace?.Circuit?.Location?.country ?? '';
   const locality = nextRace?.Circuit?.Location?.locality ?? '';
   const flag = FLAG_EMOJI[country] ?? '';
+  const headlineColor = mixColors(theme.background, '#ffffff', 0.96);
+  const mutedColor = mixColors(theme.background, '#ffffff', 0.67);
+  const subtleColor = mixColors(theme.background, '#ffffff', 0.38);
+  const sectionLabelColor = theme.accent;
 
   const sessions: { label: string; date: string; time?: string }[] = [];
   if (nextRace && showSessions) {
@@ -136,7 +170,7 @@ export default function F1Countdown({ config }: WidgetComponentProps) {
   }
 
   return (
-    <DarkContainer ref={containerRef}>
+    <DarkContainer ref={containerRef} bg={theme.background}>
       <div
         style={{
           width: DESIGN_W,
@@ -149,11 +183,11 @@ export default function F1Countdown({ config }: WidgetComponentProps) {
         className="flex items-end"
       >
         {error && (
-          <div style={{ color: '#ABABAF', fontSize: 11, textAlign: 'center', width: '100%' }}>{error}</div>
+          <div style={{ color: mutedColor, fontSize: 11, textAlign: 'center', width: '100%' }}>{error}</div>
         )}
 
         {!nextRace && !error && (
-          <div style={{ color: '#5E5E62', fontSize: 12, textAlign: 'center', width: '100%' }}>Loading F1 schedule...</div>
+          <div style={{ color: subtleColor, fontSize: 12, textAlign: 'center', width: '100%' }}>Loading F1 schedule...</div>
         )}
 
         {nextRace && (
@@ -167,7 +201,7 @@ export default function F1Countdown({ config }: WidgetComponentProps) {
                   style={{
                     fontSize: 12,
                     fontWeight: 500,
-                    color: '#FDFBFF',
+                    color: headlineColor,
                     flex: 1,
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -179,7 +213,7 @@ export default function F1Countdown({ config }: WidgetComponentProps) {
               </div>
 
               {/* Location */}
-              <div style={{ fontSize: 11, color: '#ABABAF', marginBottom: 4 }}>
+              <div style={{ fontSize: 11, color: mutedColor, marginBottom: 4 }}>
                 {locality}{country ? `, ${country}` : ''}
               </div>
 
@@ -191,7 +225,7 @@ export default function F1Countdown({ config }: WidgetComponentProps) {
                     fontSize: 80,
                     lineHeight: '80px',
                     fontWeight: 400,
-                    color: '#FDFBFF',
+                    color: headlineColor,
                     letterSpacing: '-2px',
                   }}
                 >
@@ -203,7 +237,7 @@ export default function F1Countdown({ config }: WidgetComponentProps) {
               <div
                 style={{
                   fontSize: 11,
-                  color: '#ABABAF',
+                  color: sectionLabelColor,
                   fontWeight: 500,
                   letterSpacing: '1.1px',
                   textTransform: 'uppercase',
@@ -220,7 +254,7 @@ export default function F1Countdown({ config }: WidgetComponentProps) {
                   style={{
                     fontSize: 11,
                     fontWeight: 500,
-                    color: '#ABABAF',
+                    color: sectionLabelColor,
                     letterSpacing: '1.1px',
                     textTransform: 'uppercase',
                     marginBottom: 2,
@@ -230,8 +264,8 @@ export default function F1Countdown({ config }: WidgetComponentProps) {
                 </div>
                 {sessions.map((s) => (
                   <div key={s.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                    <span style={{ fontSize: 11, color: '#FDFBFF', fontWeight: 500 }}>{s.label}</span>
-                    <span style={{ fontSize: 10, color: '#ABABAF' }}>{formatSessionDate(s.date, s.time)}</span>
+                    <span style={{ fontSize: 11, color: headlineColor, fontWeight: 500 }}>{s.label}</span>
+                    <span style={{ fontSize: 10, color: mutedColor }}>{formatSessionDate(s.date, s.time)}</span>
                   </div>
                 ))}
               </div>

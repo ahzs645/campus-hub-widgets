@@ -23,7 +23,7 @@ const CHOICES = [
   },
 ] as const;
 
-export default function RockPaperScissors({ config }: WidgetComponentProps) {
+export default function RockPaperScissors({ config, theme }: WidgetComponentProps) {
   const cfg = config as RPSConfig | undefined;
   const playInterval = cfg?.playInterval ?? 15;
 
@@ -70,7 +70,12 @@ export default function RockPaperScissors({ config }: WidgetComponentProps) {
   const choice = CHOICES[currentIndex];
 
   return (
-    <DarkContainer ref={containerRef} className="flex items-center justify-center" style={{ padding: 16 }}>
+    <DarkContainer
+      ref={containerRef}
+      bg={theme.background}
+      className="flex items-center justify-center"
+      style={{ padding: 16 }}
+    >
       <style>{`
         @keyframes rpsShake {
           0%, 100% { transform: translateY(0); }
@@ -92,24 +97,22 @@ export default function RockPaperScissors({ config }: WidgetComponentProps) {
             width: 90,
             height: 90,
             animation: isCycling ? 'rpsShake 400ms ease-in-out infinite' : 'none',
+            backgroundColor: theme.accent,
+            WebkitMaskImage: `url("${choice.image}")`,
+            maskImage: `url("${choice.image}")`,
+            WebkitMaskRepeat: 'no-repeat',
+            maskRepeat: 'no-repeat',
+            WebkitMaskPosition: 'center',
+            maskPosition: 'center',
+            WebkitMaskSize: 'contain',
+            maskSize: 'contain',
+            filter: `drop-shadow(0 0 14px ${theme.primary}55)`,
           }}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={choice.image}
-            alt={choice.name}
-            style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'contain',
-              filter: 'invert(1) brightness(0.9)',
-            }}
-            draggable={false}
-          />
         </div>
         <div
           style={{
-            color: '#D81921',
+            color: theme.accent,
             fontFamily: 'monospace',
             fontSize: '0.7rem',
             fontWeight: 700,

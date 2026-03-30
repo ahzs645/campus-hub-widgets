@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useId } from 'react';
 import { WidgetComponentProps, registerWidget, DarkContainer } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale } from '@firstform/campus-hub-widget-sdk';
 import ISSTrackerOptions from './ISSTrackerOptions';
@@ -23,10 +23,11 @@ function getSunLongitude(): number {
   return -(hours - 12) * 15;
 }
 
-export default function ISSTracker({ config }: WidgetComponentProps) {
+export default function ISSTracker({ config, theme }: WidgetComponentProps) {
   const cfg = config as ISSTrackerConfig | undefined;
   const refreshInterval = cfg?.refreshInterval ?? 1;
   const showMap = cfg?.showMap ?? true;
+  const dayNightGradientId = useId().replace(/:/g, '');
 
   const [position, setPosition] = useState<ISSPosition | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -89,6 +90,13 @@ export default function ISSTracker({ config }: WidgetComponentProps) {
 
   const coordFontSize = Math.max(11, earthSize * 0.14);
   const speedFontSize = Math.max(10, earthSize * 0.11);
+  const globeBorderColor = `${theme.primary}80`;
+  const globeGlowColor = `${theme.accent}44`;
+  const coordinateColor = theme.accent;
+  const speedColor = `${theme.primary}dd`;
+  const statusColor = `${theme.accent}99`;
+  const markerColor = theme.accent;
+  const markerBorderColor = theme.background;
 
   const renderGlobe = () => (
     <div
@@ -96,10 +104,10 @@ export default function ISSTracker({ config }: WidgetComponentProps) {
         width: earthSize,
         height: earthSize,
         borderRadius: earthSize / 2,
-        border: '2px solid #5E5E62',
+        border: `2px solid ${globeBorderColor}`,
         overflow: 'hidden',
         position: 'relative',
-        boxShadow: '0 0 20px rgba(0, 150, 255, 0.4)',
+        boxShadow: `0 0 20px ${globeGlowColor}`,
         flexShrink: 0,
       }}
     >
@@ -116,13 +124,13 @@ export default function ISSTracker({ config }: WidgetComponentProps) {
         style={{ position: 'absolute', top: 0, left: 0 }}
       >
         <defs>
-          <radialGradient id="daynight" cx={`${sunCx}%`} cy={`${sunCy}%`} r="50%">
+          <radialGradient id={dayNightGradientId} cx={`${sunCx}%`} cy={`${sunCy}%`} r="50%">
             <stop offset="0%" stopColor="transparent" />
             <stop offset="50%" stopColor="transparent" />
             <stop offset="100%" stopColor="rgba(0,0,0,0.65)" />
           </radialGradient>
         </defs>
-        <rect width={earthSize} height={earthSize} fill="url(#daynight)" />
+        <rect width={earthSize} height={earthSize} fill={`url(#${dayNightGradientId})`} />
       </svg>
       {position && (
         <>
@@ -132,7 +140,8 @@ export default function ISSTracker({ config }: WidgetComponentProps) {
               left: projectX(position.longitude),
               top: projectY(position.latitude),
               width: 8, height: 8, borderRadius: 4,
-              backgroundColor: '#D81921', border: '1px solid #FFFFFF',
+              backgroundColor: markerColor,
+              border: `1px solid ${markerBorderColor}`,
               transform: 'translate(-50%, -50%)', zIndex: 2,
             }}
           />
@@ -142,7 +151,7 @@ export default function ISSTracker({ config }: WidgetComponentProps) {
               left: projectX(position.longitude),
               top: projectY(position.latitude),
               width: 8, height: 8, borderRadius: 4,
-              backgroundColor: '#D81921', opacity: 0.6, zIndex: 1,
+              backgroundColor: markerColor, opacity: 0.6, zIndex: 1,
               animation: 'iss-pulse 2s ease-out infinite',
             }}
           />
@@ -153,17 +162,17 @@ export default function ISSTracker({ config }: WidgetComponentProps) {
 
   const renderInfo = () => (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-      <span style={{ fontFamily: 'Inter, sans-serif', fontSize: coordFontSize, color: '#E0E0E0', letterSpacing: 0.2 }}>
+      <span style={{ fontFamily: 'Inter, sans-serif', fontSize: coordFontSize, color: coordinateColor, letterSpacing: 0.2 }}>
         {position ? formatCoord(position.latitude, position.longitude) : '...'}
       </span>
-      <span style={{ fontFamily: 'Inter, sans-serif', fontSize: speedFontSize, color: '#8E8E93' }}>
+      <span style={{ fontFamily: 'Inter, sans-serif', fontSize: speedFontSize, color: speedColor }}>
         {position ? `${Math.round(position.velocity).toLocaleString()} km/h` : '...'}
       </span>
     </div>
   );
 
   return (
-    <DarkContainer ref={containerRef}>
+    <DarkContainer ref={containerRef} bg={theme.background}>
       <style>{`
         @keyframes iss-pulse {
           0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
@@ -185,7 +194,7 @@ export default function ISSTracker({ config }: WidgetComponentProps) {
       >
         {loading && !position && (
           <div className="flex items-center justify-center">
-            <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 11, color: '#8E8E93' }}>
+            <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 11, color: statusColor }}>
               Loading ISS position...
             </span>
           </div>
@@ -193,7 +202,7 @@ export default function ISSTracker({ config }: WidgetComponentProps) {
 
         {error && !position && (
           <div className="flex items-center justify-center">
-            <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 11, color: '#D81921' }}>
+            <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 11, color: statusColor }}>
               {error}
             </span>
           </div>

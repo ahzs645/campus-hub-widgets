@@ -15,7 +15,37 @@ const DESIGN_W = 340;
 const DESIGN_H = 150;
 const REFRESH_INTERVAL_MS = 60 * 60 * 1000; // 60 minutes
 
-export default function ExchangeRate({ config }: WidgetComponentProps) {
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const normalized = hex.trim().replace('#', '');
+  const expanded =
+    normalized.length === 3
+      ? normalized.split('').map((char) => char + char).join('')
+      : normalized;
+
+  if (!/^[0-9a-fA-F]{6}$/.test(expanded)) return null;
+
+  const value = Number.parseInt(expanded, 16);
+  return {
+    r: (value >> 16) & 255,
+    g: (value >> 8) & 255,
+    b: value & 255,
+  };
+}
+
+function mixColors(base: string, target: string, weight: number): string {
+  const baseRgb = hexToRgb(base);
+  const targetRgb = hexToRgb(target);
+
+  if (!baseRgb || !targetRgb) return target;
+
+  const clampedWeight = Math.max(0, Math.min(1, weight));
+  const mix = (start: number, end: number) =>
+    Math.round(start + (end - start) * clampedWeight);
+
+  return `rgb(${mix(baseRgb.r, targetRgb.r)}, ${mix(baseRgb.g, targetRgb.g)}, ${mix(baseRgb.b, targetRgb.b)})`;
+}
+
+export default function ExchangeRate({ config, theme }: WidgetComponentProps) {
   const cfg = config as ExchangeRateConfig | undefined;
   const baseCurrency = cfg?.baseCurrency ?? 'USD';
   const currencies = cfg?.currencies ?? ['EUR', 'GBP', 'JPY', 'INR'];
@@ -74,6 +104,16 @@ export default function ExchangeRate({ config }: WidgetComponentProps) {
   const targetCurrency = currencies[currentIndex] ?? 'EUR';
   const rate = rates?.[targetCurrency];
   const convertedAmount = rate != null ? (amount * rate).toFixed(2) : '—';
+  const panelBg = theme.background;
+  const headlineColor = mixColors(theme.background, '#ffffff', 0.96);
+  const mutedColor = mixColors(theme.background, '#ffffff', 0.67);
+  const subtleColor = mixColors(theme.background, '#ffffff', 0.36);
+  const fromPillBg = mixColors(theme.background, '#000000', 0.45);
+  const fromBadgeBg = mixColors(theme.background, '#ffffff', 0.08);
+  const resultCardBg = mixColors(theme.primary, '#ffffff', 0.9);
+  const resultCardText = mixColors(theme.background, '#000000', 0.35);
+  const resultCardMuted = mixColors(resultCardText, '#ffffff', 0.35);
+  const targetBadgeBg = mixColors(theme.background, '#000000', 0.15);
 
   return (
     <div
@@ -86,7 +126,7 @@ export default function ExchangeRate({ config }: WidgetComponentProps) {
           height: DESIGN_H,
           transform: `scale(${scale})`,
           transformOrigin: 'center center',
-          backgroundColor: '#1B1B1D',
+          backgroundColor: panelBg,
           backgroundImage: 'linear-gradient(var(--widget-theme-tint, transparent), var(--widget-theme-tint, transparent))',
           borderRadius: 22,
           padding: 12,
@@ -102,13 +142,13 @@ export default function ExchangeRate({ config }: WidgetComponentProps) {
               width: 5,
               height: 5,
               borderRadius: '50%',
-              backgroundColor: '#D81921',
+              backgroundColor: theme.accent,
               flexShrink: 0,
             }}
           />
           <span
             style={{
-              color: '#ABABAF',
+              color: mutedColor,
               fontSize: 9,
               fontWeight: 600,
               letterSpacing: 2,
@@ -123,7 +163,7 @@ export default function ExchangeRate({ config }: WidgetComponentProps) {
         {error && !rates ? (
           <div
             className="flex-1 flex items-center justify-center"
-            style={{ color: '#D81921', fontSize: 11 }}
+            style={{ color: theme.accent, fontSize: 11 }}
           >
             Unable to load rates
           </div>
@@ -142,7 +182,7 @@ export default function ExchangeRate({ config }: WidgetComponentProps) {
               {/* Currency pill */}
               <div
                 style={{
-                  backgroundColor: '#0A0A0A',
+                  backgroundColor: fromPillBg,
                   borderRadius: 20,
                   padding: '3px 10px',
                   display: 'inline-flex',
@@ -154,7 +194,7 @@ export default function ExchangeRate({ config }: WidgetComponentProps) {
                 <span
                   style={{
                     fontSize: 9,
-                    color: '#5E5E62',
+                    color: subtleColor,
                     fontWeight: 600,
                     letterSpacing: 1,
                     textTransform: 'uppercase',
@@ -164,12 +204,12 @@ export default function ExchangeRate({ config }: WidgetComponentProps) {
                 </span>
                 <span
                   style={{
-                    backgroundColor: '#1A1A1A',
+                    backgroundColor: fromBadgeBg,
                     borderRadius: 12,
                     padding: '2px 8px',
                     fontSize: 10,
                     fontWeight: 700,
-                    color: '#FDFBFF',
+                    color: headlineColor,
                     letterSpacing: 1,
                   }}
                 >
@@ -183,7 +223,7 @@ export default function ExchangeRate({ config }: WidgetComponentProps) {
                 style={{
                   fontSize: 36,
                   fontWeight: 700,
-                  color: '#FDFBFF',
+                  color: headlineColor,
                   lineHeight: 1,
                   letterSpacing: -1,
                 }}
@@ -195,7 +235,7 @@ export default function ExchangeRate({ config }: WidgetComponentProps) {
             {/* Right: White result card */}
             <div
               style={{
-                backgroundColor: '#FDFBFF',
+                backgroundColor: resultCardBg,
                 borderRadius: 16,
                 padding: '10px 14px',
                 minWidth: 130,
@@ -210,7 +250,7 @@ export default function ExchangeRate({ config }: WidgetComponentProps) {
                 style={{
                   fontSize: 9,
                   fontWeight: 600,
-                  color: '#5E5E62',
+                  color: resultCardMuted,
                   letterSpacing: 2,
                   textTransform: 'uppercase',
                   lineHeight: 1,
@@ -225,7 +265,7 @@ export default function ExchangeRate({ config }: WidgetComponentProps) {
                 style={{
                   fontSize: 28,
                   fontWeight: 700,
-                  color: '#1B1B1D',
+                  color: resultCardText,
                   lineHeight: 1,
                   letterSpacing: -0.5,
                 }}
@@ -236,7 +276,7 @@ export default function ExchangeRate({ config }: WidgetComponentProps) {
               {/* Target currency badge */}
               <div
                 style={{
-                  backgroundColor: '#1B1B1D',
+                  backgroundColor: targetBadgeBg,
                   borderRadius: 10,
                   padding: '2px 8px',
                   display: 'inline-flex',
@@ -248,7 +288,7 @@ export default function ExchangeRate({ config }: WidgetComponentProps) {
                 <span
                   style={{
                     fontSize: 9,
-                    color: '#5E5E62',
+                    color: resultCardMuted,
                     fontWeight: 600,
                     letterSpacing: 1,
                   }}
@@ -259,7 +299,7 @@ export default function ExchangeRate({ config }: WidgetComponentProps) {
                   style={{
                     fontSize: 10,
                     fontWeight: 700,
-                    color: '#FDFBFF',
+                    color: headlineColor,
                     letterSpacing: 1,
                   }}
                 >
@@ -280,8 +320,7 @@ export default function ExchangeRate({ config }: WidgetComponentProps) {
                   width: i === currentIndex ? 10 : 4,
                   height: 4,
                   borderRadius: 2,
-                  backgroundColor:
-                    i === currentIndex ? '#D81921' : '#5E5E62',
+                  backgroundColor: i === currentIndex ? theme.accent : subtleColor,
                   transition: 'all 0.3s ease',
                 }}
               />

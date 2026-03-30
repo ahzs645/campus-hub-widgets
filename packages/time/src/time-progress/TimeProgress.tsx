@@ -20,6 +20,36 @@ const MONTHS = [
   'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER',
 ];
 
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const normalized = hex.trim().replace('#', '');
+  const expanded =
+    normalized.length === 3
+      ? normalized.split('').map((char) => char + char).join('')
+      : normalized;
+
+  if (!/^[0-9a-fA-F]{6}$/.test(expanded)) return null;
+
+  const value = Number.parseInt(expanded, 16);
+  return {
+    r: (value >> 16) & 255,
+    g: (value >> 8) & 255,
+    b: value & 255,
+  };
+}
+
+function mixColors(base: string, target: string, weight: number): string {
+  const baseRgb = hexToRgb(base);
+  const targetRgb = hexToRgb(target);
+
+  if (!baseRgb || !targetRgb) return target;
+
+  const clampedWeight = Math.max(0, Math.min(1, weight));
+  const mix = (start: number, end: number) =>
+    Math.round(start + (end - start) * clampedWeight);
+
+  return `rgb(${mix(baseRgb.r, targetRgb.r)}, ${mix(baseRgb.g, targetRgb.g)}, ${mix(baseRgb.b, targetRgb.b)})`;
+}
+
 function getISOWeekNumber(date: Date): number {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
   const dayNum = d.getUTCDay() || 7;
@@ -69,12 +99,19 @@ const DOTS_PER_ROW = 20;
 const DOT_COUNT = 40;
 const DANGER_THRESHOLD = 36;
 
-const COLOR_BG = '#1B1B1D';
-const COLOR_PRIMARY = '#FDFBFF';
-const COLOR_UNFILLED = '#5E5E62';
-const COLOR_DANGER = '#D81921';
-
-function FiniteDotGrid({ progress, dotsTotal }: { progress: number; dotsTotal: number }) {
+function FiniteDotGrid({
+  progress,
+  dotsTotal,
+  filledColor,
+  unfilledColor,
+  accentColor,
+}: {
+  progress: number;
+  dotsTotal: number;
+  filledColor: string;
+  unfilledColor: string;
+  accentColor: string;
+}) {
   const perRow = Math.ceil(dotsTotal / 2);
   const filledCount = Math.round(progress * dotsTotal);
   const dangerStart = Math.round(dotsTotal * 0.9);
@@ -89,9 +126,9 @@ function FiniteDotGrid({ progress, dotsTotal }: { progress: number; dotsTotal: n
             const isFilled = idx < filledCount;
             let color: string;
             if (isFilled) {
-              color = idx >= dangerStart ? COLOR_DANGER : COLOR_PRIMARY;
+              color = idx >= dangerStart ? accentColor : filledColor;
             } else {
-              color = COLOR_UNFILLED;
+              color = unfilledColor;
             }
             return (
               <div
@@ -107,21 +144,41 @@ function FiniteDotGrid({ progress, dotsTotal }: { progress: number; dotsTotal: n
   );
 }
 
-function FiniteDotsRow({ item, fontSize, dotsTotal }: { item: ProgressRow; fontSize: number; dotsTotal: number }) {
+function FiniteDotsRow({
+  item,
+  fontSize,
+  dotsTotal,
+  textColor,
+  unfilledColor,
+  accentColor,
+}: {
+  item: ProgressRow;
+  fontSize: number;
+  dotsTotal: number;
+  textColor: string;
+  unfilledColor: string;
+  accentColor: string;
+}) {
   const pct = Math.round(item.progress * 100);
 
   return (
     <div className="flex items-center flex-1 w-full">
       <span
         className="font-mono uppercase tracking-wider leading-none shrink-0"
-        style={{ color: COLOR_PRIMARY, width: '30%', fontSize }}
+        style={{ color: textColor, width: '30%', fontSize }}
       >
         {item.label}
       </span>
-      <FiniteDotGrid progress={item.progress} dotsTotal={dotsTotal} />
+      <FiniteDotGrid
+        progress={item.progress}
+        dotsTotal={dotsTotal}
+        filledColor={textColor}
+        unfilledColor={unfilledColor}
+        accentColor={accentColor}
+      />
       <span
         className="font-mono uppercase tracking-wider leading-none text-right shrink-0"
-        style={{ color: COLOR_PRIMARY, width: '15%', fontSize }}
+        style={{ color: textColor, width: '15%', fontSize }}
       >
         {pct}%
       </span>
@@ -129,32 +186,44 @@ function FiniteDotsRow({ item, fontSize, dotsTotal }: { item: ProgressRow; fontS
   );
 }
 
-function BarsRow({ item, fontSize }: { item: ProgressRow; fontSize: number }) {
+function BarsRow({
+  item,
+  fontSize,
+  textColor,
+  unfilledColor,
+  accentColor,
+}: {
+  item: ProgressRow;
+  fontSize: number;
+  textColor: string;
+  unfilledColor: string;
+  accentColor: string;
+}) {
   const pct = Math.round(item.progress * 100);
 
   return (
     <div className="flex items-center gap-2 flex-1 w-full">
       <span
         className="font-mono uppercase tracking-wider leading-none shrink-0"
-        style={{ color: COLOR_PRIMARY, width: '30%', fontSize }}
+        style={{ color: textColor, width: '30%', fontSize }}
       >
         {item.label}
       </span>
       <div
         className="flex-1 h-[8px] rounded-full overflow-hidden mx-[8px]"
-        style={{ backgroundColor: COLOR_UNFILLED }}
+        style={{ backgroundColor: unfilledColor }}
       >
         <div
           className="h-full rounded-full transition-all duration-500"
           style={{
             width: `${pct}%`,
-            backgroundColor: pct >= 90 ? COLOR_DANGER : COLOR_PRIMARY,
+            backgroundColor: pct >= 90 ? accentColor : textColor,
           }}
         />
       </div>
       <span
         className="font-mono uppercase tracking-wider leading-none text-right shrink-0"
-        style={{ color: COLOR_PRIMARY, width: '15%', fontSize }}
+        style={{ color: textColor, width: '15%', fontSize }}
       >
         {pct}%
       </span>
@@ -162,7 +231,7 @@ function BarsRow({ item, fontSize }: { item: ProgressRow; fontSize: number }) {
   );
 }
 
-export default function TimeProgress({ config }: WidgetComponentProps) {
+export default function TimeProgress({ config, theme }: WidgetComponentProps) {
   const cfg = config as TimeProgressConfig | undefined;
   const displayMode = cfg?.displayMode ?? 'dots';
 
@@ -189,9 +258,12 @@ export default function TimeProgress({ config }: WidgetComponentProps) {
   // Scale font and dots based on available width
   const fontSize = Math.min(16, Math.max(11, DESIGN_W * 0.04));
   const dotsTotal = Math.max(20, Math.min(60, Math.round(DESIGN_W * 0.1)));
+  const textColor = mixColors(theme.background, '#ffffff', 0.96);
+  const unfilledColor = mixColors(theme.background, '#ffffff', 0.22);
+  const accentColor = theme.accent;
 
   return (
-    <DarkContainer ref={containerRef}>
+    <DarkContainer ref={containerRef} bg={theme.background}>
       <div
         style={{
           width: DESIGN_W,
@@ -204,9 +276,24 @@ export default function TimeProgress({ config }: WidgetComponentProps) {
       >
         {items.map((item) =>
           displayMode === 'dots' ? (
-            <FiniteDotsRow key={item.label} item={item} fontSize={fontSize} dotsTotal={dotsTotal} />
+            <FiniteDotsRow
+              key={item.label}
+              item={item}
+              fontSize={fontSize}
+              dotsTotal={dotsTotal}
+              textColor={textColor}
+              unfilledColor={unfilledColor}
+              accentColor={accentColor}
+            />
           ) : (
-            <BarsRow key={item.label} item={item} fontSize={fontSize} />
+            <BarsRow
+              key={item.label}
+              item={item}
+              fontSize={fontSize}
+              textColor={textColor}
+              unfilledColor={unfilledColor}
+              accentColor={accentColor}
+            />
           )
         )}
       </div>

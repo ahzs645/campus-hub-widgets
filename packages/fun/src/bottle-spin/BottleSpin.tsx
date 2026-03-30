@@ -12,7 +12,7 @@ type SpinPhase = 'idle' | 'windup' | 'spinning' | 'pulse';
 
 const BOTTLE_URL = 'https://res.cloudinary.com/htoohtoo/image/upload/v1771519987/Bottle_tkeadp.png';
 
-export default function BottleSpin({ config }: WidgetComponentProps) {
+export default function BottleSpin({ config, theme }: WidgetComponentProps) {
   const cfg = config as BottleSpinConfig | undefined;
   const spinInterval = cfg?.spinInterval ?? 30;
 
@@ -57,7 +57,15 @@ export default function BottleSpin({ config }: WidgetComponentProps) {
   const bottleStyle: React.CSSProperties = {
     width: 60,
     height: 140,
-    objectFit: 'contain',
+    backgroundColor: theme.accent,
+    WebkitMaskImage: `url("${BOTTLE_URL}")`,
+    maskImage: `url("${BOTTLE_URL}")`,
+    WebkitMaskRepeat: 'no-repeat',
+    maskRepeat: 'no-repeat',
+    WebkitMaskPosition: 'center',
+    maskPosition: 'center',
+    WebkitMaskSize: 'contain',
+    maskSize: 'contain',
     transform: phase === 'windup'
       ? `rotate(${rotation - 30}deg)`
       : `rotate(${rotation}deg)`,
@@ -68,11 +76,11 @@ export default function BottleSpin({ config }: WidgetComponentProps) {
         : 'none',
     animation: phase === 'pulse' ? 'bottlePulse 0.5s ease-in-out 4' : 'none',
     transformOrigin: 'center center',
-    filter: 'invert(1) brightness(0.9)',
+    filter: `drop-shadow(0 0 14px ${theme.primary}55)`,
   };
 
   return (
-    <DarkContainer ref={containerRef} className="flex items-center justify-center">
+    <DarkContainer ref={containerRef} bg={theme.background} className="flex items-center justify-center">
       <style>{`
         @keyframes bottlePulse {
           0%, 100% { transform: rotate(${rotation}deg) scale(1); }
@@ -88,16 +96,14 @@ export default function BottleSpin({ config }: WidgetComponentProps) {
         }}
         className="flex flex-col items-center justify-center gap-2"
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={BOTTLE_URL}
-          alt="Bottle"
+        <div
+          aria-label="Bottle"
+          role="img"
           style={bottleStyle}
-          draggable={false}
         />
         <div
           style={{
-            color: '#5E5E62',
+            color: theme.accent,
             fontFamily: 'monospace',
             fontSize: '0.6rem',
             textTransform: 'uppercase',

@@ -154,6 +154,36 @@ const LANGUAGE_LABELS: Record<string, string> = {
   japanese: 'Japanese',
 };
 
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const normalized = hex.trim().replace('#', '');
+  const expanded =
+    normalized.length === 3
+      ? normalized.split('').map((char) => char + char).join('')
+      : normalized;
+
+  if (!/^[0-9a-fA-F]{6}$/.test(expanded)) return null;
+
+  const value = Number.parseInt(expanded, 16);
+  return {
+    r: (value >> 16) & 255,
+    g: (value >> 8) & 255,
+    b: value & 255,
+  };
+}
+
+function mixColors(base: string, target: string, weight: number): string {
+  const baseRgb = hexToRgb(base);
+  const targetRgb = hexToRgb(target);
+
+  if (!baseRgb || !targetRgb) return target;
+
+  const clampedWeight = Math.max(0, Math.min(1, weight));
+  const mix = (start: number, end: number) =>
+    Math.round(start + (end - start) * clampedWeight);
+
+  return `rgb(${mix(baseRgb.r, targetRgb.r)}, ${mix(baseRgb.g, targetRgb.g)}, ${mix(baseRgb.b, targetRgb.b)})`;
+}
+
 function getDayOfYear(): number {
   const now = new Date();
   const start = new Date(now.getFullYear(), 0, 0);
@@ -161,7 +191,7 @@ function getDayOfYear(): number {
   return Math.floor(diff / (1000 * 60 * 60 * 24));
 }
 
-export default function Flashcard({ config }: WidgetComponentProps) {
+export default function Flashcard({ config, theme }: WidgetComponentProps) {
   const cfg = config as FlashcardConfig | undefined;
   const language = cfg?.language ?? 'spanish';
   const mode = cfg?.mode ?? 'cycle';
@@ -181,6 +211,11 @@ export default function Flashcard({ config }: WidgetComponentProps) {
   const currentWord = words[cardIndex % words.length];
 
   const { containerRef, scale } = useFitScale(200, 200);
+  const headlineColor = mixColors(theme.background, '#ffffff', 0.97);
+  const bodyColor = mixColors(theme.background, '#ffffff', 0.86);
+  const mutedColor = mixColors(theme.background, '#ffffff', 0.42);
+  const surfaceColor = mixColors(theme.background, '#ffffff', 0.08);
+  const surfaceBorder = mixColors(theme.background, '#ffffff', 0.14);
 
   useEffect(() => {
     if (mode === 'daily') {
@@ -217,7 +252,7 @@ export default function Flashcard({ config }: WidgetComponentProps) {
   }, [mode, cycleInterval, words.length]);
 
   return (
-    <DarkContainer ref={containerRef} className="flex items-center justify-center">
+    <DarkContainer ref={containerRef} bg={theme.background} className="flex items-center justify-center">
       <div
         style={{
           width: 200,
@@ -230,14 +265,14 @@ export default function Flashcard({ config }: WidgetComponentProps) {
         {/* Gold accent circle */}
         <div
           className="absolute -top-2 -left-2 w-10 h-10 rounded-full opacity-20"
-          style={{ backgroundColor: '#FFD700' }}
+          style={{ backgroundColor: theme.accent }}
         />
 
         {/* Language label */}
         <div
           className="absolute top-2 left-0 right-0 text-center"
           style={{
-            color: '#D81921',
+            color: theme.accent,
             fontFamily: 'monospace',
             fontSize: '0.6rem',
             fontWeight: 700,
@@ -265,21 +300,21 @@ export default function Flashcard({ config }: WidgetComponentProps) {
               className="absolute inset-0 flex flex-col items-center justify-center px-3"
               style={{
                 backfaceVisibility: 'hidden',
-                backgroundColor: '#2A2A2D',
+                backgroundColor: surfaceColor,
                 borderRadius: 16,
-                border: '1px solid #3A3A3D',
+                border: `1px solid ${surfaceBorder}`,
               }}
             >
               <span
                 className="text-xl font-bold text-center leading-tight"
-                style={{ color: '#FDFBFF' }}
+                style={{ color: headlineColor }}
               >
                 {currentWord.foreign}
               </span>
-              <div className="w-10 h-px my-2" style={{ backgroundColor: '#FFD700' }} />
+              <div className="w-10 h-px my-2" style={{ backgroundColor: theme.accent }} />
               <span
                 style={{
-                  color: '#5E5E62',
+                  color: mutedColor,
                   fontFamily: 'monospace',
                   fontSize: '0.55rem',
                   textTransform: 'uppercase',
@@ -295,22 +330,22 @@ export default function Flashcard({ config }: WidgetComponentProps) {
               className="absolute inset-0 flex flex-col items-center justify-center px-3"
               style={{
                 backfaceVisibility: 'hidden',
-                backgroundColor: '#2A2A2D',
+                backgroundColor: surfaceColor,
                 borderRadius: 16,
-                border: '1px solid #FFD700',
+                border: `1px solid ${theme.accent}`,
                 transform: 'rotateY(180deg)',
               }}
             >
               <span
                 className="text-lg font-bold text-center leading-tight"
-                style={{ color: '#FFD700' }}
+                style={{ color: theme.accent }}
               >
                 {currentWord.english}
               </span>
-              <div className="w-10 h-px my-2" style={{ backgroundColor: '#3A3A3D' }} />
+              <div className="w-10 h-px my-2" style={{ backgroundColor: surfaceBorder }} />
               <span
                 style={{
-                  color: '#5E5E62',
+                  color: mutedColor,
                   fontFamily: 'monospace',
                   fontSize: '0.55rem',
                   textTransform: 'uppercase',
@@ -327,7 +362,7 @@ export default function Flashcard({ config }: WidgetComponentProps) {
         <div
           className="absolute bottom-2 left-0 right-0 text-center"
           style={{
-            color: '#5E5E62',
+            color: mutedColor,
             fontFamily: 'monospace',
             fontSize: '0.55rem',
             letterSpacing: '0.1em',

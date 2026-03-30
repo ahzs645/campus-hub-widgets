@@ -13,12 +13,16 @@ interface QRCodeConfig {
   errorCorrection?: 'L' | 'M' | 'Q' | 'H';
 }
 
+function resolveColor(value: string | undefined, fallback: string): string {
+  return value?.trim() || fallback;
+}
+
 export default function QRCodeWidget({ config, theme }: WidgetComponentProps) {
   const qrConfig = config as QRCodeConfig | undefined;
   const text = qrConfig?.text ?? '';
   const label = qrConfig?.label ?? '';
-  const fgColor = qrConfig?.fgColor ?? '#000000';
-  const bgColor = qrConfig?.bgColor ?? '#ffffff';
+  const fgColor = resolveColor(qrConfig?.fgColor, theme.accent);
+  const bgColor = resolveColor(qrConfig?.bgColor, theme.primary);
   const errorCorrection = qrConfig?.errorCorrection ?? 'M';
 
   const [dataUrl, setDataUrl] = useState<string | null>(null);
@@ -88,8 +92,8 @@ registerWidget({
   defaultProps: {
     text: '',
     label: '',
-    fgColor: '#000000',
-    bgColor: '#ffffff',
+    fgColor: '',
+    bgColor: '',
     errorCorrection: 'M',
   },
 });

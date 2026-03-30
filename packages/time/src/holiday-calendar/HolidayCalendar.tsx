@@ -104,6 +104,36 @@ function getEmojis(holiday: string, month: number): string[] {
 
 const BAUHAUS_WORD_COLORS = ['#FDCA21', '#0C4E82', '#48525B'] as const;
 
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const normalized = hex.trim().replace('#', '');
+  const expanded =
+    normalized.length === 3
+      ? normalized.split('').map((char) => char + char).join('')
+      : normalized;
+
+  if (!/^[0-9a-fA-F]{6}$/.test(expanded)) return null;
+
+  const value = Number.parseInt(expanded, 16);
+  return {
+    r: (value >> 16) & 255,
+    g: (value >> 8) & 255,
+    b: value & 255,
+  };
+}
+
+function mixColors(base: string, target: string, weight: number): string {
+  const baseRgb = hexToRgb(base);
+  const targetRgb = hexToRgb(target);
+
+  if (!baseRgb || !targetRgb) return target;
+
+  const clampedWeight = Math.max(0, Math.min(1, weight));
+  const mix = (start: number, end: number) =>
+    Math.round(start + (end - start) * clampedWeight);
+
+  return `rgb(${mix(baseRgb.r, targetRgb.r)}, ${mix(baseRgb.g, targetRgb.g)}, ${mix(baseRgb.b, targetRgb.b)})`;
+}
+
 /** Break text into lines that fit within maxCols characters */
 function wrapText(text: string, maxCols: number): string[] {
   const words = text.toUpperCase().split(' ');
@@ -122,7 +152,7 @@ function wrapText(text: string, maxCols: number): string[] {
   return lines;
 }
 
-export default function HolidayCalendar({ config }: WidgetComponentProps) {
+export default function HolidayCalendar({ config, theme }: WidgetComponentProps) {
   const calConfig = config as HolidayCalendarConfig | undefined;
   const style = calConfig?.style ?? 'modern';
   const { containerRef, scale } = useFitScale(220, 220);
@@ -141,13 +171,19 @@ export default function HolidayCalendar({ config }: WidgetComponentProps) {
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const dateLabel = `${monthNames[month]} ${now.getDate()}`;
   const holidayLines = useMemo(() => wrapText(holiday, 12), [holiday]);
+  const headlineColor = mixColors(theme.background, '#ffffff', 0.96);
+  const mutedColor = mixColors(theme.background, '#ffffff', 0.68);
+  const emptyDotColor = mixColors(theme.background, '#ffffff', 0.12);
+  const lightSurface = mixColors(theme.background, '#ffffff', 0.86);
+  const surfaceEmptyColor = mixColors(lightSurface, theme.background, 0.16);
 
   if (style === 'bauhaus') {
     // Bauhaus: light bg, date in red dots, holiday in colored dots
     const dateChars: DotChar[] = dateLabel.toUpperCase().split('').map((ch) => ({
       char: ch,
-      color: '#C33531',
+      color: theme.accent,
     }));
+    const bauhausPalette = [theme.accent, theme.primary, theme.background] as const;
 
     // Color each word with rotating Bauhaus palette
     const holidayCharsPerLine = holidayLines.map((line) => {
@@ -156,7 +192,7 @@ export default function HolidayCalendar({ config }: WidgetComponentProps) {
       let wordIdx = 0;
       for (const word of words) {
         if (chars.length > 0) chars.push({ char: ' ', color: 'transparent' });
-        const color = BAUHAUS_WORD_COLORS[wordIdx % BAUHAUS_WORD_COLORS.length];
+        const color = bauhausPalette[wordIdx % bauhausPalette.length] ?? BAUHAUS_WORD_COLORS[wordIdx % BAUHAUS_WORD_COLORS.length];
         for (const ch of word) chars.push({ char: ch, color });
         wordIdx++;
       }
@@ -164,15 +200,15 @@ export default function HolidayCalendar({ config }: WidgetComponentProps) {
     });
 
     return (
-      <DarkContainer ref={containerRef} bg="#E2E3E8" className="flex items-center justify-center">
+      <DarkContainer ref={containerRef} bg={lightSurface} className="flex items-center justify-center">
         <div
           style={{ transform: `scale(${scale})`, transformOrigin: 'center center', width: 220, height: 220 }}
           className="flex flex-col items-center justify-center gap-3 px-3"
         >
-          <DotMatrixText chars={dateChars} dotSize={3.5} gap={1} emptyColor="#C5C6CB" showEmpty />
+          <DotMatrixText chars={dateChars} dotSize={3.5} gap={1} emptyColor={surfaceEmptyColor} showEmpty />
           <div className="flex flex-col items-center gap-2">
             {holidayCharsPerLine.map((lineChars, i) => (
-              <DotMatrixText key={i} chars={lineChars} dotSize={4.5} gap={1.2} emptyColor="#C5C6CB" showEmpty />
+              <DotMatrixText key={i} chars={lineChars} dotSize={4.5} gap={1.2} emptyColor={surfaceEmptyColor} showEmpty />
             ))}
           </div>
         </div>
@@ -184,7 +220,7 @@ export default function HolidayCalendar({ config }: WidgetComponentProps) {
   const emojis = getEmojis(holiday, month);
 
   return (
-    <DarkContainer ref={containerRef} className="flex items-center justify-center">
+    <DarkContainer ref={containerRef} bg={theme.background} className="flex items-center justify-center">
       <div
         style={{ transform: `scale(${scale})`, transformOrigin: 'center center', width: 220, height: 220 }}
         className="flex flex-col items-center justify-center gap-2 px-3"
@@ -195,17 +231,17 @@ export default function HolidayCalendar({ config }: WidgetComponentProps) {
         </div>
 
         {/* Greeting */}
-        <div style={{ color: '#ABABAF', fontSize: 14, fontWeight: 500 }}>Happy</div>
+        <div style={{ color: mutedColor, fontSize: 14, fontWeight: 500 }}>Happy</div>
 
         {/* Holiday name in dot-matrix */}
         <div className="flex flex-col items-center gap-1.5">
           {holidayLines.map((line, i) => (
             <DotMatrixText
               key={i}
-              chars={textToChars(line, '#FDFBFF')}
+              chars={textToChars(line, headlineColor)}
               dotSize={3}
               gap={0.8}
-              emptyColor="#2A2A2E"
+              emptyColor={emptyDotColor}
               showEmpty
             />
           ))}
@@ -214,7 +250,7 @@ export default function HolidayCalendar({ config }: WidgetComponentProps) {
         {/* Date in dot-matrix */}
         <div className="mt-1">
           <DotMatrixText
-            chars={textToChars(dateLabel, '#ABABAF')}
+            chars={textToChars(dateLabel, mutedColor)}
             dotSize={2.5}
             gap={0.8}
           />

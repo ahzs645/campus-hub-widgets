@@ -25,6 +25,10 @@ function buildWifiString(ssid: string, password: string, encryption: string, hid
   return `WIFI:T:${encryption};S:${escapedSsid};P:${escapedPassword};H:${hidden ? 'true' : 'false'};;`;
 }
 
+function resolveColor(value: string | undefined, fallback: string): string {
+  return value?.trim() || fallback;
+}
+
 export default function WiFiShareWidget({ config, theme }: WidgetComponentProps) {
   const c = config as WiFiShareConfig | undefined;
   const ssid = c?.ssid ?? '';
@@ -34,10 +38,10 @@ export default function WiFiShareWidget({ config, theme }: WidgetComponentProps)
   const message = c?.message ?? 'Scan to Connect to WiFi!';
   const showNetworkName = c?.showNetworkName ?? true;
   const showPassword = c?.showPassword ?? true;
-  const bgColor = c?.bgColor || theme.primary;
-  const textColor = c?.textColor ?? '#ffffff';
-  const qrFgColor = c?.qrFgColor ?? '#000000';
-  const qrBgColor = c?.qrBgColor ?? '#ffffff';
+  const bgColor = resolveColor(c?.bgColor, theme.background);
+  const textColor = resolveColor(c?.textColor, theme.accent);
+  const qrFgColor = resolveColor(c?.qrFgColor, theme.accent);
+  const qrBgColor = resolveColor(c?.qrBgColor, theme.primary);
 
   const [dataUrl, setDataUrl] = useState<string | null>(null);
 
@@ -129,9 +133,9 @@ registerWidget({
     message: 'Scan to Connect to WiFi!',
     showNetworkName: true,
     showPassword: true,
-    bgColor: '#2563eb',
-    textColor: '#ffffff',
-    qrFgColor: '#000000',
-    qrBgColor: '#ffffff',
+    bgColor: '',
+    textColor: '',
+    qrFgColor: '',
+    qrBgColor: '',
   },
 });

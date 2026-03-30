@@ -26,7 +26,37 @@ const DEFAULT_COINS = ['bitcoin', 'ethereum', 'solana'];
 const CHART_WIDTH = 180;
 const CHART_HEIGHT = 60;
 
-function Sparkline({ prices, positive }: { prices: number[]; positive: boolean }) {
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const normalized = hex.trim().replace('#', '');
+  const expanded =
+    normalized.length === 3
+      ? normalized.split('').map((char) => char + char).join('')
+      : normalized;
+
+  if (!/^[0-9a-fA-F]{6}$/.test(expanded)) return null;
+
+  const value = Number.parseInt(expanded, 16);
+  return {
+    r: (value >> 16) & 255,
+    g: (value >> 8) & 255,
+    b: value & 255,
+  };
+}
+
+function mixColors(base: string, target: string, weight: number): string {
+  const baseRgb = hexToRgb(base);
+  const targetRgb = hexToRgb(target);
+
+  if (!baseRgb || !targetRgb) return target;
+
+  const clampedWeight = Math.max(0, Math.min(1, weight));
+  const mix = (start: number, end: number) =>
+    Math.round(start + (end - start) * clampedWeight);
+
+  return `rgb(${mix(baseRgb.r, targetRgb.r)}, ${mix(baseRgb.g, targetRgb.g)}, ${mix(baseRgb.b, targetRgb.b)})`;
+}
+
+function Sparkline({ prices, strokeColor }: { prices: number[]; strokeColor: string }) {
   if (!prices || prices.length < 2) return null;
 
   const pts = prices.slice(-48);
@@ -53,7 +83,7 @@ function Sparkline({ prices, positive }: { prices: number[]; positive: boolean }
       <polyline
         points={points}
         fill="none"
-        stroke={positive ? '#4CAF50' : '#D81921'}
+        stroke={strokeColor}
         strokeWidth="1.5"
         strokeLinejoin="round"
         strokeLinecap="round"
@@ -68,7 +98,7 @@ function formatPrice(price: number): string {
   return `$${price.toFixed(4)}`;
 }
 
-export default function CryptoTracker({ config }: WidgetComponentProps) {
+export default function CryptoTracker({ config, theme }: WidgetComponentProps) {
   const trackerConfig = config as CryptoTrackerConfig | undefined;
   const coins = trackerConfig?.coins ?? DEFAULT_COINS;
   const cycleInterval = trackerConfig?.cycleInterval ?? 10;
@@ -118,15 +148,22 @@ export default function CryptoTracker({ config }: WidgetComponentProps) {
 
   const coin = coinData[activeIndex];
   const changePositive = coin ? coin.price_change_percentage_24h >= 0 : true;
+  const headlineColor = mixColors(theme.background, '#ffffff', 0.96);
+  const mutedColor = mixColors(theme.background, '#ffffff', 0.67);
+  const subtleColor = mixColors(theme.background, '#ffffff', 0.38);
+  const emptyDotColor = mixColors(theme.background, '#ffffff', 0.12);
+  const negativeColor = mixColors(theme.background, '#ff5a5a', 0.82);
+  const sparklineColor = changePositive ? theme.accent : negativeColor;
+  const changeColor = changePositive ? theme.accent : negativeColor;
 
   // Dot-matrix price chars
   const priceChars = useMemo(() => {
     if (!coin) return [];
-    return textToChars(formatPrice(coin.current_price), '#FDFBFF');
-  }, [coin]);
+    return textToChars(formatPrice(coin.current_price), headlineColor);
+  }, [coin, headlineColor]);
 
   return (
-    <DarkContainer ref={containerRef} className="relative">
+    <DarkContainer ref={containerRef} bg={theme.background} className="relative">
       <div
         style={{
           transform: `scale(${scale})`,
@@ -138,7 +175,7 @@ export default function CryptoTracker({ config }: WidgetComponentProps) {
       >
         {!coin ? (
           <div className="flex items-center justify-center w-full h-full">
-            <span style={{ color: '#5E5E62', fontSize: 12 }}>Loading...</span>
+            <span style={{ color: subtleColor, fontSize: 12 }}>Loading...</span>
           </div>
         ) : (
           <div
@@ -151,7 +188,7 @@ export default function CryptoTracker({ config }: WidgetComponentProps) {
                 style={{
                   fontSize: 13,
                   fontWeight: 600,
-                  color: '#FDFBFF',
+                  color: headlineColor,
                   textTransform: 'uppercase',
                   letterSpacing: '0.5px',
                   lineHeight: 1.2,
@@ -163,7 +200,7 @@ export default function CryptoTracker({ config }: WidgetComponentProps) {
                 style={{
                   fontSize: 11,
                   fontWeight: 500,
-                  color: '#ABABAF',
+                  color: mutedColor,
                   lineHeight: 1.2,
                 }}
               >
@@ -176,7 +213,7 @@ export default function CryptoTracker({ config }: WidgetComponentProps) {
               {/* Sparkline behind */}
               {showSparkline && coin.sparkline_in_7d?.price && (
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <Sparkline prices={coin.sparkline_in_7d.price} positive={changePositive} />
+                  <Sparkline prices={coin.sparkline_in_7d.price} strokeColor={sparklineColor} />
                 </div>
               )}
               {/* Dot-matrix price */}
@@ -185,7 +222,7 @@ export default function CryptoTracker({ config }: WidgetComponentProps) {
                   chars={priceChars}
                   dotSize={3}
                   gap={1}
-                  emptyColor="#2A2A2E"
+                  emptyColor={emptyDotColor}
                   showEmpty
                 />
               </div>
@@ -197,7 +234,7 @@ export default function CryptoTracker({ config }: WidgetComponentProps) {
                 style={{
                   fontSize: 12,
                   fontWeight: 600,
-                  color: changePositive ? '#4CAF50' : '#D81921',
+                  color: changeColor,
                 }}
               >
                 {changePositive ? '+' : ''}
@@ -215,7 +252,7 @@ export default function CryptoTracker({ config }: WidgetComponentProps) {
                     style={{
                       width: 6,
                       height: 6,
-                      backgroundColor: i === activeIndex ? '#FDFBFF' : '#5E5E62',
+                      backgroundColor: i === activeIndex ? headlineColor : subtleColor,
                     }}
                   />
                 ))}
