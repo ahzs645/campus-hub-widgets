@@ -227,6 +227,36 @@ const describeError = (err: unknown): string => {
   return String(err);
 };
 
+const generateDemoResponse = (): LibCalGridResponse => {
+  const slots: LibCalSlot[] = [];
+  const today = new Date();
+
+  for (let dayOffset = 0; dayOffset < 3; dayOffset++) {
+    const date = new Date(today);
+    date.setDate(date.getDate() + dayOffset);
+    const dateStr = formatDateKey(date);
+
+    for (let ri = 0; ri < ROOM_MAP.length; ri++) {
+      const room = ROOM_MAP[ri];
+      for (let si = 0; si < 30; si++) {
+        const hour = 8 + Math.floor(si / 2);
+        const min = (si % 2) * 30;
+        const nextHour = min === 30 ? hour + 1 : hour;
+        const nextMin = min === 30 ? 0 : 30;
+        const seed = (ri * 97 + si * 31 + dayOffset * 17) % 100;
+        slots.push({
+          start: `${dateStr} ${pad2(hour)}:${pad2(min)}:00`,
+          end: `${dateStr} ${pad2(nextHour)}:${pad2(nextMin)}:00`,
+          itemId: room.id,
+          className: seed > 35 ? 's-lc-eq-avail' : 's-lc-eq-checkout',
+        });
+      }
+    }
+  }
+
+  return { slots };
+};
+
 function getNextOpenWindow(
   metrics: RoomDayMetrics,
   dayIndex: number,
@@ -274,8 +304,8 @@ export default function LibraryAvailability({
   const closeHourRaw = clamp(Math.round(widgetConfig?.closeHour ?? 23), 1, 24);
   const closeHour = closeHourRaw <= openHour ? openHour + 1 : closeHourRaw;
   const useCorsProxy = widgetConfig?.useCorsProxy ?? true;
-  const [response, setResponse] = useState<LibCalGridResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [response, setResponse] = useState<LibCalGridResponse | null>(() => generateDemoResponse());
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -283,7 +313,7 @@ export default function LibraryAvailability({
   const [pageIndex, setPageIndex] = useState(0);
   const [size, setSize] = useState({ width: 0, height: 0 });
 
-  const hasLoadedRef = useRef(false);
+  const hasLoadedRef = useRef(true);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const dayMeta = useMemo<DayMeta[]>(() => {

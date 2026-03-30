@@ -28,6 +28,62 @@ interface GroupFitnessConfig {
   useCorsProxy?: boolean;
 }
 
+const DEMO_SCHEDULE: ParsedGroupFitnessSchedule = {
+  semesterLabel: 'Winter 2026',
+  semesterDates: 'Jan 6 – Apr 10',
+  notes: [],
+  byDay: [
+    { title: 'Monday', rows: [
+      { className: 'Yoga Flow', time: '7:00 – 8:00 AM', location: 'Studio A', instructor: 'J. Smith' },
+      { className: 'Spin', time: '12:00 – 12:45 PM', location: 'Spin Room', instructor: 'K. Lee' },
+      { className: 'HIIT', time: '5:30 – 6:15 PM', location: 'Studio A', instructor: 'M. Chen' },
+    ]},
+    { title: 'Tuesday', rows: [
+      { className: 'Pilates', time: '7:00 – 7:45 AM', location: 'Studio B', instructor: 'S. Park' },
+      { className: 'Zumba', time: '12:00 – 12:45 PM', location: 'Studio A', instructor: 'R. Garcia' },
+      { className: 'Boxing Fit', time: '5:30 – 6:15 PM', location: 'Gym Floor', instructor: 'D. Wilson' },
+    ]},
+    { title: 'Wednesday', rows: [
+      { className: 'Yoga Flow', time: '7:00 – 8:00 AM', location: 'Studio A', instructor: 'J. Smith' },
+      { className: 'Spin', time: '12:00 – 12:45 PM', location: 'Spin Room', instructor: 'K. Lee' },
+      { className: 'Body Pump', time: '5:30 – 6:15 PM', location: 'Studio A', instructor: 'A. Brown' },
+    ]},
+    { title: 'Thursday', rows: [
+      { className: 'Pilates', time: '7:00 – 7:45 AM', location: 'Studio B', instructor: 'S. Park' },
+      { className: 'HIIT', time: '12:00 – 12:45 PM', location: 'Studio A', instructor: 'M. Chen' },
+      { className: 'Zumba', time: '5:30 – 6:15 PM', location: 'Studio A', instructor: 'R. Garcia' },
+    ]},
+    { title: 'Friday', rows: [
+      { className: 'Yoga Flow', time: '7:00 – 8:00 AM', location: 'Studio A', instructor: 'J. Smith' },
+      { className: 'Spin', time: '12:00 – 12:45 PM', location: 'Spin Room', instructor: 'K. Lee' },
+    ]},
+  ],
+  byClass: [
+    { title: 'Yoga Flow', rows: [
+      { day: 'Monday', time: '7:00 – 8:00 AM', location: 'Studio A', instructor: 'J. Smith' },
+      { day: 'Wednesday', time: '7:00 – 8:00 AM', location: 'Studio A', instructor: 'J. Smith' },
+      { day: 'Friday', time: '7:00 – 8:00 AM', location: 'Studio A', instructor: 'J. Smith' },
+    ]},
+    { title: 'Spin', rows: [
+      { day: 'Monday', time: '12:00 – 12:45 PM', location: 'Spin Room', instructor: 'K. Lee' },
+      { day: 'Wednesday', time: '12:00 – 12:45 PM', location: 'Spin Room', instructor: 'K. Lee' },
+      { day: 'Friday', time: '12:00 – 12:45 PM', location: 'Spin Room', instructor: 'K. Lee' },
+    ]},
+    { title: 'HIIT', rows: [
+      { day: 'Monday', time: '5:30 – 6:15 PM', location: 'Studio A', instructor: 'M. Chen' },
+      { day: 'Thursday', time: '12:00 – 12:45 PM', location: 'Studio A', instructor: 'M. Chen' },
+    ]},
+    { title: 'Pilates', rows: [
+      { day: 'Tuesday', time: '7:00 – 7:45 AM', location: 'Studio B', instructor: 'S. Park' },
+      { day: 'Thursday', time: '7:00 – 7:45 AM', location: 'Studio B', instructor: 'S. Park' },
+    ]},
+    { title: 'Zumba', rows: [
+      { day: 'Tuesday', time: '12:00 – 12:45 PM', location: 'Studio A', instructor: 'R. Garcia' },
+      { day: 'Thursday', time: '5:30 – 6:15 PM', location: 'Studio A', instructor: 'R. Garcia' },
+    ]},
+  ],
+};
+
 const formatLastModified = (value?: string): string | null => {
   if (!value) return null;
   const date = new Date(value);
@@ -125,9 +181,9 @@ export default function GroupFitness({
   const maxRows = Math.max(1, cfg?.maxRows ?? 6);
   const useCorsProxy = cfg?.useCorsProxy ?? true;
 
-  const [schedule, setSchedule] = useState<ParsedGroupFitnessSchedule | null>(null);
+  const [schedule, setSchedule] = useState<ParsedGroupFitnessSchedule | null>(DEMO_SCHEDULE);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const refreshMs = refreshInterval * 60 * 1000;
 

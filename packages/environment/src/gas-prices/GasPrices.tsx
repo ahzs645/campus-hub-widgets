@@ -14,6 +14,14 @@ interface StationPrice {
 const DEFAULT_URL =
   'https://www.gasbuddy.com/gasprices/british-columbia/prince-george';
 
+const DEMO_STATIONS: StationPrice[] = [
+  { name: 'Costco', price: 164.9, address: '2555 Range Rd, Prince George' },
+  { name: 'Esso', price: 171.9, address: '2100 Ferry Ave, Prince George' },
+  { name: 'Shell', price: 172.9, address: '1500 Victoria St, Prince George' },
+  { name: 'Petro-Canada', price: 174.9, address: '3800 15th Ave, Prince George' },
+  { name: 'Chevron', price: 175.9, address: '1234 Central St W, Prince George' },
+];
+
 function parseGasPrices(html: string): StationPrice[] {
   const stations: StationPrice[] = [];
   const parser = new DOMParser();
@@ -51,10 +59,10 @@ function parseGasPrices(html: string): StationPrice[] {
 }
 
 export default function GasPrices({ config: cfg, theme }: WidgetComponentProps) {
-  const [stations, setStations] = useState<StationPrice[]>([]);
+  const [stations, setStations] = useState<StationPrice[]>(DEMO_STATIONS);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const url = (cfg?.url as string) || DEFAULT_URL;
   const refreshInterval = (cfg?.refreshInterval as number) ?? 30;

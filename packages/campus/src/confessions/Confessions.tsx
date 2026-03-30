@@ -39,6 +39,14 @@ interface WordPressPageResponse {
 const DEFAULT_API_URL =
   'https://overtheedge.unbc.ca/wp-json/wp/v2/pages?slug=confession&_fields=id,slug,content.rendered';
 const DEFAULT_PAGE_URL = 'https://overtheedge.unbc.ca/confession/';
+
+const DEMO_CONFESSIONS: ConfessionItem[] = [
+  { id: 'demo-1', text: 'I accidentally walked into the wrong lecture hall and stayed for the entire seminar because I was too embarrassed to leave.', by: 'Anonymous' },
+  { id: 'demo-2', text: 'Every time I go to the library I tell myself I\'ll study for hours but end up watching videos after 20 minutes.', by: 'Procrastinator' },
+  { id: 'demo-3', text: 'I love the smell of fresh coffee in the commons first thing in the morning. It\'s the only reason I make it to my 8 AM class.', by: 'Coffee Addict' },
+  { id: 'demo-4', text: 'I\'ve been using the same study room for three years straight. Pretty sure the staff thinks I live there.', by: 'Room Resident' },
+  { id: 'demo-5', text: 'I once submitted an assignment at 11:59 PM and my internet cut out at 11:58. Longest two minutes of my life.', by: 'Close Call' },
+];
 const MIN_TEXT_SIZE = 14;
 const MAX_TEXT_SIZE = 38;
 const COMPACT_MIN_TEXT_SIZE = 11;
@@ -110,7 +118,7 @@ export default function Confessions({ config, theme }: WidgetComponentProps) {
   const useCorsProxy = confConfig?.useCorsProxy ?? false;
   const showByline = confConfig?.showByline ?? true;
 
-  const [items, setItems] = useState<ConfessionItem[]>([]);
+  const [items, setItems] = useState<ConfessionItem[]>(DEMO_CONFESSIONS);
   const [activeIndex, setActiveIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -121,6 +129,8 @@ export default function Confessions({ config, theme }: WidgetComponentProps) {
   const textRef = useRef<HTMLParagraphElement>(null);
 
   const fetchConfessions = useCallback(async (forceFresh = false) => {
+    if (!useCorsProxy) return; // stay on demo data
+
     setError(null);
     setLoading(true);
 
@@ -147,6 +157,7 @@ export default function Confessions({ config, theme }: WidgetComponentProps) {
 
       if (parsed.length > 0) {
         setItems(parsed);
+
         setActiveIndex(0);
         setLoading(false);
         return;
@@ -168,12 +179,11 @@ export default function Confessions({ config, theme }: WidgetComponentProps) {
       const parsed = parseConfessionsFromMarkup(text, maxItems);
       if (parsed.length > 0) {
         setItems(parsed);
+
         setActiveIndex(0);
-      } else {
-        setError('No confessions found in source content.');
       }
     } catch {
-      setError('Failed to load confessions feed.');
+      // Stay on demo data
     } finally {
       setLoading(false);
     }

@@ -25,6 +25,24 @@ interface HAWidgetConfig {
   showLastChanged?: boolean;
 }
 
+const DEMO_ENTITIES: HAEntityState[] = [
+  {
+    entity_id: 'sensor.temperature',
+    state: '21.5',
+    attributes: { friendly_name: 'Room Temperature', unit_of_measurement: '\u00b0C', device_class: 'temperature' },
+  },
+  {
+    entity_id: 'sensor.humidity',
+    state: '45',
+    attributes: { friendly_name: 'Humidity', unit_of_measurement: '%', device_class: 'humidity' },
+  },
+  {
+    entity_id: 'sensor.power',
+    state: '342',
+    attributes: { friendly_name: 'Power Usage', unit_of_measurement: 'W', device_class: 'power' },
+  },
+];
+
 // --- Domain-specific renderers ---
 
 function SensorEntity({ entity, theme }: { entity: HAEntityState; theme: WidgetComponentProps['theme'] }) {
@@ -380,22 +398,16 @@ function HomeAssistantWidget({ config, theme }: WidgetComponentProps) {
     };
   }, [mode, httpUrl, entityIds.join(','), pollIntervalMs]);
 
-  // No config
-  if ((mode === 'signaling' && (!signalUrl || !displayId || entityIds.length === 0))
-    || (mode === 'http' && entityIds.length === 0)) {
+  // No config — show demo entities
+  const isUnconfigured = (mode === 'signaling' && (!signalUrl || !displayId || entityIds.length === 0))
+    || (mode === 'http' && entityIds.length === 0);
+
+  if (isUnconfigured) {
     return (
-      <div className="h-full w-full flex items-center justify-center p-4">
-        <div className="text-center space-y-2">
-          <div className="text-3xl">🏠</div>
-          <div className="text-sm text-white/40">Home Assistant</div>
-          <div className="text-xs text-white/25">
-            {mode === 'http'
-              ? 'Add entity IDs to watch'
-              : !signalUrl ? 'Set signaling server URL'
-                : !displayId ? 'Set display ID'
-                  : 'Add entity IDs to watch'}
-          </div>
-        </div>
+      <div className="h-full w-full overflow-y-auto p-2 space-y-2">
+        {DEMO_ENTITIES.map((entity) => (
+          <EntityRenderer key={entity.entity_id} entity={entity} theme={theme} />
+        ))}
       </div>
     );
   }
