@@ -141,19 +141,22 @@ export default function WordClock({ config, theme }: WidgetComponentProps) {
 
   const resolvedWidth = containerWidth || 340;
   const resolvedHeight = containerHeight || 360;
+  const fillScale = clamp(Math.min(resolvedWidth / 280, resolvedHeight / 260), 1, 2);
+  const layoutWidth = resolvedWidth / fillScale;
+  const layoutHeight = resolvedHeight / fillScale;
   const cols = GRID[0]?.length ?? 11;
   const rows = GRID.length;
-  const padX = clamp(resolvedWidth * 0.08, 10, 22);
-  const padY = clamp(resolvedHeight * 0.06, 10, 20);
-  const availableWidth = Math.max(resolvedWidth - padX * 2, 80);
-  const availableHeight = Math.max(resolvedHeight - padY * 2, 100);
-  const colGap = clamp(availableWidth * 0.005, 1, 3);
-  const rowGap = clamp(availableHeight * 0.015, 2, 7);
+  const padX = clamp(layoutWidth * 0.05, 8, 18);
+  const padY = clamp(layoutHeight * 0.05, 8, 18);
+  const availableWidth = Math.max(layoutWidth - padX * 2, 80);
+  const availableHeight = Math.max(layoutHeight - padY * 2, 100);
+  const colGap = clamp(availableWidth * 0.003, 0.75, 2.5);
+  const rowGap = clamp(availableHeight * 0.01, 1.25, 4);
   const cellWidth = Math.max((availableWidth - colGap * (cols - 1)) / cols, 10);
   const cellHeight = Math.max((availableHeight - rowGap * (rows - 1)) / rows, 10);
-  const fontSize = clamp(Math.min(cellWidth * 0.8, cellHeight * 0.8), 10, 22);
-  const inactiveColor = `${theme.accent}18`;
-  const glowRadius = clamp(fontSize * 0.7, 6, 14);
+  const fontSize = clamp(Math.min(cellWidth * 0.92, cellHeight * 0.94), 10, 42);
+  const inactiveColor = `${theme.accent}26`;
+  const glowRadius = clamp(fontSize * 0.75, 6, 20);
 
   return (
     <ThemedContainer
@@ -164,47 +167,57 @@ export default function WordClock({ config, theme }: WidgetComponentProps) {
       className="flex items-center justify-center"
     >
       <div
-        className="flex h-full w-full flex-col items-center justify-center"
+        className="flex items-center justify-center"
         style={{
-          padding: `${padY}px ${padX}px`,
+          width: layoutWidth,
+          height: layoutHeight,
+          transform: `scale(${fillScale})`,
+          transformOrigin: 'center center',
         }}
       >
-        {/* Grid */}
         <div
-          className="select-none font-mono text-center"
+          className="flex h-full w-full flex-col items-center justify-center"
           style={{
-            width: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: rowGap,
+            padding: `${padY}px ${padX}px`,
           }}
         >
-          {GRID.map((row, ri) => (
-            <div key={ri} className="flex justify-center" style={{ gap: colGap }}>
-              {row.split('').map((char, ci) => {
-                const isActive = active.has(`${ri}-${ci}`);
-                return (
-                  <span
-                    key={ci}
-                    className="inline-flex items-center justify-center font-bold transition-all duration-700"
-                    style={{
-                      width: cellWidth,
-                      height: cellHeight,
-                      fontSize,
-                      lineHeight: 1,
-                      letterSpacing: '0.04em',
-                      color: isActive ? theme.accent : inactiveColor,
-                      textShadow: isActive ? `0 0 ${glowRadius}px ${theme.accent}60` : 'none',
-                    }}
-                  >
-                    {char}
-                  </span>
-                );
-              })}
-            </div>
-          ))}
+          {/* Grid */}
+          <div
+            className="select-none font-mono text-center"
+            style={{
+              width: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: rowGap,
+            }}
+          >
+            {GRID.map((row, ri) => (
+              <div key={ri} className="flex justify-center" style={{ gap: colGap }}>
+                {row.split('').map((char, ci) => {
+                  const isActive = active.has(`${ri}-${ci}`);
+                  return (
+                    <span
+                      key={ci}
+                      className="inline-flex items-center justify-center font-bold transition-all duration-700"
+                      style={{
+                        width: cellWidth,
+                        height: cellHeight,
+                        fontSize,
+                        lineHeight: 1,
+                        letterSpacing: '0.03em',
+                        color: isActive ? theme.accent : inactiveColor,
+                        textShadow: isActive ? `0 0 ${glowRadius}px ${theme.accent}60` : 'none',
+                      }}
+                    >
+                      {char}
+                    </span>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </ThemedContainer>

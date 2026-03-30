@@ -51,6 +51,10 @@ const EMPTY_REMAINING: TimeRemaining = {
   milliseconds: 0,
 };
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
 function computeRemaining(target: Date, now: number = Date.now()): TimeRemaining {
   const total = Math.max(0, target.getTime() - now);
 
@@ -91,28 +95,76 @@ interface UnitDisplayProps {
   label: string;
   padWidth: number;
   accent: string;
+  width?: number;
+  valueFontSize?: number;
+  labelFontSize?: number;
+  chipPaddingX?: number;
+  chipPaddingY?: number;
+  chipRadius?: number;
+  labelMarginTop?: number;
 }
 
-function UnitDisplay({ value, label, padWidth, accent }: UnitDisplayProps) {
+function UnitDisplay({
+  value,
+  label,
+  padWidth,
+  accent,
+  width,
+  valueFontSize = 36,
+  labelFontSize = 12,
+  chipPaddingX = 8,
+  chipPaddingY = 6,
+  chipRadius = 8,
+  labelMarginTop = 6,
+}: UnitDisplayProps) {
   const display = String(value).padStart(padWidth, '0');
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col items-center" style={{ width }}>
       <div
-        className="text-4xl font-bold font-mono tabular-nums leading-none px-2 py-1.5 rounded-lg"
-        style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}
+        className="font-bold font-mono tabular-nums leading-none"
+        style={{
+          backgroundColor: 'rgba(255,255,255,0.08)',
+          fontSize: valueFontSize,
+          padding: `${chipPaddingY}px ${chipPaddingX}px`,
+          borderRadius: chipRadius,
+          width: width ? '100%' : undefined,
+          textAlign: 'center',
+        }}
       >
         {display}
       </div>
-      <div className="text-xs uppercase tracking-wider mt-1.5 font-medium" style={{ color: accent }}>
+      <div
+        className="uppercase tracking-wider font-medium"
+        style={{
+          color: accent,
+          fontSize: labelFontSize,
+          marginTop: labelMarginTop,
+        }}
+      >
         {label}
       </div>
     </div>
   );
 }
 
-function Separator() {
+function Separator({ fontSize = 30, marginX = 2, marginTop = 4, glyph = ':' }: {
+  fontSize?: number;
+  marginX?: number;
+  marginTop?: number;
+  glyph?: string;
+}) {
   return (
-    <div className="text-3xl font-bold text-white/30 self-start mt-1 mx-0.5">:</div>
+    <div
+      className="font-bold text-white/30 self-start"
+      style={{
+        fontSize,
+        marginTop,
+        marginInline: marginX,
+        lineHeight: 1,
+      }}
+    >
+      {glyph}
+    </div>
   );
 }
 
@@ -233,7 +285,15 @@ export default function Countdown({ config, theme }: WidgetComponentProps) {
   }, [activeMilestones.length, rotationSeconds]);
 
   // Landscape: wide banner for all units in a row; portrait: taller with wrapping units
-  const { containerRef, scale, designWidth: BASE_W, designHeight: DESIGN_H, isLandscape, containerWidth } = useAdaptiveFitScale({
+  const {
+    containerRef,
+    scale,
+    designWidth: BASE_W,
+    designHeight: DESIGN_H,
+    isLandscape,
+    containerWidth,
+    containerHeight,
+  } = useAdaptiveFitScale({
     landscape: { w: 500, h: 220 },
     portrait: { w: 280, h: 360 },
   });
@@ -262,6 +322,39 @@ export default function Countdown({ config, theme }: WidgetComponentProps) {
     !isLandscape ||
     (containerWidth > 0 && units.length > 0 && containerWidth / units.length < 135);
 
+  const resolvedWidth = DESIGN_W;
+  const resolvedHeight = containerHeight > 0 ? Math.max(DESIGN_H, containerHeight / scale) : DESIGN_H;
+  const sidePaddingX = clamp(resolvedWidth * (useCompactLayout ? 0.06 : 0.05), 16, 36);
+  const sidePaddingY = clamp(resolvedHeight * (useCompactLayout ? 0.1 : 0.08), 16, 28);
+  const contentWidth = Math.max(resolvedWidth - sidePaddingX * 2, 220);
+  const expandedLayout = !useCompactLayout && units.length > 0;
+  const titleFontSize = clamp(Math.min(resolvedWidth * 0.04, resolvedHeight * 0.16), 14, 28);
+  const titleMarginBottom = clamp(resolvedHeight * 0.055, 10, 18);
+  const dateFontSize = clamp(Math.min(resolvedWidth * 0.022, resolvedHeight * 0.075), 10, 16);
+  const dateMarginTop = clamp(resolvedHeight * 0.05, 10, 18);
+  const compactGap = clamp(contentWidth * 0.03, 10, 18);
+  const separatorFontSize = clamp(Math.min(contentWidth / 18, resolvedHeight * 0.2), 22, 48);
+  const separatorMarginX = clamp(separatorFontSize * 0.12, 2, 8);
+  const separatorMarginTop = clamp(resolvedHeight * 0.01, 2, 8);
+  const separatorSlot = separatorFontSize * 0.55 + separatorMarginX * 2;
+  const expandedGap = clamp(contentWidth * 0.012, 8, 18);
+  const unitWidth = expandedLayout
+    ? clamp(
+        (contentWidth - separatorSlot * Math.max(units.length - 1, 0) - expandedGap * Math.max(units.length - 1, 0)) /
+          Math.max(units.length, 1),
+        64,
+        120
+      )
+    : undefined;
+  const valueFontSize = expandedLayout && unitWidth
+    ? clamp(Math.min(unitWidth * 0.58, resolvedHeight * 0.28), 36, 64)
+    : 36;
+  const chipPaddingX = expandedLayout && unitWidth ? clamp(unitWidth * 0.12, 10, 16) : 8;
+  const chipPaddingY = expandedLayout ? clamp(valueFontSize * 0.2, 7, 14) : 6;
+  const chipRadius = expandedLayout && unitWidth ? clamp(unitWidth * 0.14, 10, 18) : 8;
+  const labelFontSize = expandedLayout ? clamp(valueFontSize * 0.27, 11, 16) : 12;
+  const labelMarginTop = expandedLayout ? clamp(resolvedHeight * 0.03, 6, 12) : 6;
+
   const eventLabel = currentMilestone?.label || '';
   const eventEmoji = currentMilestone?.emoji || '';
 
@@ -275,17 +368,22 @@ export default function Countdown({ config, theme }: WidgetComponentProps) {
       <div
         style={{
           width: DESIGN_W,
-          height: DESIGN_H,
+          height: resolvedHeight,
           transform: `scale(${scale})`,
           transformOrigin: 'top left',
+          padding: `${sidePaddingY}px ${sidePaddingX}px`,
         }}
-        className="flex flex-col items-center justify-center p-6"
+        className="flex flex-col items-center justify-center"
       >
         {/* Event Name with optional emoji */}
         {(eventLabel || eventEmoji) && (
           <div
-            className="text-sm font-semibold tracking-wide uppercase mb-4 transition-opacity duration-500"
-            style={{ color: theme.accent }}
+            className="font-semibold tracking-wide uppercase transition-opacity duration-500"
+            style={{
+              color: theme.accent,
+              fontSize: titleFontSize,
+              marginBottom: titleMarginBottom,
+            }}
           >
             {eventEmoji && <span className="mr-1.5">{eventEmoji}</span>}
             {eventLabel}
@@ -310,21 +408,50 @@ export default function Countdown({ config, theme }: WidgetComponentProps) {
           <div
             className={
               useCompactLayout
-                ? 'flex w-fit max-w-[320px] flex-wrap items-center justify-center gap-x-3 gap-y-3'
-                : 'flex items-center justify-center gap-1'
+                ? 'flex w-full flex-wrap items-center justify-center'
+                : 'flex w-full items-center justify-center'
+            }
+            style={
+              useCompactLayout
+                ? {
+                    columnGap: compactGap,
+                    rowGap: compactGap,
+                    maxWidth: Math.min(contentWidth, 420),
+                  }
+                : {
+                    gap: expandedGap,
+                  }
             }
           >
             {units.map((unit, i) => (
               <div key={unit.key} className="flex items-center">
-                {!useCompactLayout && i > 0 && unit.key !== 'ms' && <Separator />}
+                {!useCompactLayout && i > 0 && unit.key !== 'ms' && (
+                  <Separator
+                    fontSize={separatorFontSize}
+                    marginX={separatorMarginX}
+                    marginTop={separatorMarginTop}
+                  />
+                )}
                 {!useCompactLayout && i > 0 && unit.key === 'ms' && (
-                  <div className="text-3xl font-bold text-white/30 self-start mt-1 mx-0.5">.</div>
+                  <Separator
+                    glyph="."
+                    fontSize={separatorFontSize}
+                    marginX={separatorMarginX}
+                    marginTop={separatorMarginTop}
+                  />
                 )}
                 <UnitDisplay
                   value={unit.value}
                   label={unit.label}
                   padWidth={unit.padWidth}
                   accent={theme.accent}
+                  width={unitWidth}
+                  valueFontSize={valueFontSize}
+                  labelFontSize={labelFontSize}
+                  chipPaddingX={chipPaddingX}
+                  chipPaddingY={chipPaddingY}
+                  chipRadius={chipRadius}
+                  labelMarginTop={labelMarginTop}
                 />
               </div>
             ))}
@@ -333,7 +460,13 @@ export default function Countdown({ config, theme }: WidgetComponentProps) {
 
         {/* Target date display */}
         {isValidTarget && !isFinished && (
-          <div className="text-xs text-white/30 text-center mt-3">
+          <div
+            className="text-white/30 text-center"
+            style={{
+              fontSize: dateFontSize,
+              marginTop: dateMarginTop,
+            }}
+          >
             {target.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
             {(currentMilestone?.time || '00:00') !== '00:00' && ` at ${currentMilestone?.time}`}
           </div>

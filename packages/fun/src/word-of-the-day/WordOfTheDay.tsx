@@ -19,6 +19,10 @@ interface WordEntry {
   origin: string;
 }
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
 function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
   const normalized = hex.trim().replace('#', '');
   const expanded =
@@ -175,6 +179,29 @@ export default function WordOfTheDay({ config, theme }: WidgetComponentProps) {
   const definitionColor = mixColors(theme.background, '#ffffff', 0.86);
   const mutedColor = mixColors(theme.background, '#ffffff', 0.62);
   const subtleColor = mixColors(theme.background, '#ffffff', 0.42);
+  const padX = clamp(DESIGN_W * 0.055, 18, 30);
+  const padY = clamp(ACTUAL_H * 0.05, 16, 28);
+  const headerFontSize = clamp(Math.min(DESIGN_W * 0.022, ACTUAL_H * 0.03), 9, 13);
+  const categoryFontSize = clamp(headerFontSize * 0.84, 8, 11);
+  const headerGap = clamp(ACTUAL_H * 0.018, 6, 10);
+  const dividerMarginBottom = clamp(ACTUAL_H * 0.045, 14, 26);
+  const wordFontSize = clamp(Math.min(DESIGN_W * 0.11, ACTUAL_H * 0.12), 32, 60);
+  const wordMarginBottom = clamp(ACTUAL_H * 0.014, 4, 10);
+  const pronunciationFontSize = clamp(Math.min(DESIGN_W * 0.03, ACTUAL_H * 0.04), 12, 18);
+  const badgeFontSize = clamp(pronunciationFontSize * 0.82, 10, 13);
+  const badgePaddingY = clamp(badgeFontSize * 0.15, 1, 3);
+  const badgePaddingX = clamp(badgeFontSize * 0.8, 5, 10);
+  const metaGap = clamp(DESIGN_W * 0.015, 8, 14);
+  const metaMarginBottom = clamp(ACTUAL_H * 0.04, 12, 24);
+  const contentGap = clamp(ACTUAL_H * 0.04, 14, 24);
+  const definitionFontSize = clamp(Math.min(DESIGN_W * 0.04, ACTUAL_H * 0.05), 15, 24);
+  const definitionLineHeight = 1.35;
+  const exampleFontSize = clamp(definitionFontSize * 0.8, 12, 18);
+  const examplePaddingX = clamp(DESIGN_W * 0.022, 10, 18);
+  const examplePaddingY = clamp(ACTUAL_H * 0.02, 8, 14);
+  const exampleRadius = clamp(exampleFontSize * 0.7, 8, 14);
+  const originFontSize = clamp(Math.min(DESIGN_W * 0.022, ACTUAL_H * 0.03), 10, 14);
+  const contentTopOffset = clamp(ACTUAL_H * 0.01, 0, 10);
 
   return (
     <DarkContainer ref={containerRef} bg={theme.background}>
@@ -184,16 +211,17 @@ export default function WordOfTheDay({ config, theme }: WidgetComponentProps) {
           height: ACTUAL_H,
           transform: `scale(${scale})`,
           transformOrigin: 'top left',
+          padding: `${padY}px ${padX}px`,
         }}
-        className="flex flex-col px-6 py-5"
+        className="flex flex-col"
       >
         {/* Header */}
-        <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center justify-between" style={{ marginBottom: headerGap }}>
           <span
             style={{
               color: theme.accent,
               fontFamily: 'monospace',
-              fontSize: '0.6rem',
+              fontSize: headerFontSize,
               fontWeight: 700,
               textTransform: 'uppercase',
               letterSpacing: '0.2em',
@@ -205,7 +233,7 @@ export default function WordOfTheDay({ config, theme }: WidgetComponentProps) {
             style={{
               color: subtleColor,
               fontFamily: 'monospace',
-              fontSize: '0.5rem',
+              fontSize: categoryFontSize,
               letterSpacing: '0.1em',
             }}
           >
@@ -214,75 +242,92 @@ export default function WordOfTheDay({ config, theme }: WidgetComponentProps) {
         </div>
 
         {/* Divider */}
-        <div className="w-full h-px mb-4" style={{ backgroundColor: theme.accent, opacity: 0.3 }} />
-
-        {/* Word */}
-        <div className="mb-1">
-          <span
-            className="text-3xl font-bold leading-tight"
-            style={{ color: headlineColor }}
-          >
-            {word.word}
-          </span>
-        </div>
-
-        {/* Pronunciation & part of speech */}
-        <div className="flex items-center gap-2 mb-3">
-          <span style={{ color: mutedColor, fontSize: '0.75rem', fontStyle: 'italic' }}>
-            {word.pronunciation}
-          </span>
-          <span
-            style={{
-              color: theme.accent,
-              fontSize: '0.65rem',
-              fontWeight: 600,
-              backgroundColor: `${theme.accent}20`,
-              padding: '1px 6px',
-              borderRadius: 4,
-            }}
-          >
-            {word.partOfSpeech}
-          </span>
-        </div>
-
-        {/* Definition */}
         <div
-          className="text-sm leading-snug mb-3 transition-opacity duration-700"
-          style={{
-            color: definitionColor,
-            opacity: showDetails ? 1 : 0,
-          }}
-        >
-          {word.definition}
-        </div>
+          className="w-full h-px"
+          style={{ backgroundColor: theme.accent, opacity: 0.3, marginBottom: dividerMarginBottom }}
+        />
 
-        {/* Example */}
-        <div
-          className="text-xs italic leading-snug mb-3 transition-opacity duration-700 delay-300"
-          style={{
-            color: mutedColor,
-            opacity: showDetails ? 1 : 0,
-            borderLeft: `2px solid ${theme.accent}40`,
-            paddingLeft: 8,
-          }}
-        >
-          &ldquo;{word.example}&rdquo;
-        </div>
+        <div className="flex flex-1 flex-col" style={{ paddingTop: contentTopOffset }}>
+          <div>
+            {/* Word */}
+            <div style={{ marginBottom: wordMarginBottom }}>
+              <span
+                className="font-bold leading-[0.95]"
+                style={{ color: headlineColor, fontSize: wordFontSize }}
+              >
+                {word.word}
+              </span>
+            </div>
 
-        {/* Origin */}
-        <div className="mt-auto">
-          <span
-            className="transition-opacity duration-700 delay-500"
-            style={{
-              color: subtleColor,
-              fontFamily: 'monospace',
-              fontSize: '0.55rem',
-              letterSpacing: '0.05em',
-              opacity: showDetails ? 1 : 0,
-            }}
-          >
-            Origin: {word.origin}
-          </span>
+            {/* Pronunciation & part of speech */}
+            <div className="flex items-center flex-wrap" style={{ gap: metaGap, marginBottom: metaMarginBottom }}>
+              <span style={{ color: mutedColor, fontSize: pronunciationFontSize, fontStyle: 'italic' }}>
+                {word.pronunciation}
+              </span>
+              <span
+                style={{
+                  color: theme.accent,
+                  fontSize: badgeFontSize,
+                  fontWeight: 600,
+                  backgroundColor: `${theme.accent}20`,
+                  padding: `${badgePaddingY}px ${badgePaddingX}px`,
+                  borderRadius: 999,
+                }}
+              >
+                {word.partOfSpeech}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-1 flex-col justify-center" style={{ gap: contentGap }}>
+            {/* Definition */}
+            <div
+              className="transition-opacity duration-700"
+              style={{
+                color: definitionColor,
+                opacity: showDetails ? 1 : 0,
+                fontSize: definitionFontSize,
+                lineHeight: definitionLineHeight,
+                fontWeight: 500,
+              }}
+            >
+              {word.definition}
+            </div>
+
+            {/* Example */}
+            <div
+              className="transition-opacity duration-700 delay-300"
+              style={{
+                color: mutedColor,
+                opacity: showDetails ? 1 : 0,
+                borderLeft: `2px solid ${theme.accent}40`,
+                backgroundColor: `${theme.accent}10`,
+                padding: `${examplePaddingY}px ${examplePaddingX}px`,
+                borderRadius: exampleRadius,
+                fontSize: exampleFontSize,
+                lineHeight: 1.4,
+                fontStyle: 'italic',
+              }}
+            >
+              &ldquo;{word.example}&rdquo;
+            </div>
+          </div>
+
+          {/* Origin */}
+          <div>
+            <span
+              className="transition-opacity duration-700 delay-500"
+              style={{
+                color: subtleColor,
+                fontFamily: 'monospace',
+                fontSize: originFontSize,
+                letterSpacing: '0.05em',
+                opacity: showDetails ? 1 : 0,
+              }}
+            >
+              Origin: {word.origin}
+            </span>
+          </div>
         </div>
       </div>
     </DarkContainer>

@@ -208,6 +208,8 @@ export default function TriviaGame({ config, theme }: WidgetComponentProps) {
   const badgeColor = mixColors(theme.background, '#ffffff', 0.18);
   const revealedSurface = mixColors(theme.background, theme.accent, 0.18);
   const revealedText = mixColors(theme.background, '#ffffff', 0.92);
+  const outerPadX = 12;
+  const outerPadY = 12;
 
   if (allQuestions.length === 0) {
     return (
@@ -232,143 +234,153 @@ export default function TriviaGame({ config, theme }: WidgetComponentProps) {
           opacity: transitioning ? 0 : 1,
           transition: 'opacity 0.35s ease',
         }}
-        className="relative flex flex-col"
+        className="relative"
       >
-        {/* Category badge */}
-        <div className="flex items-center gap-2 mb-2">
-          <div
-            style={{
-              backgroundColor: accentColor,
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              flexShrink: 0,
-            }}
-          />
-          <span
-            style={{
-              color: accentColor,
-              fontFamily: 'monospace',
-              fontSize: '0.6rem',
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              letterSpacing: '0.2em',
-            }}
-          >
-            {CATEGORY_LABELS[question.category ?? ''] ?? question.category ?? 'Trivia'}
-          </span>
-          <div style={{ flex: 1 }} />
-          <span
-            style={{
-              color: mutedColor,
-              fontFamily: 'monospace',
-              fontSize: '0.55rem',
-              letterSpacing: '0.1em',
-            }}
-          >
-            {String((index % allQuestions.length) + 1).padStart(2, '0')}/{String(allQuestions.length).padStart(2, '0')}
-          </span>
-        </div>
-
-        {/* Question */}
         <div
           style={{
-            backgroundColor: surfaceColor,
-            borderRadius: 14,
-            border: `1px solid ${surfaceBorder}`,
-            padding: '14px 16px',
-            marginBottom: 10,
+            width: '100%',
+            height: '100%',
+            padding: `${outerPadY}px ${outerPadX}px`,
+            boxSizing: 'border-box',
           }}
+          className="flex flex-col"
         >
-          <span
-            style={{
-              color: headlineColor,
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              lineHeight: 1.4,
-            }}
-          >
-            {question.question}
-          </span>
-        </div>
-
-        {/* Answer options */}
-        <div className="flex flex-col gap-[6px]" style={{ flex: 1 }}>
-          {question.options.map((opt, i) => {
-            const isCorrect = i === question.answer;
-            const showCorrect = revealed && isCorrect;
-            const showWrong = revealed && !isCorrect;
-
-            return (
-              <div
-                key={`${index}-${i}`}
-                style={{
-                  backgroundColor: showCorrect ? revealedSurface : surfaceColor,
-                  borderRadius: 10,
-                  border: `1px solid ${showCorrect ? accentColor : surfaceBorder}`,
-                  padding: '8px 12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  transition: 'all 0.4s ease',
-                }}
-              >
-                {/* Letter badge */}
-                <div
-                  style={{
-                    width: 22,
-                    height: 22,
-                    borderRadius: 6,
-                    backgroundColor: showCorrect ? accentColor : badgeColor,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    transition: 'background-color 0.4s ease',
-                  }}
-                >
-                  <span
-                    style={{
-                      color: showCorrect ? theme.background : mutedColor,
-                      fontFamily: 'monospace',
-                      fontSize: '0.65rem',
-                      fontWeight: 700,
-                    }}
-                  >
-                    {OPTION_LETTERS[i]}
-                  </span>
-                </div>
-
-                <span
-                  style={{
-                    color: showCorrect ? revealedText : showWrong ? mutedColor : bodyColor,
-                    fontSize: '0.75rem',
-                    fontWeight: showCorrect ? 600 : 400,
-                    transition: 'color 0.4s ease',
-                  }}
-                >
-                  {opt}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Progress dots */}
-        <div className="flex items-center justify-center gap-[5px] mt-2">
-          {Array.from({ length: Math.min(allQuestions.length, 10) }).map((_, i) => (
+          {/* Category badge */}
+          <div className="flex items-center gap-2 mb-2">
             <div
-              key={i}
               style={{
-                width: i === index % Math.min(allQuestions.length, 10) ? 14 : 5,
-                height: 5,
-                borderRadius: 3,
-                backgroundColor:
-                  i === index % Math.min(allQuestions.length, 10) ? accentColor : surfaceBorder,
-                transition: 'all 0.3s ease',
+                backgroundColor: accentColor,
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                flexShrink: 0,
               }}
             />
-          ))}
+            <span
+              style={{
+                color: accentColor,
+                fontFamily: 'monospace',
+                fontSize: '0.6rem',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.2em',
+              }}
+            >
+              {CATEGORY_LABELS[question.category ?? ''] ?? question.category ?? 'Trivia'}
+            </span>
+            <div style={{ flex: 1 }} />
+            <span
+              style={{
+                color: mutedColor,
+                fontFamily: 'monospace',
+                fontSize: '0.55rem',
+                letterSpacing: '0.1em',
+              }}
+            >
+              {String((index % allQuestions.length) + 1).padStart(2, '0')}/{String(allQuestions.length).padStart(2, '0')}
+            </span>
+          </div>
+
+          {/* Question */}
+          <div
+            style={{
+              backgroundColor: surfaceColor,
+              borderRadius: 14,
+              border: `1px solid ${surfaceBorder}`,
+              padding: '14px 16px',
+              marginBottom: 10,
+            }}
+          >
+            <span
+              style={{
+                color: headlineColor,
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                lineHeight: 1.4,
+              }}
+            >
+              {question.question}
+            </span>
+          </div>
+
+          {/* Answer options */}
+          <div className="flex flex-col gap-[6px]" style={{ flex: 1 }}>
+            {question.options.map((opt, i) => {
+              const isCorrect = i === question.answer;
+              const showCorrect = revealed && isCorrect;
+              const showWrong = revealed && !isCorrect;
+
+              return (
+                <div
+                  key={`${index}-${i}`}
+                  style={{
+                    backgroundColor: showCorrect ? revealedSurface : surfaceColor,
+                    borderRadius: 10,
+                    border: `1px solid ${showCorrect ? accentColor : surfaceBorder}`,
+                    padding: '8px 12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    transition: 'all 0.4s ease',
+                  }}
+                >
+                  {/* Letter badge */}
+                  <div
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: 6,
+                      backgroundColor: showCorrect ? accentColor : badgeColor,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      transition: 'background-color 0.4s ease',
+                    }}
+                  >
+                    <span
+                      style={{
+                        color: showCorrect ? theme.background : mutedColor,
+                        fontFamily: 'monospace',
+                        fontSize: '0.65rem',
+                        fontWeight: 700,
+                      }}
+                    >
+                      {OPTION_LETTERS[i]}
+                    </span>
+                  </div>
+
+                  <span
+                    style={{
+                      color: showCorrect ? revealedText : showWrong ? mutedColor : bodyColor,
+                      fontSize: '0.75rem',
+                      fontWeight: showCorrect ? 600 : 400,
+                      transition: 'color 0.4s ease',
+                    }}
+                  >
+                    {opt}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Progress dots */}
+          <div className="flex items-center justify-center gap-[5px] mt-2">
+            {Array.from({ length: Math.min(allQuestions.length, 10) }).map((_, i) => (
+              <div
+                key={i}
+                style={{
+                  width: i === index % Math.min(allQuestions.length, 10) ? 14 : 5,
+                  height: 5,
+                  borderRadius: 3,
+                  backgroundColor:
+                    i === index % Math.min(allQuestions.length, 10) ? accentColor : surfaceBorder,
+                  transition: 'all 0.3s ease',
+                }}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </DarkContainer>

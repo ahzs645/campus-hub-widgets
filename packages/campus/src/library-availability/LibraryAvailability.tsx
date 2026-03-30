@@ -85,7 +85,14 @@ interface CardsPage {
   columns: number;
 }
 
-type WidgetPage = GridPage | CalendarPage | CardsPage;
+interface CompactPage {
+  kind: 'compact';
+  dayIndex: number;
+  roomStart: number;
+  roomEnd: number;
+}
+
+type WidgetPage = GridPage | CalendarPage | CardsPage | CompactPage;
 
 const DEFAULT_ENDPOINT = 'https://unbc.libcal.com/spaces/availability/grid';
 const SLOT_MINUTES = 30;
@@ -548,10 +555,42 @@ export default function LibraryAvailability({
     [emptyMetrics, processed.metricsByRoomDay],
   );
 
+  const viewportWidth = size.width || 960;
+  const viewportHeight = size.height || 540;
+  const compactMode = viewportWidth < 540 || viewportHeight < 360;
+  const tinyMode = viewportWidth < 420 || viewportHeight < 300;
+
   const pages = useMemo<WidgetPage[]>(() => {
-    const width = size.width || 960;
-    const height = size.height || 540;
+    const width = viewportWidth;
+    const height = viewportHeight;
     const roomCount = processed.rooms.length;
+
+    if (compactMode) {
+      const compactChromeHeight = tinyMode ? 188 : 204;
+      const compactRowHeight = tinyMode ? 82 : 94;
+      const maxRoomsPerPage = Math.max(1, roomCount);
+      const minRoomsPerPage = Math.min(2, maxRoomsPerPage);
+      const roomsPerPage = clamp(
+        Math.floor((height - compactChromeHeight) / compactRowHeight),
+        minRoomsPerPage,
+        maxRoomsPerPage,
+      );
+
+      const out: WidgetPage[] = [];
+
+      dayMeta.forEach((_day, dayIndex) => {
+        for (let roomStart = 0; roomStart < roomCount; roomStart += roomsPerPage) {
+          out.push({
+            kind: 'compact',
+            dayIndex,
+            roomStart,
+            roomEnd: Math.min(roomCount, roomStart + roomsPerPage),
+          });
+        }
+      });
+
+      return out;
+    }
 
     if (mode === 'grid') {
       const roomLabelWidth = 160;
@@ -655,7 +694,16 @@ export default function LibraryAvailability({
     });
 
     return out;
-  }, [dayMeta, mode, processed.rooms.length, size.height, size.width, slotCount]);
+  }, [
+    compactMode,
+    dayMeta,
+    mode,
+    processed.rooms.length,
+    slotCount,
+    tinyMode,
+    viewportHeight,
+    viewportWidth,
+  ]);
 
   useEffect(() => {
     setPageIndex(0);
@@ -697,9 +745,27 @@ export default function LibraryAvailability({
         : `${firstDay.shortLabel} to ${lastDay.shortLabel}`;
     }
 
+    if (activePage.kind === 'compact') {
+      const day = dayMeta[activePage.dayIndex];
+      return day?.shortLabel ?? '';
+    }
+
     const day = dayMeta[activePage.dayIndex];
     return day?.shortLabel ?? '';
   }, [activePage, dayMeta, openHour]);
+
+  const pageCountText = pages.length > 0 ? `Page ${pageIndex + 1} / ${pages.length}` : 'Page 1 / 1';
+  const updatedText = refreshing
+    ? 'Refreshing…'
+    : lastUpdated
+      ? `Updated ${lastUpdated.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+      : 'Waiting for live data';
+  const compactTitleSize = clamp(viewportWidth * 0.055, 18, 28);
+  const compactDescriptionSize = clamp(viewportWidth * 0.029, 11, 14);
+  const compactMetaSize = clamp(viewportWidth * 0.027, 11, 13);
+  const descriptionText = compactMode
+    ? 'Booked slots count as unavailable.'
+    : 'Booked slots shown as unavailable. Rooms not in the grid default to fully unavailable.';
 
   return (
     <div
@@ -709,22 +775,43 @@ export default function LibraryAvailability({
         background: `linear-gradient(160deg, ${theme.primary}30 0%, ${theme.background}55 100%)`,
       }}
     >
-      <div className="flex items-start gap-3 justify-between">
+      <div className={compactMode ? 'flex flex-col gap-2' : 'flex items-start gap-3 justify-between'}>
         <div className="min-w-0">
-          <h3 className="text-xl md:text-2xl font-bold leading-tight" style={{ color: theme.accent }}>
+          <h3
+            className={`font-bold leading-tight ${compactMode ? 'line-clamp-2' : ''}`}
+            style={{
+              color: theme.accent,
+              fontSize: compactMode ? `${compactTitleSize}px` : undefined,
+            }}
+          >
             {title}
           </h3>
-          <p className="text-xs md:text-sm text-white/65 mt-1">
-            Booked slots shown as unavailable. Rooms not in the grid default to fully unavailable.
+          <p
+            className={`text-white/65 mt-1 ${compactMode ? 'line-clamp-2' : ''}`}
+            style={{
+              fontSize: compactMode ? `${compactDescriptionSize}px` : undefined,
+            }}
+          >
+            {descriptionText}
           </p>
         </div>
-        <div className="text-right text-[11px] md:text-xs text-white/60 whitespace-nowrap">
-          <div>{pageSummary}</div>
-          <div>
-            {pages.length > 0 ? `Page ${pageIndex + 1} / ${pages.length}` : 'Page 1 / 1'}
+
+        {compactMode ? (
+          <div
+            className="flex flex-wrap gap-x-3 gap-y-1 text-white/60"
+            style={{ fontSize: `${compactMetaSize}px` }}
+          >
+            {pageSummary ? <span>{pageSummary}</span> : null}
+            <span>{pageCountText}</span>
+            <span>{updatedText}</span>
           </div>
-          <div>{refreshing ? 'Refreshing…' : lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : 'Waiting for live data'}</div>
-        </div>
+        ) : (
+          <div className="text-right text-[11px] md:text-xs text-white/60 whitespace-nowrap">
+            <div>{pageSummary}</div>
+            <div>{pageCountText}</div>
+            <div>{updatedText}</div>
+          </div>
+        )}
       </div>
 
       {response?.windowEnd && (
@@ -746,7 +833,173 @@ export default function LibraryAvailability({
       )}
 
       {!loading && activePage && (
-        <div className="flex-1 min-h-0 rounded-xl border border-white/15 bg-black/20 p-2 md:p-3 overflow-hidden">
+        <div
+          className="flex-1 min-h-0 rounded-xl border border-white/15 bg-black/20 p-2 md:p-3 overflow-hidden"
+          style={{ padding: compactMode ? '10px' : undefined }}
+        >
+          {activePage.kind === 'compact' && (
+            <div className="h-full flex flex-col min-h-0">
+              {(() => {
+                const day = dayMeta[activePage.dayIndex];
+                const roomCards = processed.rooms
+                  .slice(activePage.roomStart, activePage.roomEnd)
+                  .map((room) => {
+                    const metrics = day ? getMetrics(room.id, day.key) : emptyMetrics;
+                    return {
+                      room,
+                      metrics,
+                      nextWindow:
+                        day ? getNextOpenWindow(metrics, activePage.dayIndex, openHour) : null,
+                    };
+                  });
+
+                const openingsCount = roomCards.filter(({ metrics }) => metrics.openCount > 0).length;
+                const badgeTextSize = clamp(viewportWidth * 0.023, 10, 12);
+                const cardTitleSize = clamp(viewportWidth * 0.035, 14, 18);
+                const cardBodySize = clamp(viewportWidth * 0.029, 11, 14);
+                const cardMetaSize = clamp(viewportWidth * 0.024, 10, 12);
+
+                return (
+                  <>
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      <span
+                        className="rounded-full px-2 py-1 text-white/80"
+                        style={{
+                          fontSize: `${badgeTextSize}px`,
+                          backgroundColor: 'rgba(34, 197, 94, 0.18)',
+                        }}
+                      >
+                        Green: available
+                      </span>
+                      <span
+                        className="rounded-full px-2 py-1 text-white/80"
+                        style={{
+                          fontSize: `${badgeTextSize}px`,
+                          backgroundColor: 'rgba(239, 68, 68, 0.16)',
+                        }}
+                      >
+                        Red: booked
+                      </span>
+                      <span
+                        className="rounded-full px-2 py-1 text-white/80"
+                        style={{
+                          fontSize: `${badgeTextSize}px`,
+                          background: HATCH_BG,
+                        }}
+                      >
+                        Hatched: past
+                      </span>
+                      <span
+                        className="rounded-full px-2 py-1 text-white/70"
+                        style={{
+                          fontSize: `${badgeTextSize}px`,
+                          backgroundColor: 'rgba(255,255,255,0.06)',
+                        }}
+                      >
+                        {day?.shortLabel ?? ''} · Rooms {activePage.roomStart + 1}-{activePage.roomEnd} of{' '}
+                        {processed.rooms.length}
+                      </span>
+                    </div>
+
+                    <div
+                      className="rounded-lg px-3 py-2.5 mb-2"
+                      style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}
+                    >
+                      <div
+                        className="text-white/90 font-semibold"
+                        style={{ fontSize: `${cardBodySize}px` }}
+                      >
+                        {openingsCount} of {roomCards.length} rooms currently have openings
+                      </div>
+                      <div
+                        className="text-white/60 mt-1"
+                        style={{ fontSize: `${cardMetaSize}px` }}
+                      >
+                        {day?.longLabel ?? ''} summary with next available window per room.
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2 flex-1 min-h-0">
+                      {roomCards.map(({ room, metrics, nextWindow }) => (
+                        <div
+                          key={`compact-room-${room.id}`}
+                          className="rounded-lg border border-white/12 p-3 flex flex-col gap-2"
+                          style={{ backgroundColor: 'rgba(255,255,255,0.04)' }}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <div
+                                className="font-semibold text-white truncate"
+                                style={{ fontSize: `${cardTitleSize}px` }}
+                              >
+                                {room.name}
+                              </div>
+                              <div
+                                className="text-white/55"
+                                style={{ fontSize: `${cardMetaSize}px` }}
+                              >
+                                {room.capacity ? `${room.capacity} seats` : 'Capacity n/a'}
+                              </div>
+                            </div>
+                            <span
+                              className="px-2 py-1 rounded-full whitespace-nowrap"
+                              style={{
+                                fontSize: `${badgeTextSize}px`,
+                                backgroundColor:
+                                  metrics.openCount > 0
+                                    ? 'rgba(34,197,94,0.18)'
+                                    : 'rgba(239,68,68,0.18)',
+                                color:
+                                  metrics.openCount > 0
+                                    ? 'rgb(187 247 208)'
+                                    : 'rgb(254 202 202)',
+                              }}
+                            >
+                              {metrics.openCount > 0 ? `${Math.round(metrics.ratio * 100)}% free` : 'Full'}
+                            </span>
+                          </div>
+
+                          <div
+                            className="text-white/80"
+                            style={{ fontSize: `${cardBodySize}px` }}
+                          >
+                            {nextWindow
+                              ? `Next: ${formatRange(nextWindow, openHour)}`
+                              : activePage.dayIndex === 0
+                                ? 'No more openings today'
+                                : 'No confirmed openings'}
+                          </div>
+
+                          <div
+                            className="grid gap-[2px]"
+                            style={{ gridTemplateColumns: `repeat(${slotCount}, minmax(0, 1fr))` }}
+                          >
+                            {metrics.slots.map((isOpen, index) => {
+                              const isPast = activePage.dayIndex === 0 && index < processed.pastSlotCutoff;
+                              return (
+                                <div
+                                  key={`${room.id}-compact-mini-${index}`}
+                                  className="h-2 rounded-[2px]"
+                                  style={{
+                                    background: isPast
+                                      ? HATCH_BG
+                                      : isOpen
+                                        ? 'rgba(34, 197, 94, 0.75)'
+                                        : 'rgba(239, 68, 68, 0.35)',
+                                  }}
+                                />
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          )}
+
           {activePage.kind === 'grid' && (
             <div className="h-full flex flex-col min-h-0">
               <div className="flex items-center gap-3 mb-2 text-[11px] md:text-xs text-white/70">
