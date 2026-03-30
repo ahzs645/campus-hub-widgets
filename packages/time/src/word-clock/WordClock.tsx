@@ -2,12 +2,6 @@
 import { useState, useEffect } from 'react';
 import { WidgetComponentProps, registerWidget, ThemedContainer, Skeleton } from '@firstform/campus-hub-widget-sdk';
 import { useFitScale } from '@firstform/campus-hub-widget-sdk';
-import WordClockOptions from './WordClockOptions';
-
-interface WordClockConfig {
-  language?: 'en';
-  accentMinutes?: boolean;
-}
 
 // The word clock grid — each row is a string of characters
 // Active words light up based on the current time
@@ -122,9 +116,6 @@ function buildActiveSet(matches: WordMatch[]): Set<string> {
 }
 
 export default function WordClock({ config, theme }: WidgetComponentProps) {
-  const wcConfig = config as WordClockConfig | undefined;
-  const accentMinutes = wcConfig?.accentMinutes ?? true;
-
   const [time, setTime] = useState<Date | null>(null);
 
   const { containerRef, containerWidth, containerHeight } = useFitScale(340, 360);
@@ -148,20 +139,14 @@ export default function WordClock({ config, theme }: WidgetComponentProps) {
   const matches = getTimeWords(hours, minutes);
   const active = buildActiveSet(matches);
 
-  // Show dots for the remaining minutes (0-4 dots for minutes not captured by 5-min rounding)
-  const extraMinutes = minutes % 5;
   const resolvedWidth = containerWidth || 340;
   const resolvedHeight = containerHeight || 360;
   const cols = GRID[0]?.length ?? 11;
   const rows = GRID.length;
-  const showMinuteDots = accentMinutes && extraMinutes > 0;
   const padX = clamp(resolvedWidth * 0.08, 10, 22);
   const padY = clamp(resolvedHeight * 0.06, 10, 20);
-  const dotSize = clamp(Math.min(resolvedWidth, resolvedHeight) * 0.022, 4, 8);
-  const dotGap = clamp(dotSize * 0.75, 4, 8);
-  const dotArea = showMinuteDots ? dotSize + clamp(resolvedHeight * 0.045, 8, 16) : 0;
   const availableWidth = Math.max(resolvedWidth - padX * 2, 80);
-  const availableHeight = Math.max(resolvedHeight - padY * 2 - dotArea, 100);
+  const availableHeight = Math.max(resolvedHeight - padY * 2, 100);
   const colGap = clamp(availableWidth * 0.005, 1, 3);
   const rowGap = clamp(availableHeight * 0.015, 2, 7);
   const cellWidth = Math.max((availableWidth - colGap * (cols - 1)) / cols, 10);
@@ -221,30 +206,6 @@ export default function WordClock({ config, theme }: WidgetComponentProps) {
             </div>
           ))}
         </div>
-
-        {/* Minute dots */}
-        {showMinuteDots && (
-          <div
-            className="flex justify-center"
-            style={{
-              gap: dotGap,
-              marginTop: clamp(resolvedHeight * 0.04, 8, 16),
-            }}
-          >
-            {Array.from({ length: extraMinutes }).map((_, i) => (
-              <div
-                key={i}
-                className="rounded-full"
-                style={{
-                  width: dotSize,
-                  height: dotSize,
-                  backgroundColor: theme.accent,
-                  boxShadow: `0 0 ${clamp(dotSize * 1.5, 4, 8)}px ${theme.accent}60`,
-                }}
-              />
-            ))}
-          </div>
-        )}
       </div>
     </ThemedContainer>
   );
@@ -260,8 +221,4 @@ registerWidget({
   defaultW: 3,
   defaultH: 3,
   component: WordClock,
-  OptionsComponent: WordClockOptions,
-  defaultProps: {
-    accentMinutes: true,
-  },
 });
