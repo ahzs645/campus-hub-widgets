@@ -255,7 +255,7 @@ export default function RSSReader({ config, theme }: WidgetComponentProps) {
             borderBottom: `1px solid ${theme.accent}20`,
           }}
         >
-          <span style={{ color: theme.accent }}><AppIcon name="rss" style={{ width: iconSize, height: iconSize }} /></span>
+          <span style={{ color: theme.accent }}><AppIcon name="rss" size={iconSize} /></span>
           <span className="font-semibold text-white truncate" style={{ fontSize: titleSize }}>{feedTitle}</span>
           {!feedUrl && (
             <span
