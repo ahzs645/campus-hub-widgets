@@ -141,7 +141,7 @@ registerWidget({
   type: 'google-sheets',
   name: 'Google Sheets',
   description: 'Display data, updates, and charts from Google Sheets on your screens',
-  icon: 'table',
+  icon: 'brandGoogleSheets',
   minW: 3,
   minH: 2,
   defaultW: 6,

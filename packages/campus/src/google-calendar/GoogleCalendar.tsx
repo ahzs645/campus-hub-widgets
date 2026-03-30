@@ -247,7 +247,7 @@ registerWidget({
   type: 'google-calendar',
   name: 'Google Calendar',
   description: 'Display events from Google Calendar',
-  icon: 'calendarRange',
+  icon: 'brandGoogleCalendar',
   minW: 2,
   minH: 3,
   defaultW: 3,

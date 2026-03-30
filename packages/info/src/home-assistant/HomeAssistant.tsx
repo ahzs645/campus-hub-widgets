@@ -452,7 +452,7 @@ registerWidget({
   type: 'home-assistant',
   name: 'Home Assistant',
   description: 'Display live Home Assistant entity data — sensors, 3D printers, media players, cameras, and more',
-  icon: 'gauge',
+  icon: 'brandHomeAssistant',
   minW: 2,
   minH: 2,
   maxW: 12,

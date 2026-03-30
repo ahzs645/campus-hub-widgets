@@ -72,7 +72,7 @@ registerWidget({
   type: 'youtube',
   name: 'YouTube',
   description: 'Embed YouTube videos',
-  icon: 'tv',
+  icon: 'brandYoutube',
   minW: 3,
   minH: 2,
   defaultW: 6,
