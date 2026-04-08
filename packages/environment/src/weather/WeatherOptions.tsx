@@ -5,6 +5,7 @@ import { AppIcon } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
 type DisplayMode = 'full' | 'temperature-only' | 'wind-only' | 'minimal' | 'custom';
+type WeatherAppearance = 'default' | 'dashboard-macos';
 
 interface DisplayItems {
   location: boolean;
@@ -70,6 +71,7 @@ interface WeatherData {
   dataSource: 'openweathermap' | 'unbc-rooftop' | 'msc-geomet';
   refreshInterval: number;
   useCorsProxy: boolean;
+  appearance: WeatherAppearance;
 }
 
 export default function WeatherOptions({ data, onChange }: WidgetOptionsProps) {
@@ -89,6 +91,7 @@ export default function WeatherOptions({ data, onChange }: WidgetOptionsProps) {
     dataSource: (data?.dataSource as 'openweathermap' | 'unbc-rooftop' | 'msc-geomet') ?? 'openweathermap',
     refreshInterval: (data?.refreshInterval as number) ?? 10,
     useCorsProxy: (data?.useCorsProxy as boolean) ?? true,
+    appearance: (data?.appearance as WeatherAppearance) ?? 'default',
   });
 
   useEffect(() => {
@@ -104,6 +107,7 @@ export default function WeatherOptions({ data, onChange }: WidgetOptionsProps) {
         dataSource: (data.dataSource as 'openweathermap' | 'unbc-rooftop' | 'msc-geomet') ?? 'openweathermap',
         refreshInterval: (data.refreshInterval as number) ?? 10,
         useCorsProxy: (data.useCorsProxy as boolean) ?? true,
+        appearance: (data.appearance as WeatherAppearance) ?? 'default',
       });
     }
   }, [data]);
@@ -192,6 +196,16 @@ export default function WeatherOptions({ data, onChange }: WidgetOptionsProps) {
 
       {/* Display Mode */}
       <OptionsSection title="Display Mode" divider>
+        <FormSelect
+          label="Appearance"
+          name="appearance"
+          value={state.appearance}
+          options={[
+            { value: 'default', label: 'Default Widget Theme' },
+            { value: 'dashboard-macos', label: 'Dashboard macOS Style' },
+          ]}
+          onChange={handleChange}
+        />
 
         <FormSelect
           label="What to show"
@@ -298,49 +312,85 @@ export default function WeatherOptions({ data, onChange }: WidgetOptionsProps) {
 
       {/* Preview */}
       <OptionsPreview>
-          <div className="text-xs text-[var(--color-accent)] mb-1">
-            {isUNBC ? 'UNBC Rooftop' : isGeoMet ? 'Prince George' : state.location}
-          </div>
-          <div className="flex items-center gap-3">
-            <AppIcon
-              name={isUNBC ? 'snowflake' : isGeoMet ? 'cloud' : 'cloudSun'}
-              className="w-8 h-8 text-white/80"
-            />
-            <div>
-              <div className="text-2xl font-bold text-white">
-                {isUNBC
-                  ? (state.units === 'celsius' ? '-15°C' : '5°F')
-                  : isGeoMet
-                    ? (state.units === 'celsius' ? '1°C' : '34°F')
-                  : `72${state.units === 'celsius' ? '°C' : '°F'}`}
+        {state.appearance === 'dashboard-macos' ? (
+          <div className="relative overflow-hidden rounded-[18px] border border-white/10 bg-[linear-gradient(180deg,rgba(50,50,50,0.8)_0%,rgba(25,25,25,0.85)_100%)] shadow-[0_8px_24px_rgba(0,0,0,0.28)]">
+            <div className="flex items-center px-3 py-3" style={{ background: 'linear-gradient(180deg, #5A8AAF 0%, #8BAFC5 40%, #B0C8D8 100%)' }}>
+              <div className="min-w-0 flex-1">
+                <div className="text-[11px] text-white/80">Partly cloudy</div>
+                <div className="truncate text-[13px] font-bold text-white">
+                  {isUNBC ? 'UNBC Rooftop' : isGeoMet ? 'Prince George' : state.location}
+                </div>
+                <div className="text-[11px] text-white/80">
+                  {isUNBC
+                    ? (state.units === 'celsius' ? '5.0 m/s' : '11 mph')
+                    : isGeoMet
+                      ? (state.units === 'celsius' ? '3.1 m/s' : '7 mph')
+                      : '8 mph'}
+                </div>
               </div>
-              <div className="text-xs text-white/70">
-                {isGeoMet ? 'Cloudy' : 'Partly Cloudy'}
+              <div className="ml-3 flex items-center gap-3">
+                <span className="text-2xl">⛅</span>
+                <div className="text-5xl font-light leading-none text-white">
+                  {isUNBC
+                    ? (state.units === 'celsius' ? '-15°' : '5°')
+                    : isGeoMet
+                      ? (state.units === 'celsius' ? '1°' : '34°')
+                      : '72°'}
+                </div>
               </div>
             </div>
+            <div className="flex justify-between bg-[linear-gradient(180deg,rgba(50,60,75,0.85)_0%,rgba(35,45,55,0.9)_100%)] px-3 py-2 text-[11px] text-white/80">
+              <span>{isUNBC ? '40% humidity' : isGeoMet ? '82% humidity' : '45% humidity'}</span>
+              <span>8:55 AM</span>
+            </div>
           </div>
-          {state.showDetails && (
-            <div className="mt-2 flex gap-3 text-xs text-white/60">
-              <span className="flex items-center gap-1">
-                <AppIcon name="droplets" className="w-3.5 h-3.5" />
-                {isUNBC ? '40%' : isGeoMet ? '82%' : '45%'}
-              </span>
-              <span className="flex items-center gap-1">
-                <AppIcon name="wind" className="w-3.5 h-3.5" />
-                {isUNBC
-                  ? (state.units === 'celsius' ? '5.0 m/s' : '11 mph')
-                  : isGeoMet
-                    ? (state.units === 'celsius' ? '3.1 m/s' : '7 mph')
-                  : '8 mph'}
-              </span>
-              {(isUNBC || isGeoMet) && (
+        ) : (
+          <>
+            <div className="text-xs text-[var(--color-accent)] mb-1">
+              {isUNBC ? 'UNBC Rooftop' : isGeoMet ? 'Prince George' : state.location}
+            </div>
+            <div className="flex items-center gap-3">
+              <AppIcon
+                name={isUNBC ? 'snowflake' : isGeoMet ? 'cloud' : 'cloudSun'}
+                className="w-8 h-8 text-white/80"
+              />
+              <div>
+                <div className="text-2xl font-bold text-white">
+                  {isUNBC
+                    ? (state.units === 'celsius' ? '-15°C' : '5°F')
+                    : isGeoMet
+                      ? (state.units === 'celsius' ? '1°C' : '34°F')
+                      : `72${state.units === 'celsius' ? '°C' : '°F'}`}
+                </div>
+                <div className="text-xs text-white/70">
+                  {isGeoMet ? 'Cloudy' : 'Partly Cloudy'}
+                </div>
+              </div>
+            </div>
+            {state.showDetails && (
+              <div className="mt-2 flex gap-3 text-xs text-white/60">
                 <span className="flex items-center gap-1">
-                  <AppIcon name="gauge" className="w-3.5 h-3.5" />
-                  {isGeoMet ? '1017 hPa' : '1010 hPa'}
+                  <AppIcon name="droplets" className="w-3.5 h-3.5" />
+                  {isUNBC ? '40%' : isGeoMet ? '82%' : '45%'}
                 </span>
-              )}
-            </div>
-          )}
+                <span className="flex items-center gap-1">
+                  <AppIcon name="wind" className="w-3.5 h-3.5" />
+                  {isUNBC
+                    ? (state.units === 'celsius' ? '5.0 m/s' : '11 mph')
+                    : isGeoMet
+                      ? (state.units === 'celsius' ? '3.1 m/s' : '7 mph')
+                    : '8 mph'}
+                </span>
+                {(isUNBC || isGeoMet) && (
+                  <span className="flex items-center gap-1">
+                    <AppIcon name="gauge" className="w-3.5 h-3.5" />
+                    {isGeoMet ? '1017 hPa' : '1010 hPa'}
+                  </span>
+                )}
+              </div>
+            )}
+          </>
+        )}
       </OptionsPreview>
     </OptionsPanel>
   );

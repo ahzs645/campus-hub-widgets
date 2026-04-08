@@ -7,7 +7,7 @@ import {
   type WidgetComponentProps,
 } from '@firstform/campus-hub-widget-sdk';
 import MacOSIPodOptions from './MacOSIPodOptions';
-import { MACOS_MONO_FONT, MacOSInset, MacOSWidgetFrame } from '../shared/ui';
+import { MacOSInset } from '../shared/ui';
 
 interface IpodConfig {
   title?: string;
@@ -95,20 +95,42 @@ export default function MacOSIPod({ config }: WidgetComponentProps) {
   );
 
   return (
-    <MacOSWidgetFrame
-      title="iPod"
-      subtitle={playerConfig.album?.trim() || 'Aqua Mix'}
-      footer={
-        <div className="flex items-center justify-between text-[11px] text-black/55">
-          <span>{playerConfig.audioUrl ? 'Audio ready' : 'Preview mode'}</span>
-          <span style={{ fontFamily: MACOS_MONO_FONT }}>
-            {formatDuration(currentTime)} / {formatDuration(duration)}
-          </span>
-        </div>
-      }
+    <div
+      className="relative flex h-full min-h-0 items-center overflow-hidden rounded-[20px] px-[8px] pr-[10px]"
+      style={{
+        background:
+          'linear-gradient(180deg, #e2e2e2 0%, #d6d6d6 12%, #cccccc 28%, #c0c0c0 45%, #b8b8b8 55%, #c0c0c0 68%, #cccccc 82%, #d6d6d6 100%)',
+        boxShadow:
+          '0 10px 24px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.72)',
+        gap: 6,
+      }}
     >
+      <div
+        className="pointer-events-none absolute inset-0 rounded-[inherit]"
+        style={{
+          background:
+            'linear-gradient(90deg, rgba(255,255,255,0.01) 0%, rgba(255,255,255,0.06) 12%, transparent 28%, rgba(255,255,255,0.04) 48%, transparent 65%, rgba(255,255,255,0.05) 82%, rgba(255,255,255,0.01) 100%)',
+        }}
+      />
+      <div
+        className="pointer-events-none absolute top-[2px] left-1/2 z-[2] h-[35%] max-h-[50px] -translate-x-1/2"
+        style={{
+          width: 'calc(100% - 6px)',
+          borderRadius: '9999px 9999px 50% 50%',
+          background: 'linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0))',
+        }}
+      />
+      <div
+        className="pointer-events-none absolute bottom-[2px] left-1/2 z-[2] h-[20%] max-h-[30px] -translate-x-1/2"
+        style={{
+          width: 'calc(100% - 10px)',
+          borderRadius: '50% 50% 9999px 9999px',
+          background: 'linear-gradient(rgba(255,255,255,0), rgba(255,255,255,0.25))',
+        }}
+      />
+
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_13rem] gap-4">
-        <MacOSInset className="flex min-h-0 flex-col overflow-hidden p-4" tone="dark">
+        <MacOSInset className="relative z-[1] flex min-h-0 flex-col overflow-hidden p-4" tone="dark">
           <div
             className="rounded-[16px] border border-black/25 p-3 text-[#0f2914]"
             style={{
@@ -154,7 +176,7 @@ export default function MacOSIPod({ config }: WidgetComponentProps) {
         </MacOSInset>
         <div className="flex items-center justify-center">
           <div
-            className="relative h-[12.5rem] w-[12.5rem] rounded-full border border-black/12 bg-[linear-gradient(180deg,#fdfdfd_0%,#ececec_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_12px_28px_rgba(0,0,0,0.12)]"
+            className="relative z-[1] h-[12.5rem] w-[12.5rem] rounded-full border border-black/12 bg-[linear-gradient(180deg,#fdfdfd_0%,#ececec_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_12px_28px_rgba(0,0,0,0.12)]"
           >
             <button
               type="button"
@@ -197,7 +219,7 @@ export default function MacOSIPod({ config }: WidgetComponentProps) {
           </div>
         </div>
       </div>
-    </MacOSWidgetFrame>
+    </div>
   );
 }
 

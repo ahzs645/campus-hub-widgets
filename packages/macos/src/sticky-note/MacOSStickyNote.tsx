@@ -6,7 +6,6 @@ import {
   type WidgetComponentProps,
 } from '@firstform/campus-hub-widget-sdk';
 import MacOSStickyNoteOptions from './MacOSStickyNoteOptions';
-import { MacOSWidgetFrame } from '../shared/ui';
 
 interface StickyNoteConfig {
   title?: string;
@@ -37,11 +36,30 @@ export default function MacOSStickyNote({ config }: WidgetComponentProps) {
   }, [noteConfig.text]);
 
   return (
-    <MacOSWidgetFrame title={noteConfig.title?.trim() || 'Sticky note'}>
+    <div
+      className="relative h-full min-h-0 overflow-hidden rounded-[20px]"
+      style={{
+        background: `linear-gradient(135deg, ${paperColor} 0%, color-mix(in srgb, ${paperColor} 82%, #f1dd7b 18%) 100%)`,
+        boxShadow: '0 10px 24px rgba(0,0,0,0.16)',
+      }}
+    >
       <div
-        className="macos-note-paper h-full p-4"
+        className="pointer-events-none absolute inset-0"
         style={{
-          background: `linear-gradient(180deg, ${paperColor} 0%, color-mix(in srgb, ${paperColor} 82%, #f1dd7b 18%) 100%)`,
+          backgroundImage: `repeating-linear-gradient(
+            to bottom,
+            transparent,
+            transparent 23px,
+            color-mix(in srgb, ${paperColor} 70%, #8f7a22 30%) 23px,
+            color-mix(in srgb, ${paperColor} 70%, #8f7a22 30%) 24px
+          )`,
+          backgroundPosition: '0 10px',
+          opacity: 0.22,
+        }}
+      />
+      <div
+        className="macos-note-paper relative z-[1] h-full p-4"
+        style={{
           color: textColorForBackground(paperColor),
         }}
       >
@@ -54,7 +72,7 @@ export default function MacOSStickyNote({ config }: WidgetComponentProps) {
           onChange={(event) => setText(event.target.value)}
         />
       </div>
-    </MacOSWidgetFrame>
+    </div>
   );
 }
 

@@ -7,7 +7,6 @@ import {
   type WidgetComponentProps,
 } from '@firstform/campus-hub-widget-sdk';
 import MacOSCalendarOptions from './MacOSCalendarOptions';
-import { MacOSInset, MacOSPill, MacOSWidgetFrame } from '../shared/ui';
 
 interface CalendarConfig {
   title?: string;
@@ -63,7 +62,6 @@ function isSameDay(left: Date, right: Date) {
 
 export default function MacOSCalendar({ config }: WidgetComponentProps) {
   const calendarConfig = (config ?? {}) as CalendarConfig;
-  const title = calendarConfig.title?.trim() || 'Calendar';
   const now = new Date();
   const monthStart = startOfMonth(now);
   const gridStart = new Date(monthStart);
@@ -96,70 +94,175 @@ export default function MacOSCalendar({ config }: WidgetComponentProps) {
     };
   });
 
+  const dayHeaders = useMemo(
+    () => ['S', 'M', 'T', 'W', 'T', 'F', 'S'],
+    [],
+  );
+  const dayAbbrev = now
+    .toLocaleDateString([], { weekday: 'short' })
+    .slice(0, 3)
+    .toUpperCase();
+  const monthAbbrev = now
+    .toLocaleDateString([], { month: 'short' })
+    .slice(0, 3)
+    .toUpperCase();
+  const brown = '#A33A2A';
+  const brownDark = '#7C2418';
+  const brownLight = '#C4503A';
+
   return (
-    <MacOSWidgetFrame
-      title={title}
-      subtitle={now.toLocaleDateString([], { month: 'long', year: 'numeric' })}
-      toolbar={<MacOSPill>{events.length} events</MacOSPill>}
+    <div
+      className="flex h-full min-h-0 flex-col overflow-hidden rounded-[20px]"
+      style={{
+        background: `linear-gradient(180deg, ${brownLight} 0%, ${brown} 30%, ${brownDark} 100%)`,
+        boxShadow:
+          '0 8px 24px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.16)',
+      }}
     >
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] gap-3">
-        <MacOSInset className="flex min-h-0 flex-col p-3">
-          <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-black/45">
-            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
-              <div key={`${day}-${index}`}>{day}</div>
-            ))}
+      <div className="flex gap-2 px-3 pt-3 pb-2">
+        <div
+          className="relative flex flex-1 flex-col items-center justify-center"
+          style={{
+            aspectRatio: '1',
+            borderRadius: 8,
+            background: 'linear-gradient(180deg, #FFFFFF 0%, #F0EDE8 100%)',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.8)',
+          }}
+        >
+          <div
+            className="font-bold"
+            style={{
+              fontSize: 16,
+              color: brown,
+              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+            }}
+          >
+            {dayAbbrev}
           </div>
-          <div className="mt-2 grid flex-1 grid-cols-7 gap-1">
-            {days.map((day) => (
-              <div
-                key={day.date.toISOString()}
-                className="flex min-h-[2.3rem] flex-col rounded-[10px] border border-black/6 px-1.5 py-1 text-[11px]"
-                style={{
-                  background: day.isToday
-                    ? 'linear-gradient(180deg, rgba(109,171,255,0.96), rgba(64,129,232,0.96))'
-                    : day.inMonth
-                      ? 'rgba(255,255,255,0.74)'
-                      : 'rgba(0,0,0,0.04)',
-                  color: day.isToday ? '#fff' : day.inMonth ? '#1a1a1a' : 'rgba(0,0,0,0.32)',
-                }}
-              >
-                <span className="font-semibold">{day.date.getDate()}</span>
-                {day.count > 0 ? (
-                  <span className="mt-auto text-[9px] font-semibold opacity-75">
-                    {day.count} event{day.count > 1 ? 's' : ''}
-                  </span>
-                ) : null}
-              </div>
-            ))}
+          <div
+            className="font-bold leading-tight"
+            style={{
+              fontSize: 24,
+              color: brown,
+              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+            }}
+          >
+            {monthAbbrev}
           </div>
-        </MacOSInset>
-        <MacOSInset className="macos-scroll flex min-h-0 flex-col overflow-auto p-3">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-black/45">
-            Upcoming
+        </div>
+        <div
+          className="relative flex flex-1 items-center justify-center"
+          style={{
+            aspectRatio: '1',
+            borderRadius: 8,
+            background: 'linear-gradient(180deg, #FFFFFF 0%, #F0EDE8 100%)',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.8)',
+          }}
+        >
+          <div
+            className="font-bold leading-none"
+            style={{
+              fontSize: 56,
+              color: brown,
+              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+            }}
+          >
+            {now.getDate()}
           </div>
-          <div className="mt-3 space-y-2">
-            {events.map((event) => (
-              <div
-                key={event.id}
-                className="rounded-[10px] border border-black/8 bg-white/70 px-3 py-2"
-              >
-                <div className="text-[12px] font-semibold text-[#1c2b3b]">
-                  {event.title}
-                </div>
-                <div className="mt-1 text-[11px] text-black/55">
-                  {[event.date, event.time].filter(Boolean).join(' · ')}
-                </div>
-                {event.location ? (
-                  <div className="mt-1 text-[11px] text-[#3f5e7a]">
-                    {event.location}
-                  </div>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        </MacOSInset>
+        </div>
       </div>
-    </MacOSWidgetFrame>
+
+      <div className="flex min-h-0 flex-1 flex-col px-3 pb-2">
+        <div
+          className="grid grid-cols-7 pb-2"
+          style={{ borderBottom: '1px solid rgba(255,255,255,0.15)' }}
+        >
+          {dayHeaders.map((day, index) => (
+            <div
+              key={`${day}-${index}`}
+              className="text-center font-bold"
+              style={{
+                fontSize: 14,
+                color: 'rgba(255,255,255,0.6)',
+                fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+              }}
+            >
+              {day}
+            </div>
+          ))}
+        </div>
+
+        <div className="grid min-h-0 flex-1 grid-rows-6">
+          {Array.from({ length: 6 }, (_, weekIndex) => (
+            <div
+              key={weekIndex}
+              className="grid grid-cols-7"
+              style={{
+                borderBottom:
+                  weekIndex < 5 ? '1px solid rgba(255,255,255,0.08)' : 'none',
+              }}
+            >
+              {days.slice(weekIndex * 7, weekIndex * 7 + 7).map((day) => (
+                <div
+                  key={day.date.toISOString()}
+                  className="relative flex items-center justify-center py-[6px]"
+                  style={{ opacity: day.inMonth ? 1 : 0 }}
+                >
+                  <span
+                    className="flex items-center justify-center leading-none"
+                    style={{
+                      width: 26,
+                      height: 26,
+                      borderRadius: 6,
+                      backgroundColor: day.isToday
+                        ? 'rgba(255,255,255,0.25)'
+                        : 'transparent',
+                      color: day.isToday
+                        ? '#FFF'
+                        : 'rgba(255,255,255,0.55)',
+                      fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                      fontSize: 15,
+                      fontWeight: day.isToday ? 800 : 700,
+                    }}
+                  >
+                    {day.date.getDate()}
+                  </span>
+                  {day.count > 0 ? (
+                    <div
+                      className="absolute flex gap-0.5"
+                      style={{
+                        bottom: 1,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                      }}
+                    >
+                      {Array.from({ length: Math.min(day.count, 2) }, (_, dotIndex) => (
+                        <span
+                          key={dotIndex}
+                          className="h-1 w-1 rounded-full"
+                          style={{ backgroundColor: '#F0A060' }}
+                        />
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+
+        <div
+          className="pt-1 text-center"
+          style={{
+            fontSize: 10,
+            color: 'rgba(255,255,255,0.45)',
+            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+          }}
+        >
+          {events.length} event{events.length === 1 ? '' : 's'}
+        </div>
+      </div>
+    </div>
   );
 }
 

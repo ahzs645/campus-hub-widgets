@@ -11,9 +11,6 @@ import MacOSStocksOptions from './MacOSStocksOptions';
 import {
   EmptyState,
   MACOS_MONO_FONT,
-  MacOSInset,
-  MacOSSegmentedControl,
-  MacOSWidgetFrame,
 } from '../shared/ui';
 
 interface StocksConfig {
@@ -136,71 +133,141 @@ export default function MacOSStocks({ config }: WidgetComponentProps) {
   const chartPath = data?.chart.length
     ? buildLinePath(data.chart, 320, 120)
     : '';
-  const positive = (selectedQuote?.change ?? 0) >= 0;
 
   if (!symbols.length) {
     return (
-      <MacOSWidgetFrame title="Stocks">
+      <div
+        className="flex h-full min-h-0 items-center justify-center rounded-[20px]"
+        style={{
+          background: 'linear-gradient(180deg, #1B3A5C 0%, #0F2844 40%, #0A1E36 100%)',
+          boxShadow:
+            '0 8px 24px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.14)',
+        }}
+      >
         <EmptyState
           title="Add some symbols"
           description="Enter comma-separated tickers in the widget settings."
         />
-      </MacOSWidgetFrame>
+      </div>
     );
   }
 
   return (
-    <MacOSWidgetFrame
-      title="Stocks"
-      subtitle={selectedSymbol}
-      bodyClassName="gap-3"
-      footer={
-        <div className="flex items-center justify-between text-[11px] text-black/55">
-          <span>Twelve Data</span>
-          <MacOSSegmentedControl
-            value={range ?? '6mo'}
-            options={RANGE_OPTIONS as Array<{ value: StocksConfig['range']; label: string }>}
-            onChange={setRange}
-          />
-        </div>
-      }
+    <div
+      className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[20px]"
+      style={{
+        fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+        background: 'linear-gradient(180deg, #1B3A5C 0%, #0F2844 40%, #0A1E36 100%)',
+        boxShadow:
+          '0 8px 24px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.14)',
+      }}
     >
       {error ? (
-        <EmptyState title="Market data unavailable" description={error} />
+        <div className="flex h-full min-h-0 items-center justify-center px-4 text-center text-[12px] text-white/55">
+          {error}
+        </div>
       ) : (
         <>
-          <MacOSInset className="overflow-hidden p-3">
-            <div className="grid grid-cols-[1fr_auto] gap-4">
-              <div>
-                <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-black/45">
-                  {selectedQuote ? shortName(selectedQuote.symbol, selectedQuote.name) : 'Loading'}
-                </div>
-                <div className="mt-1 text-[clamp(1.8rem,6vw,3rem)] leading-none font-macos-display text-[#162534]">
-                  {selectedQuote ? `$${selectedQuote.price.toFixed(2)}` : '--'}
-                </div>
-                <div
-                  className="mt-2 text-sm font-semibold"
-                  style={{ color: positive ? '#1f7a38' : '#b5362a' }}
+          <div className="shrink-0 px-1 pt-1.5">
+            {(data?.quotes ?? []).map((quote, index) => {
+              const isFirst = index === 0;
+              const isSelected = selectedSymbol === quote.symbol;
+              return (
+                <button
+                  key={quote.symbol}
+                  type="button"
+                  className="flex w-full items-center px-2 text-left transition-colors"
+                  style={{
+                    height: isFirst ? 32 : 28,
+                    background: isSelected ? 'rgba(255,255,255,0.08)' : 'transparent',
+                    borderRadius: isSelected ? 6 : 0,
+                    borderBottom:
+                      !isSelected && index < (data?.quotes.length ?? 0) - 1
+                        ? '1px solid rgba(255,255,255,0.06)'
+                        : '1px solid transparent',
+                  }}
+                  onClick={() => setSelectedSymbol(quote.symbol)}
                 >
-                  {selectedQuote
-                    ? `${positive ? '+' : ''}${selectedQuote.change.toFixed(2)} (${selectedQuote.changePercent.toFixed(2)}%)`
-                    : ''}
-                </div>
-              </div>
-              <div className="rounded-full bg-[#eef3f8] px-3 py-2 text-right text-[11px] text-black/55">
-                <div className="font-semibold uppercase tracking-[0.18em]">Range</div>
-                <div className="mt-1 font-macos-mono text-black/75">
-                  {range?.toUpperCase()}
-                </div>
-              </div>
+                  <span
+                    className="font-bold"
+                    style={{
+                      fontSize: isFirst ? 15 : 14,
+                      color: 'rgba(255,255,255,0.9)',
+                      width: 58,
+                      letterSpacing: '0.02em',
+                    }}
+                  >
+                    {quote.symbol.startsWith('^') ? quote.symbol.slice(1) : quote.symbol}
+                  </span>
+                  <span
+                    className="flex-1 text-right font-medium"
+                    style={{
+                      fontSize: isFirst ? 15 : 14,
+                      color: 'rgba(255,255,255,0.85)',
+                      letterSpacing: '-0.01em',
+                    }}
+                  >
+                    {quote.price.toFixed(2)}
+                  </span>
+                  <span
+                    className="font-bold text-right"
+                    style={{
+                      fontSize: isFirst ? 13 : 12,
+                      width: 56,
+                      marginLeft: 6,
+                      padding: '1px 5px',
+                      borderRadius: 3,
+                      color: '#FFF',
+                      background:
+                        quote.change >= 0
+                          ? 'linear-gradient(180deg, #3DA03D 0%, #2D7E2D 100%)'
+                          : 'linear-gradient(180deg, #D94040 0%, #B52F2F 100%)',
+                    }}
+                  >
+                    {quote.change >= 0 ? '+' : ''}
+                    {quote.change.toFixed(2)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex min-h-0 flex-1 flex-col justify-end px-2 pt-1.5 pb-1.5">
+            <div className="mb-1 flex items-center justify-center gap-1">
+              {RANGE_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setRange(option.value)}
+                  style={{
+                    fontSize: 11,
+                    fontWeight: range === option.value ? 700 : 400,
+                    color: range === option.value ? '#FFF' : 'rgba(255,255,255,0.45)',
+                    background:
+                      range === option.value ? 'rgba(255,255,255,0.12)' : 'transparent',
+                    borderRadius: 4,
+                    padding: '1px 6px',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {option.label}
+                </button>
+              ))}
             </div>
-            <div className="mt-4 overflow-hidden rounded-[14px] border border-black/10 bg-[linear-gradient(180deg,#f5fbff_0%,#dceaf7_100%)] p-3">
+
+            <div
+              className="overflow-hidden rounded-[12px]"
+              style={{ background: 'rgba(255,255,255,0.05)' }}
+            >
               {chartPath ? (
-                <svg viewBox="0 0 320 120" className="h-28 w-full">
+                <svg viewBox="0 0 320 120" className="block h-28 w-full">
                   <defs>
                     <linearGradient id="macos-stocks-fill" x1="0" x2="0" y1="0" y2="1">
-                      <stop offset="0%" stopColor={positive ? '#79c484' : '#f0a39c'} stopOpacity="0.55" />
-                      <stop offset="100%" stopColor={positive ? '#79c484' : '#f0a39c'} stopOpacity="0.05" />
+                      <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.3" />
+                      <stop offset="20%" stopColor="#FFFFFF" stopOpacity="0.15" />
+                      <stop offset="50%" stopColor="#FFFFFF" stopOpacity="0.05" />
+                      <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
                     </linearGradient>
                   </defs>
                   <path
@@ -210,64 +277,33 @@ export default function MacOSStocks({ config }: WidgetComponentProps) {
                   <path
                     d={chartPath}
                     fill="none"
-                    stroke={positive ? '#2c8b4d' : '#c84232'}
-                    strokeWidth="3"
+                    stroke="#FFFFFF"
+                    strokeWidth="1.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   />
                 </svg>
               ) : (
-                <div className="flex h-28 items-center justify-center text-sm text-black/50">
+                <div className="flex h-28 items-center justify-center text-sm text-white/45">
                   Loading chart…
                 </div>
               )}
             </div>
-          </MacOSInset>
-          <div className="macos-scroll grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-auto">
-            {(data?.quotes ?? []).map((quote) => {
-              const isActive = quote.symbol === selectedSymbol;
-              const rising = quote.change >= 0;
-              return (
-                <button
-                  key={quote.symbol}
-                  type="button"
-                  onClick={() => setSelectedSymbol(quote.symbol)}
-                  className="macos-list-row text-left"
-                  style={{
-                    background: isActive
-                      ? 'linear-gradient(180deg, rgba(212,231,255,0.96), rgba(188,215,246,0.96))'
-                      : undefined,
-                  }}
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-[12px] font-semibold text-[#1f2f42]">
-                      {shortName(quote.symbol, quote.name)}
-                    </div>
-                    <div className="text-[10px] uppercase tracking-[0.18em] text-black/40">
-                      {quote.symbol}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div
-                      className="text-[13px] font-semibold text-[#152634]"
-                      style={{ fontFamily: MACOS_MONO_FONT }}
-                    >
-                      {quote.price.toFixed(2)}
-                    </div>
-                    <div
-                      className="text-[10px] font-semibold"
-                      style={{ color: rising ? '#1f7a38' : '#b5362a' }}
-                    >
-                      {`${rising ? '+' : ''}${quote.changePercent.toFixed(2)}%`}
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
+
+            <div
+              className="pt-1 text-center"
+              style={{
+                color: 'rgba(255,255,255,0.4)',
+                fontSize: 9,
+                fontFamily: MACOS_MONO_FONT,
+              }}
+            >
+              {selectedQuote ? shortName(selectedQuote.symbol, selectedQuote.name) : 'Market snapshot'}
+            </div>
           </div>
         </>
       )}
-    </MacOSWidgetFrame>
+    </div>
   );
 }
 

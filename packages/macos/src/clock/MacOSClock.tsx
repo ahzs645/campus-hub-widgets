@@ -6,7 +6,7 @@ import {
   type WidgetComponentProps,
 } from '@firstform/campus-hub-widget-sdk';
 import MacOSClockOptions from './MacOSClockOptions';
-import { MACOS_UI_FONT } from '../shared/ui';
+import { MACOS_UI_FONT, MacOSDashboardSurface } from '../shared/ui';
 
 interface ClockConfig {
   timezone?: string;
@@ -96,114 +96,116 @@ export default function MacOSClock({ config }: WidgetComponentProps) {
   });
 
   return (
-    <div className="flex h-full w-full items-center justify-center">
-      <svg
-        viewBox="0 0 170 170"
-        preserveAspectRatio="xMidYMid meet"
-        className="block h-full w-full max-h-[170px] max-w-[170px]"
-      >
-        <defs>
-          <radialGradient id={`faceGrad-${id}`} cx="50%" cy="38%" r="58%">
-            <stop offset="0%" stopColor={isDark ? '#3a3a3a' : '#f8f8f8'} />
-            <stop offset="100%" stopColor={isDark ? '#1a1a1a' : '#dddddd'} />
-          </radialGradient>
-          <filter
-            id={`clockShadow-${id}`}
-            x="-10%"
-            y="-10%"
-            width="120%"
-            height="120%"
-          >
-            <feDropShadow
-              dx="0"
-              dy="2"
-              stdDeviation="3"
-              floodColor="#000"
-              floodOpacity="0.35"
-            />
-          </filter>
-        </defs>
+    <MacOSDashboardSurface>
+      <div className="relative z-[1] flex h-full w-full items-center justify-center px-1 py-1.5">
+        <svg
+          viewBox="0 0 170 170"
+          preserveAspectRatio="xMidYMid meet"
+          className="block h-full w-full max-h-[170px] max-w-[170px]"
+        >
+          <defs>
+            <radialGradient id={`faceGrad-${id}`} cx="50%" cy="38%" r="58%">
+              <stop offset="0%" stopColor={isDark ? '#3a3a3a' : '#f8f8f8'} />
+              <stop offset="100%" stopColor={isDark ? '#1a1a1a' : '#dddddd'} />
+            </radialGradient>
+            <filter
+              id={`clockShadow-${id}`}
+              x="-10%"
+              y="-10%"
+              width="120%"
+              height="120%"
+            >
+              <feDropShadow
+                dx="0"
+                dy="2"
+                stdDeviation="3"
+                floodColor="#000"
+                floodOpacity="0.35"
+              />
+            </filter>
+          </defs>
 
-        {showDigital ? (
-          <text
-            x="85"
-            y="15"
-            textAnchor="middle"
-            fontSize="11"
-            fontWeight="700"
-            fill={isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.62)'}
-            style={{ fontFamily: MACOS_UI_FONT }}
-          >
-            {digitalTime}
-          </text>
-        ) : null}
-
-        <circle
-          cx="85"
-          cy="85"
-          r="55"
-          fill={`url(#faceGrad-${id})`}
-          stroke="none"
-          strokeWidth="0"
-          filter={`url(#clockShadow-${id})`}
-        />
-
-        {Array.from({ length: 12 }, (_, index) => {
-          const label = index === 0 ? 12 : index;
-          const angle = ((label * 30 - 90) * Math.PI) / 180;
-          const radius = 40;
-          return (
+          {showDigital ? (
             <text
-              key={label}
-              x={85 + radius * Math.cos(angle)}
-              y={85 + radius * Math.sin(angle)}
+              x="85"
+              y="15"
               textAnchor="middle"
-              dominantBaseline="central"
-              fontSize="14"
+              fontSize="11"
               fontWeight="700"
-              fill={isDark ? 'rgba(255,255,255,0.9)' : '#333333'}
+              fill="rgba(255,255,255,0.7)"
               style={{ fontFamily: MACOS_UI_FONT }}
             >
-              {label}
+              {digitalTime}
             </text>
-          );
-        })}
+          ) : null}
 
-        <polygon
-          points={handPolygon(85, 85, hourAngle, 28, 3.5, 5)}
-          fill={isDark ? '#dddddd' : '#222222'}
-        />
-        <polygon
-          points={handPolygon(85, 85, minuteAngle, 40, 2.5, 5)}
-          fill={isDark ? '#dddddd' : '#222222'}
-        />
-        {showSeconds ? (
-          <line
-            x1={85 - 10 * Math.cos(((secondAngle - 90) * Math.PI) / 180)}
-            y1={85 - 10 * Math.sin(((secondAngle - 90) * Math.PI) / 180)}
-            x2={85 + 46 * Math.cos(((secondAngle - 90) * Math.PI) / 180)}
-            y2={85 + 46 * Math.sin(((secondAngle - 90) * Math.PI) / 180)}
-            stroke="#D95030"
-            strokeWidth="1"
-            strokeLinecap="round"
+          <circle
+            cx="85"
+            cy="85"
+            r="55"
+            fill={`url(#faceGrad-${id})`}
+            stroke="none"
+            strokeWidth="0"
+            filter={`url(#clockShadow-${id})`}
           />
-        ) : null}
-        <circle cx="85" cy="85" r="6" fill="#dddddd" />
-        <circle cx="85" cy="85" r="2.5" fill="#ffffff" />
 
-        <text
-          x="85"
-          y="160"
-          textAnchor="middle"
-          fontSize="12"
-          fontWeight="700"
-          fill={isDark ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.74)'}
-          style={{ fontFamily: MACOS_UI_FONT }}
-        >
-          {cityLabel}
-        </text>
-      </svg>
-    </div>
+          {Array.from({ length: 12 }, (_, index) => {
+            const label = index === 0 ? 12 : index;
+            const angle = ((label * 30 - 90) * Math.PI) / 180;
+            const radius = 40;
+            return (
+              <text
+                key={label}
+                x={85 + radius * Math.cos(angle)}
+                y={85 + radius * Math.sin(angle)}
+                textAnchor="middle"
+                dominantBaseline="central"
+                fontSize="14"
+                fontWeight="700"
+                fill={isDark ? 'rgba(255,255,255,0.9)' : '#333333'}
+                style={{ fontFamily: MACOS_UI_FONT }}
+              >
+                {label}
+              </text>
+            );
+          })}
+
+          <polygon
+            points={handPolygon(85, 85, hourAngle, 28, 3.5, 5)}
+            fill={isDark ? '#dddddd' : '#222222'}
+          />
+          <polygon
+            points={handPolygon(85, 85, minuteAngle, 40, 2.5, 5)}
+            fill={isDark ? '#dddddd' : '#222222'}
+          />
+          {showSeconds ? (
+            <line
+              x1={85 - 10 * Math.cos(((secondAngle - 90) * Math.PI) / 180)}
+              y1={85 - 10 * Math.sin(((secondAngle - 90) * Math.PI) / 180)}
+              x2={85 + 46 * Math.cos(((secondAngle - 90) * Math.PI) / 180)}
+              y2={85 + 46 * Math.sin(((secondAngle - 90) * Math.PI) / 180)}
+              stroke="#D95030"
+              strokeWidth="1"
+              strokeLinecap="round"
+            />
+          ) : null}
+          <circle cx="85" cy="85" r="6" fill="#D95030" />
+          <circle cx="85" cy="85" r="2.5" fill="#ffffff" />
+
+          <text
+            x="85"
+            y="160"
+            textAnchor="middle"
+            fontSize="12"
+            fontWeight="700"
+            fill="rgba(255,255,255,0.8)"
+            style={{ fontFamily: MACOS_UI_FONT }}
+          >
+            {cityLabel}
+          </text>
+        </svg>
+      </div>
+    </MacOSDashboardSurface>
   );
 }
 

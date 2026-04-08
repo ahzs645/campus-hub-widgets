@@ -8,13 +8,6 @@ import {
   type WidgetComponentProps,
 } from '@firstform/campus-hub-widget-sdk';
 import MacOSDictionaryOptions from './MacOSDictionaryOptions';
-import {
-  EmptyState,
-  MACOS_INPUT_CLASS_NAME,
-  MacOSInset,
-  MacOSSegmentedControl,
-  MacOSWidgetFrame,
-} from '../shared/ui';
 
 interface DictionaryConfig {
   initialWord?: string;
@@ -108,96 +101,258 @@ export default function MacOSDictionary({ config }: WidgetComponentProps) {
       ),
     ).slice(0, 18);
   }, [entry]);
+  const font = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+  const serifFont = 'Georgia, "Times New Roman", Times, serif';
 
   return (
-    <MacOSWidgetFrame
-      title="Dictionary"
-      subtitle={entry?.word || 'Search'}
-      toolbar={
-        <MacOSSegmentedControl
-          value={tab}
-          options={[
-            { value: 'definitions', label: 'Meaning' },
-            { value: 'synonyms', label: 'Synonyms' },
-          ]}
-          onChange={setTab}
-        />
-      }
-      bodyClassName="gap-3"
+    <div
+      style={{
+        fontFamily: font,
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: 'inherit',
+        height: '100%',
+        borderRadius: 20,
+        overflow: 'hidden',
+        boxShadow: '0 8px 24px rgba(0,0,0,0.22)',
+      }}
     >
-      <input
-        className={MACOS_INPUT_CLASS_NAME}
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        placeholder="Search a word"
-      />
-      {!entry && !loading ? (
-        <EmptyState
-          title="Look something up"
-          description={error || 'Definitions will appear here as you type.'}
+      <div
+        style={{
+          background: 'linear-gradient(180deg, #7D5E3F 0%, #6B4C30 40%, #5A3E25 100%)',
+          borderBottom: '1px solid #3E2A14',
+          padding: '6px 10px 8px',
+          position: 'relative',
+          flexShrink: 0,
+        }}
+      >
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            boxShadow:
+              'inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -1px 0 rgba(0,0,0,0.2)',
+            pointerEvents: 'none',
+          }}
         />
-      ) : (
-        <MacOSInset className="macos-scroll flex min-h-0 flex-1 flex-col overflow-auto p-3">
-          {loading ? (
-            <div className="text-sm text-black/55">Looking up “{query}”…</div>
-          ) : (
-            <>
-              <div className="pb-3">
-                <div className="text-[26px] leading-none font-macos-display text-[#15283c]">
-                  {entry?.word}
-                </div>
-                {pronunciation ? (
-                  <div className="mt-1 text-[12px] text-[#4d6984]">
-                    {pronunciation}
+
+        <div
+          className="flex items-center justify-center gap-0"
+          style={{ position: 'relative', marginBottom: 6 }}
+        >
+          <button
+            type="button"
+            onClick={() => setTab('definitions')}
+            style={{
+              fontSize: 11,
+              fontWeight: tab === 'definitions' ? 700 : 400,
+              color: tab === 'definitions' ? '#FFF' : 'rgba(255,255,255,0.55)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '1px 4px',
+              textShadow: '0 1px 2px rgba(0,0,0,0.4)',
+              letterSpacing: '0.02em',
+            }}
+          >
+            Dictionary
+          </button>
+          <span
+            style={{
+              color: 'rgba(255,255,255,0.35)',
+              fontSize: 11,
+              margin: '0 4px',
+              userSelect: 'none',
+            }}
+          >
+            ·
+          </span>
+          <button
+            type="button"
+            onClick={() => setTab('synonyms')}
+            style={{
+              fontSize: 11,
+              fontWeight: tab === 'synonyms' ? 700 : 400,
+              color: tab === 'synonyms' ? '#FFF' : 'rgba(255,255,255,0.55)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '1px 4px',
+              textShadow: '0 1px 2px rgba(0,0,0,0.4)',
+              letterSpacing: '0.02em',
+            }}
+          >
+            Thesaurus
+          </button>
+        </div>
+
+        <div
+          className="flex items-center gap-1.5"
+          style={{
+            background: 'rgba(0,0,0,0.25)',
+            borderRadius: 10,
+            padding: '3px 8px',
+            border: '1px solid rgba(0,0,0,0.2)',
+            boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.3), 0 1px 0 rgba(255,255,255,0.08)',
+          }}
+        >
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search a word"
+            className="flex-1 bg-transparent outline-none"
+            style={{
+              color: '#FFF',
+              caretColor: 'rgba(255,255,255,0.7)',
+              fontFamily: font,
+              fontSize: 11,
+            }}
+          />
+        </div>
+      </div>
+
+      <div
+        className="macos-scroll flex-1 overflow-y-auto"
+        style={{
+          background: 'linear-gradient(180deg, #F5F0E8 0%, #EDE7DA 100%)',
+          padding: '8px 12px',
+          minHeight: 0,
+        }}
+      >
+        {loading ? (
+          <div
+            className="flex items-center justify-center py-6"
+            style={{ color: '#9E9585', fontSize: 11, fontFamily: serifFont }}
+          >
+            Looking up "{query}"…
+          </div>
+        ) : error ? (
+          <div
+            className="flex items-center justify-center py-6 text-center"
+            style={{
+              color: '#9E9585',
+              fontSize: 11,
+              fontFamily: serifFont,
+              fontStyle: 'italic',
+            }}
+          >
+            {error}
+          </div>
+        ) : !entry ? (
+          <div
+            className="flex items-center justify-center py-8 text-center"
+            style={{
+              color: '#B5AA98',
+              fontSize: 12,
+              fontFamily: serifFont,
+              fontStyle: 'italic',
+            }}
+          >
+            Definitions will appear here as you type.
+          </div>
+        ) : (
+          <div style={{ fontFamily: serifFont }}>
+            <div style={{ marginBottom: 6 }}>
+              <span
+                style={{
+                  fontSize: 18,
+                  fontWeight: 700,
+                  color: '#2C2418',
+                  letterSpacing: '-0.01em',
+                }}
+              >
+                {entry.word}
+              </span>
+              {pronunciation ? (
+                <span
+                  style={{
+                    fontSize: 12,
+                    color: '#8C7E6A',
+                    marginLeft: 8,
+                    fontWeight: 400,
+                  }}
+                >
+                  {pronunciation}
+                </span>
+              ) : null}
+            </div>
+
+            {tab === 'definitions' ? (
+              entry.meanings.map((meaning) => (
+                <div key={`${entry.word}-${meaning.partOfSpeech}`} style={{ marginBottom: 8 }}>
+                  <div
+                    style={{
+                      fontStyle: 'italic',
+                      color: '#6B5D4D',
+                      fontSize: 11,
+                      marginBottom: 3,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {meaning.partOfSpeech}
                   </div>
-                ) : null}
-              </div>
-              {tab === 'definitions' ? (
-                <div className="space-y-3">
-                  {entry?.meanings.map((meaning) => (
+                  {meaning.definitions.slice(0, 3).map((definition, index) => (
                     <div
-                      key={`${entry.word}-${meaning.partOfSpeech}`}
-                      className="rounded-[10px] border border-black/8 bg-white/70 p-3"
+                      key={`${meaning.partOfSpeech}-${index}`}
+                      style={{
+                        marginBottom: 3,
+                        color: '#3D3226',
+                        fontSize: 12,
+                        lineHeight: 1.45,
+                        paddingLeft: 10,
+                      }}
                     >
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-black/45">
-                        {meaning.partOfSpeech}
-                      </div>
-                      {meaning.definitions.slice(0, 3).map((definition, index) => (
-                        <div key={`${meaning.partOfSpeech}-${index}`} className="mt-2">
-                          <div className="text-[12px] text-[#1a1a1a]">
-                            {definition.definition}
-                          </div>
-                          {dictionaryConfig.showExamples !== false && definition.example ? (
-                            <div className="mt-1 text-[11px] italic text-black/55">
-                              {definition.example}
-                            </div>
-                          ) : null}
+                      <span style={{ color: '#9E9585', marginRight: 4, fontSize: 11 }}>
+                        {index + 1}.
+                      </span>
+                      {definition.definition}
+                      {dictionaryConfig.showExamples !== false && definition.example ? (
+                        <div
+                          style={{
+                            marginTop: 3,
+                            marginLeft: 14,
+                            color: '#6B5D4D',
+                            fontSize: 11,
+                            fontStyle: 'italic',
+                          }}
+                        >
+                          {definition.example}
                         </div>
-                      ))}
+                      ) : null}
                     </div>
                   ))}
                 </div>
-              ) : synonyms.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {synonyms.map((synonym) => (
-                    <button
-                      key={synonym}
-                      type="button"
-                      className="rounded-full border border-black/10 bg-white px-3 py-1.5 text-[12px] text-[#1a1a1a]"
-                      onClick={() => setQuery(synonym)}
-                    >
-                      {synonym}
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-sm text-black/55">No synonyms found for this entry.</div>
-              )}
-            </>
-          )}
-        </MacOSInset>
-      )}
-    </MacOSWidgetFrame>
+              ))
+            ) : synonyms.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {synonyms.map((synonym) => (
+                  <button
+                    key={synonym}
+                    type="button"
+                    onClick={() => setQuery(synonym)}
+                    style={{
+                      borderRadius: 999,
+                      border: '1px solid rgba(60,44,24,0.18)',
+                      background: 'rgba(255,255,255,0.66)',
+                      padding: '5px 10px',
+                      color: '#3D3226',
+                      fontSize: 12,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {synonym}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div style={{ color: '#6B5D4D', fontSize: 12 }}>
+                No synonyms found for this entry.
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 

@@ -9,7 +9,7 @@ import {
   type WidgetComponentProps,
 } from '@firstform/campus-hub-widget-sdk';
 import MacOSWeatherOptions from './MacOSWeatherOptions';
-import { MACOS_UI_FONT } from '../shared/ui';
+import { MACOS_UI_FONT, MacOSDashboardSurface } from '../shared/ui';
 
 interface WeatherConfig {
   location?: string;
@@ -204,37 +204,25 @@ export default function MacOSWeather({ config }: WidgetComponentProps) {
 
   if (!data && !loading && error) {
     return (
-      <div
-        className="flex h-full min-h-0 items-center justify-center rounded-[20px] px-4 text-center"
-        style={{
-          background:
-            'linear-gradient(180deg, rgba(50,50,50,0.8) 0%, rgba(25,25,25,0.85) 100%)',
-          border: '1px solid rgba(255,255,255,0.1)',
-          boxShadow:
-            '0 8px 32px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)',
-          color: 'rgba(255,255,255,0.72)',
-          fontFamily: MACOS_UI_FONT,
-          fontSize: 12,
-        }}
-      >
-        {error}
-      </div>
+      <MacOSDashboardSurface>
+        <div
+          className="relative z-[1] flex h-full min-h-0 items-center justify-center px-4 text-center"
+          style={{
+            color: 'rgba(255,255,255,0.72)',
+            fontFamily: MACOS_UI_FONT,
+            fontSize: 12,
+          }}
+        >
+          {error}
+        </div>
+      </MacOSDashboardSurface>
     );
   }
 
   return (
-    <div
-      className="flex h-full min-h-0 flex-col overflow-hidden rounded-[20px]"
-      style={{
-        background:
-          'linear-gradient(180deg, rgba(50,50,50,0.8) 0%, rgba(25,25,25,0.85) 100%)',
-        border: '1px solid rgba(255,255,255,0.1)',
-        boxShadow:
-          '0 8px 32px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)',
-      }}
-    >
+    <MacOSDashboardSurface>
       <div
-        className="relative flex flex-1 px-3 py-3"
+        className="relative z-[1] flex flex-1 px-3 py-3"
         style={{ background: gradient }}
       >
         {loading ? (
@@ -309,7 +297,7 @@ export default function MacOSWeather({ config }: WidgetComponentProps) {
       </div>
 
       {showForecast && forecast.length > 0 ? (
-        <div>
+        <div className="relative z-[1]">
           <div
             className="flex"
             style={{
@@ -370,7 +358,7 @@ export default function MacOSWeather({ config }: WidgetComponentProps) {
           </div>
         </div>
       ) : null}
-    </div>
+    </MacOSDashboardSurface>
   );
 }
 

@@ -33,6 +33,7 @@ interface WeatherData {
 }
 
 type DisplayMode = 'full' | 'temperature-only' | 'wind-only' | 'minimal' | 'custom';
+type WeatherAppearance = 'default' | 'dashboard-macos';
 
 interface DisplayItems {
   location?: boolean;
@@ -59,6 +60,7 @@ interface WeatherConfig {
   dataSource?: 'openweathermap' | 'unbc-rooftop' | 'msc-geomet';
   refreshInterval?: number; // minutes
   useCorsProxy?: boolean;
+  appearance?: WeatherAppearance;
 }
 
 const DISPLAY_MODE_PRESETS: Record<Exclude<DisplayMode, 'custom'>, DisplayItems> = {
@@ -156,6 +158,68 @@ const WEATHER_ICONS: Record<WeatherIconKey, IconName> = {
   windy: 'wind',
   default: 'weather',
 };
+
+function getDashboardWeatherEmoji(icon: WeatherIconKey, isDay: boolean) {
+  switch (icon) {
+    case 'sunny':
+      return isDay ? '☀️' : '🌙';
+    case 'partly-cloudy':
+      return isDay ? '⛅' : '☁️';
+    case 'cloudy':
+      return '☁️';
+    case 'rainy':
+      return '🌧️';
+    case 'stormy':
+      return '⛈️';
+    case 'snowy':
+      return '🌨️';
+    case 'foggy':
+      return '🌫️';
+    case 'windy':
+      return '💨';
+    default:
+      return isDay ? '🌤️' : '☁️';
+  }
+}
+
+function getDashboardWeatherGradient(icon: WeatherIconKey, isDay: boolean) {
+  if (!isDay) {
+    switch (icon) {
+      case 'sunny':
+        return 'linear-gradient(180deg, #0B1A2E 0%, #1A2D4A 40%, #2A3F5C 100%)';
+      case 'partly-cloudy':
+      case 'cloudy':
+        return 'linear-gradient(180deg, #0F1F35 0%, #1E3250 40%, #2E4462 100%)';
+      case 'foggy':
+        return 'linear-gradient(180deg, #1A1E25 0%, #2A303A 40%, #3A424D 100%)';
+      case 'rainy':
+      case 'stormy':
+        return 'linear-gradient(180deg, #0E151E 0%, #1C2630 40%, #2A3540 100%)';
+      case 'snowy':
+        return 'linear-gradient(180deg, #151C28 0%, #252F3E 40%, #354050 100%)';
+      default:
+        return 'linear-gradient(180deg, #121922 0%, #222C38 40%, #323E4A 100%)';
+    }
+  }
+
+  switch (icon) {
+    case 'sunny':
+      return 'linear-gradient(180deg, #4A90C4 0%, #7AB4D8 40%, #A8CBE0 100%)';
+    case 'partly-cloudy':
+      return 'linear-gradient(180deg, #5A8AAF 0%, #8BAFC5 40%, #B0C8D8 100%)';
+    case 'cloudy':
+    case 'foggy':
+      return 'linear-gradient(180deg, #6B7B8D 0%, #8A96A3 40%, #A5AEB8 100%)';
+    case 'rainy':
+      return 'linear-gradient(180deg, #4A5A6A 0%, #6A7A8A 40%, #8A95A0 100%)';
+    case 'snowy':
+      return 'linear-gradient(180deg, #7A8A9A 0%, #9AABB8 40%, #C0CDD5 100%)';
+    case 'stormy':
+      return 'linear-gradient(180deg, #3A4550 0%, #505E6A 40%, #6A7880 100%)';
+    default:
+      return 'linear-gradient(180deg, #4A90C4 0%, #7AB4D8 40%, #A8CBE0 100%)';
+  }
+}
 
 // Mock weather data for demo
 const MOCK_WEATHER: WeatherData = {
@@ -347,6 +411,7 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
   const units = weatherConfig?.units ?? 'fahrenheit';
   const location = weatherConfig?.location ?? 'Campus';
   const apiUrl = weatherConfig?.apiUrl?.trim() || GEOMET_PRINCE_GEORGE_URL;
+  const appearance = weatherConfig?.appearance ?? 'default';
   const show = resolveDisplayItems(weatherConfig);
   const apiKey = weatherConfig?.apiKey?.trim();
   const dataSource = weatherConfig?.dataSource ?? 'openweathermap';
@@ -473,6 +538,129 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
     landscape: { w: 340, h: 260 },
     portrait: { w: 240, h: 360 },
   });
+
+  if (appearance === 'dashboard-macos') {
+    const isDay = (() => {
+      const sourceDate = lastUpdated ?? new Date();
+      const hour = sourceDate.getHours();
+      return hour >= 6 && hour < 19;
+    })();
+    const gradient = getDashboardWeatherGradient(weather.icon, isDay);
+    const tempValue = Math.round(displayTemp);
+    const textShadow = '0 1px 3px rgba(0,0,0,0.4)';
+
+    return (
+      <div
+        className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-[20px]"
+        style={{
+          background:
+            'linear-gradient(180deg, rgba(50,50,50,0.8) 0%, rgba(25,25,25,0.85) 100%)',
+          border: '1px solid rgba(255,255,255,0.1)',
+          boxShadow:
+            '0 8px 32px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)',
+        }}
+      >
+        <div
+          className="relative z-[1] flex flex-1 items-center px-3 py-3"
+          style={{ background: gradient }}
+        >
+          <div className="flex min-w-0 flex-1 flex-col justify-center">
+            <div
+              className="font-medium"
+              style={{
+                fontSize: 12,
+                color: 'rgba(255,255,255,0.8)',
+                textShadow,
+                fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+              }}
+            >
+              {weather.condition.replace(/-/g, ' ')}
+            </div>
+            <span
+              className="truncate font-bold"
+              style={{
+                fontSize: 14,
+                color: '#FFF',
+                maxWidth: 180,
+                textShadow,
+                fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+              }}
+            >
+              {weather.location}
+            </span>
+            <div
+              className="font-medium"
+              style={{
+                fontSize: 12,
+                color: 'rgba(255,255,255,0.8)',
+                textShadow,
+                fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+              }}
+            >
+              {show.wind ? `${weather.wind} ${windUnit}` : `${weather.humidity}% humidity`}
+            </div>
+          </div>
+
+          <div className="ml-3 flex shrink-0 items-center gap-3">
+            <span style={{ fontSize: 34, lineHeight: 1 }}>
+              {getDashboardWeatherEmoji(weather.icon, isDay)}
+            </span>
+            <span
+              className="font-light leading-none"
+              style={{
+                fontSize: 64,
+                letterSpacing: '-0.04em',
+                color: '#FFF',
+                textShadow: '0 2px 8px rgba(0,0,0,0.25)',
+                fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+              }}
+            >
+              {tempValue}°
+            </span>
+          </div>
+        </div>
+
+        <div
+          className="relative z-[1] flex justify-between px-3 py-2 text-[11px]"
+          style={{
+            background:
+              isDay
+                ? 'linear-gradient(180deg, rgba(50,60,75,0.85) 0%, rgba(35,45,55,0.9) 100%)'
+                : 'linear-gradient(180deg, rgba(15,22,35,0.9) 0%, rgba(10,16,28,0.95) 100%)',
+            color: 'rgba(255,255,255,0.82)',
+            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+          }}
+        >
+          <span>{show.humidity ? `Humidity ${weather.humidity}%` : weather.condition}</span>
+          <span>{lastUpdated ? lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : location}</span>
+        </div>
+
+        <div
+          className="pointer-events-none absolute top-[2px] left-1/2 z-10"
+          style={{
+            transform: 'translateX(-50%)',
+            width: 'calc(100% - 6px)',
+            height: '35%',
+            maxHeight: 50,
+            borderRadius: '18px 18px 50% 50%',
+            background: 'linear-gradient(rgba(255,255,255,0.3), rgba(255,255,255,0))',
+          }}
+        />
+        <div
+          className="pointer-events-none absolute bottom-[2px] left-1/2 z-10"
+          style={{
+            transform: 'translateX(-50%)',
+            width: 'calc(100% - 10px)',
+            height: '20%',
+            maxHeight: 30,
+            borderRadius: '50% 50% 16px 16px',
+            background: 'linear-gradient(rgba(255,255,255,0), rgba(255,255,255,0.08))',
+            filter: 'blur(1px)',
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <ThemedContainer
@@ -615,6 +803,7 @@ registerWidget({
     dataSource: 'openweathermap',
     refreshInterval: 10,
     useCorsProxy: true,
+    appearance: 'default',
   },
   acceptsSources: [{
     propName: 'apiUrl',

@@ -6,11 +6,6 @@ import {
   type WidgetComponentProps,
 } from '@firstform/campus-hub-widget-sdk';
 import MacOSTranslationOptions from './MacOSTranslationOptions';
-import {
-  MACOS_INPUT_CLASS_NAME,
-  MacOSInset,
-  MacOSWidgetFrame,
-} from '../shared/ui';
 
 interface TranslationConfig {
   fromLang?: string;
@@ -96,33 +91,132 @@ export default function MacOSTranslation({ config }: WidgetComponentProps) {
     };
   }, [fromLang, sourceText, toLang]);
 
+  const font = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+  const aquaSelectStyle = {
+    fontSize: 12,
+    fontWeight: 600,
+    padding: '3px 8px',
+    borderRadius: 6,
+    border: '1px solid rgba(0,0,0,0.25)',
+    background: 'linear-gradient(180deg, #6AB0F3 0%, #3B82D0 50%, #2E6DB8 100%)',
+    color: '#FFF',
+    cursor: 'pointer',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.3)',
+    fontFamily: font,
+    appearance: 'none',
+    WebkitAppearance: 'none',
+    outline: 'none',
+    textShadow: '0 -1px 1px rgba(0,0,0,0.25)',
+    minWidth: 0,
+  } as const;
+
   return (
-    <MacOSWidgetFrame
-      title="Translate"
-      subtitle={`${fromLang.toUpperCase()} → ${toLang.toUpperCase()}`}
-      footer={
-        <div className="flex items-center justify-between text-[11px] text-black/55">
-          <span>{loading ? 'Translating…' : 'MyMemory'}</span>
-          {error ? <span className="text-[#b5362a]">{error}</span> : null}
-        </div>
-      }
+    <div
+      className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-[20px]"
+      style={{
+        fontFamily: font,
+        background:
+          'linear-gradient(180deg, rgba(80,130,190,0.85) 0%, rgba(55,100,165,0.9) 50%, rgba(40,80,140,0.92) 100%)',
+        boxShadow:
+          '0 8px 24px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.18)',
+      }}
     >
-      <div className="grid min-h-0 flex-1 grid-rows-[auto_1fr] gap-3">
-        <div className="grid grid-cols-[1fr_auto_1fr] gap-2">
-          <select
-            className={MACOS_INPUT_CLASS_NAME}
-            value={fromLang}
-            onChange={(event) => setFromLang(event.target.value)}
+      <div
+        className="pointer-events-none absolute"
+        style={{
+          top: '50%',
+          right: -10,
+          transform: 'translateY(-50%)',
+          width: 180,
+          height: 180,
+          zIndex: 0,
+          opacity: 0.22,
+        }}
+      >
+        <svg viewBox="0 0 180 180" width="180" height="180" fill="none">
+          <circle cx="90" cy="90" r="85" stroke="rgba(120,160,220,1)" strokeWidth="1.8" />
+          <ellipse cx="90" cy="90" rx="55" ry="85" stroke="rgba(120,160,220,1)" strokeWidth="1.4" />
+          <ellipse cx="90" cy="90" rx="28" ry="85" stroke="rgba(120,160,220,1)" strokeWidth="1.2" />
+          <line x1="90" y1="5" x2="90" y2="175" stroke="rgba(120,160,220,1)" strokeWidth="1.4" />
+          <line x1="5" y1="90" x2="175" y2="90" stroke="rgba(120,160,220,1)" strokeWidth="1.4" />
+          <ellipse cx="90" cy="90" rx="85" ry="28" stroke="rgba(120,160,220,1)" strokeWidth="1" />
+          <ellipse cx="90" cy="50" rx="72" ry="1" stroke="rgba(120,160,220,1)" strokeWidth="0.8" />
+          <ellipse cx="90" cy="130" rx="72" ry="1" stroke="rgba(120,160,220,1)" strokeWidth="0.8" />
+        </svg>
+      </div>
+
+      <div className="relative z-[1]" style={{ padding: '7px 10px 5px' }}>
+        <div className="flex items-center gap-2">
+          <span
+            style={{
+              fontSize: 12,
+              color: 'rgba(255,255,255,0.85)',
+              fontWeight: 500,
+              textShadow: '0 1px 2px rgba(0,0,0,0.2)',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+            }}
           >
-            {LANGUAGES.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+            Translate from
+          </span>
+          <div style={{ position: 'relative', flex: 1, minWidth: 0, marginLeft: 'auto' }}>
+            <select
+              value={fromLang}
+              onChange={(event) => setFromLang(event.target.value)}
+              style={{ ...aquaSelectStyle, width: '100%', paddingRight: 20 }}
+            >
+              {LANGUAGES.map((option) => (
+                <option key={option.value} value={option.value} style={{ color: '#000', background: '#FFF' }}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <div
+              style={{
+                position: 'absolute',
+                right: 6,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                pointerEvents: 'none',
+                color: 'rgba(255,255,255,0.8)',
+                fontSize: 8,
+                lineHeight: 1,
+              }}
+            >
+              ▼
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="relative z-[1]" style={{ padding: '6px 10px 4px' }}>
+        <textarea
+          value={sourceText}
+          onChange={(event) => setSourceText(event.target.value)}
+          placeholder="Enter text..."
+          style={{
+            width: '100%',
+            fontSize: 13,
+            padding: '6px 10px',
+            borderRadius: 8,
+            border: '1px solid rgba(0,0,0,0.12)',
+            background: 'rgba(255,255,255,0.92)',
+            color: '#1A1A1A',
+            resize: 'none',
+            minHeight: 56,
+            fontFamily: font,
+            outline: 'none',
+            boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.06), 0 1px 0 rgba(255,255,255,0.05)',
+            lineHeight: 1.4,
+            display: 'block',
+          }}
+        />
+      </div>
+
+      <div className="relative z-[1]" style={{ padding: '5px 10px' }}>
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            className="macos-button font-macos-ui"
             onClick={() => {
               const nextFrom = toLang;
               const nextTo = fromLang;
@@ -131,45 +225,99 @@ export default function MacOSTranslation({ config }: WidgetComponentProps) {
               setTranslatedText(sourceText);
               setSourceText(translatedText);
             }}
+            style={{
+              padding: '3px 6px',
+              borderRadius: 6,
+              border: '1px solid rgba(0,0,0,0.25)',
+              background: 'linear-gradient(180deg, #6AB0F3 0%, #3B82D0 50%, #2E6DB8 100%)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              lineHeight: 1,
+              color: '#FFF',
+              flexShrink: 0,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.3)',
+            }}
           >
             Swap
           </button>
-          <select
-            className={MACOS_INPUT_CLASS_NAME}
-            value={toLang}
-            onChange={(event) => setToLang(event.target.value)}
+          <span
+            style={{
+              fontSize: 12,
+              color: 'rgba(255,255,255,0.85)',
+              fontWeight: 500,
+              textShadow: '0 1px 2px rgba(0,0,0,0.2)',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+            }}
           >
-            {LANGUAGES.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="grid min-h-0 grid-cols-2 gap-3">
-          <MacOSInset className="flex min-h-0 flex-col p-3">
-            <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-black/45">
-              Source
+            To
+          </span>
+          <div style={{ position: 'relative', flex: 1, minWidth: 0, marginLeft: 'auto' }}>
+            <select
+              value={toLang}
+              onChange={(event) => setToLang(event.target.value)}
+              style={{ ...aquaSelectStyle, width: '100%', paddingRight: 20 }}
+            >
+              {LANGUAGES.map((option) => (
+                <option key={option.value} value={option.value} style={{ color: '#000', background: '#FFF' }}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <div
+              style={{
+                position: 'absolute',
+                right: 6,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                pointerEvents: 'none',
+                color: 'rgba(255,255,255,0.8)',
+                fontSize: 8,
+                lineHeight: 1,
+              }}
+            >
+              ▼
             </div>
-            <textarea
-              className={`${MACOS_INPUT_CLASS_NAME} h-full min-h-0 resize-none border-none bg-transparent p-0 shadow-none`}
-              value={sourceText}
-              onChange={(event) => setSourceText(event.target.value)}
-            />
-          </MacOSInset>
-          <MacOSInset className="flex min-h-0 flex-col p-3">
-            <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-black/45">
-              Translation
-            </div>
-            <textarea
-              className={`${MACOS_INPUT_CLASS_NAME} h-full min-h-0 resize-none border-none bg-transparent p-0 shadow-none`}
-              value={translatedText}
-              readOnly
-            />
-          </MacOSInset>
+          </div>
         </div>
       </div>
-    </MacOSWidgetFrame>
+
+      <div className="relative z-[1] flex-1" style={{ padding: '4px 10px 8px' }}>
+        <div
+          style={{
+            width: '100%',
+            height: '100%',
+            fontSize: 13,
+            padding: '6px 10px',
+            borderRadius: 8,
+            border: '1px solid rgba(0,0,0,0.08)',
+            background: 'rgba(255,255,255,0.85)',
+            color: loading ? 'rgba(0,0,0,0.4)' : '#1A1A1A',
+            minHeight: 56,
+            maxHeight: '100%',
+            fontFamily: font,
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+            overflow: 'auto',
+            boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.04), 0 1px 0 rgba(255,255,255,0.05)',
+            lineHeight: 1.4,
+          }}
+        >
+          {loading ? (
+            <span style={{ fontStyle: 'italic', color: 'rgba(0,0,0,0.35)' }}>
+              Translating...
+            </span>
+          ) : error ? (
+            <span style={{ color: '#C44' }}>{error}</span>
+          ) : translatedText ? (
+            translatedText
+          ) : (
+            <span style={{ color: 'rgba(0,0,0,0.25)' }}>Translation</span>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
