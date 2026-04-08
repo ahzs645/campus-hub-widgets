@@ -56,6 +56,24 @@ export function MacOSWidgetFrame({
   );
 }
 
+export function MacOSDashboardSurface({
+  children,
+  className,
+  showGloss = true,
+}: {
+  children: ReactNode;
+  className?: string;
+  showGloss?: boolean;
+}) {
+  return (
+    <div className={cx('macos-dashboard-surface', className)}>
+      {children}
+      {showGloss ? <div className="macos-dashboard-gloss-top" /> : null}
+      {showGloss ? <div className="macos-dashboard-gloss-bottom" /> : null}
+    </div>
+  );
+}
+
 export function MacOSInset({
   children,
   className,

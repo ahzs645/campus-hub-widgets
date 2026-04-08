@@ -21,6 +21,53 @@
   -webkit-font-smoothing: antialiased;
 }
 
+.macos-dashboard-surface {
+  position: relative;
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background:
+    linear-gradient(180deg, rgba(50, 50, 50, 0.8) 0%, rgba(25, 25, 25, 0.85) 100%);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.macos-dashboard-gloss-top {
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  width: calc(100% - 6px);
+  height: 35%;
+  max-height: 50px;
+  transform: translateX(-50%);
+  border-radius: 18px 18px 50% 50%;
+  background: linear-gradient(rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0));
+  pointer-events: none;
+  z-index: 10;
+}
+
+.macos-dashboard-gloss-bottom {
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  width: calc(100% - 10px);
+  height: 20%;
+  max-height: 30px;
+  transform: translateX(-50%);
+  border-radius: 50% 50% 16px 16px;
+  background: linear-gradient(rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.08));
+  filter: blur(1px);
+  pointer-events: none;
+  z-index: 10;
+}
+
 .macos-widget-shell {
   position: relative;
   display: flex;
