@@ -29,7 +29,7 @@ interface GroupFitnessOptionsData {
 
 const getInitialState = (data: Record<string, unknown>): GroupFitnessOptionsData => ({
   title: (data.title as string) ?? 'Group Fitness',
-  scheduleUrl: (data.scheduleUrl as string) ?? DEFAULT_GROUP_FITNESS_URL,
+  scheduleUrl: (data.scheduleUrl as string) ?? '',
   viewMode: (data.viewMode as GroupFitnessViewMode) ?? 'day',
   selectedDay: (data.selectedDay as string) ?? 'today',
   selectedClass: (data.selectedClass as string) ?? '',

@@ -573,7 +573,14 @@ registerWidget({
   defaultH: 1,
   component: NewsTicker,
   OptionsComponent: NewsTickerOptions,
-  acceptsSources: [{ propName: 'apiUrl', types: ['feed'] }],
+  acceptsSources: [{
+    propName: 'apiUrl',
+    types: ['api', 'feed'],
+    applySource: (source) => ({
+      apiUrl: source.url,
+      sourceType: source.sourceType === 'feed' ? 'rss' : 'json',
+    }),
+  }],
   defaultProps: {
     speed: 30,
     scale: 1,

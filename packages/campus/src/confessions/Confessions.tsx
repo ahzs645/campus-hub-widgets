@@ -109,8 +109,8 @@ const appendCacheBust = (url: string, token: number): string => {
 
 export default function Confessions({ config, theme }: WidgetComponentProps) {
   const confConfig = config as ConfessionsConfig | undefined;
-  const apiUrl = confConfig?.apiUrl?.trim() || DEFAULT_API_URL;
-  const pageUrl = confConfig?.pageUrl?.trim() || DEFAULT_PAGE_URL;
+  const apiUrl = confConfig?.apiUrl?.trim() || '';
+  const pageUrl = confConfig?.pageUrl?.trim() || '';
   const maxItems = Math.min(50, Math.max(1, Math.round(confConfig?.maxItems ?? 10)));
   const rotationSeconds = Math.min(120, Math.max(4, Math.round(confConfig?.rotationSeconds ?? 12)));
   const cacheTtlSeconds = Math.min(3600, Math.max(30, Math.round(confConfig?.cacheTtlSeconds ?? 300)));
@@ -129,7 +129,7 @@ export default function Confessions({ config, theme }: WidgetComponentProps) {
   const textRef = useRef<HTMLParagraphElement>(null);
 
   const fetchConfessions = useCallback(async (forceFresh = false) => {
-    if (!useCorsProxy) return; // stay on demo data
+    if (!useCorsProxy || (!apiUrl && !pageUrl)) return; // stay on demo data
 
     setError(null);
     setLoading(true);
@@ -383,9 +383,10 @@ registerWidget({
   defaultH: 3,
   component: Confessions,
   OptionsComponent: ConfessionsOptions,
+  acceptsSources: [{ propName: 'apiUrl', types: ['api'] }],
   defaultProps: {
-    apiUrl: DEFAULT_API_URL,
-    pageUrl: DEFAULT_PAGE_URL,
+    apiUrl: '',
+    pageUrl: '',
     maxItems: 10,
     rotationSeconds: 12,
     cacheTtlSeconds: 300,

@@ -21,7 +21,7 @@ interface LibraryAvailabilityData {
 const DEFAULTS: LibraryAvailabilityData = {
   title: 'Library Study Room Availability',
   mode: 'grid',
-  endpoint: 'https://unbc.libcal.com/spaces/availability/grid',
+  endpoint: '',
   lid: 1637,
   gid: 2928,
   pageSize: 99,
@@ -146,6 +146,7 @@ export default function LibraryAvailabilityOptions({ data, onChange }: WidgetOpt
           name="endpoint"
           type="url"
           value={state.endpoint}
+          placeholder="https://unbc.libcal.com/spaces/availability/grid"
           onChange={handleChange}
         />
 

@@ -291,7 +291,19 @@ registerWidget({
   defaultH: 3,
   component: EventsList,
   OptionsComponent: EventsListOptions,
-  acceptsSources: [{ propName: 'apiUrl', types: ['calendar', 'feed'] }],
+  acceptsSources: [{
+    propName: 'apiUrl',
+    types: ['api', 'calendar', 'feed'],
+    applySource: (source) => ({
+      apiUrl: source.url,
+      sourceType:
+        source.sourceType === 'calendar'
+          ? 'ical'
+          : source.sourceType === 'feed'
+            ? 'rss'
+            : 'json',
+    }),
+  }],
   defaultProps: {
     maxItems: 10,
     title: 'Upcoming Events',

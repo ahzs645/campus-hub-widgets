@@ -317,6 +317,14 @@ registerWidget({
   defaultH: 5,
   component: PosterCarousel,
   OptionsComponent: PosterCarouselOptions,
+  acceptsSources: [{
+    propName: 'apiUrl',
+    types: ['api'],
+    applySource: (source) => ({
+      apiUrl: source.url,
+      dataSource: 'api',
+    }),
+  }],
   defaultProps: {
     rotationSeconds: 10,
     useCorsProxy: true,

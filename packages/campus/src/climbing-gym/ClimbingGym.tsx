@@ -73,6 +73,12 @@ const getOpenStatus = (): { isOpen: boolean; todayLabel: string; closesOrOpensAt
 
 const DEFAULT_PORTAL_URL =
   'https://portal.rockgympro.com/portal/public/e4f8e07377b8d1ba053944154f4c2c50/occupancy?&iframeid=occupancyCounter&fId=';
+const DEMO_OCCUPANCY: OccupancyData = {
+  count: 9,
+  capacity: 30,
+  subLabel: 'Current Climber Count',
+  lastUpdate: '',
+};
 
 /** Parse the Rock Gym Pro occupancy HTML page to extract the data object */
 const parseOccupancyData = (html: string): OccupancyData | null => {
@@ -114,19 +120,25 @@ const LEVEL_COLORS = {
 export default function ClimbingGym({ config, theme }: WidgetComponentProps) {
   const cfg = config as ClimbingGymConfig | undefined;
   const gymName = cfg?.gymName ?? 'OVERhang';
-  const portalUrl = cfg?.portalUrl?.trim() || DEFAULT_PORTAL_URL;
+  const portalUrl = cfg?.portalUrl?.trim() || '';
   const refreshInterval = cfg?.refreshInterval ?? 5;
   const showCapacityBar = cfg?.showCapacityBar ?? true;
   const showHours = cfg?.showHours ?? true;
   const useCorsProxy = cfg?.useCorsProxy ?? true;
 
-  const [data, setData] = useState<OccupancyData | null>(null);
+  const [data, setData] = useState<OccupancyData | null>(DEMO_OCCUPANCY);
   const [error, setError] = useState<string | null>(null);
   const [lastFetched, setLastFetched] = useState<Date | null>(null);
 
   const refreshMs = refreshInterval * 60 * 1000;
 
   const fetchOccupancy = useCallback(async () => {
+    if (!portalUrl) {
+      setData(DEMO_OCCUPANCY);
+      setError(null);
+      setLastFetched(null);
+      return;
+    }
     try {
       setError(null);
       const fetchUrl = useCorsProxy ? buildProxyUrl(portalUrl) : portalUrl;
@@ -292,9 +304,10 @@ registerWidget({
   defaultH: 2,
   component: ClimbingGym,
   OptionsComponent: ClimbingGymOptions,
+  acceptsSources: [{ propName: 'portalUrl', types: ['api'] }],
   defaultProps: {
     gymName: 'OVERhang',
-    portalUrl: DEFAULT_PORTAL_URL,
+    portalUrl: '',
     refreshInterval: 5,
     showCapacityBar: true,
     showHours: true,

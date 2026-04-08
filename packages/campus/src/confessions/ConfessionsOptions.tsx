@@ -13,9 +13,8 @@ interface ConfessionsOptionsState {
 }
 
 const DEFAULTS: ConfessionsOptionsState = {
-  apiUrl:
-    'https://overtheedge.unbc.ca/wp-json/wp/v2/pages?slug=confession&_fields=id,slug,content.rendered',
-  pageUrl: 'https://overtheedge.unbc.ca/confession/',
+  apiUrl: '',
+  pageUrl: '',
   maxItems: 10,
   rotationSeconds: 12,
   cacheTtlSeconds: 300,
@@ -73,7 +72,7 @@ export default function ConfessionsOptions({ data, onChange }: WidgetOptionsProp
           name="apiUrl"
           type="url"
           value={state.apiUrl}
-          placeholder={DEFAULTS.apiUrl}
+          placeholder="https://overtheedge.unbc.ca/wp-json/wp/v2/pages?slug=confession&_fields=id,slug,content.rendered"
           onChange={handleChange}
         />
         <FormInput
@@ -81,7 +80,7 @@ export default function ConfessionsOptions({ data, onChange }: WidgetOptionsProp
           name="pageUrl"
           type="url"
           value={state.pageUrl}
-          placeholder={DEFAULTS.pageUrl}
+          placeholder="https://overtheedge.unbc.ca/confession/"
           onChange={handleChange}
         />
         <div className="text-sm text-[var(--ui-text-muted)]">

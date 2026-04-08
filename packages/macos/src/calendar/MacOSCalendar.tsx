@@ -175,6 +175,19 @@ registerWidget({
   component: MacOSCalendar,
   OptionsComponent: MacOSCalendarOptions,
   tags: ['retro', 'campus'],
+  acceptsSources: [{
+    propName: 'apiUrl',
+    types: ['api', 'calendar', 'feed'],
+    applySource: (source) => ({
+      apiUrl: source.url,
+      sourceType:
+        source.sourceType === 'calendar'
+          ? 'ical'
+          : source.sourceType === 'feed'
+            ? 'rss'
+            : 'json',
+    }),
+  }],
   defaultProps: {
     title: 'Calendar',
     apiUrl: '',

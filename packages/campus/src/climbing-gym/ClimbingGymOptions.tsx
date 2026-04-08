@@ -19,7 +19,7 @@ const DEFAULT_PORTAL_URL =
 export default function ClimbingGymOptions({ data, onChange }: WidgetOptionsProps) {
   const [state, setState] = useState<ClimbingGymData>({
     gymName: (data?.gymName as string) ?? 'OVERhang',
-    portalUrl: (data?.portalUrl as string) ?? DEFAULT_PORTAL_URL,
+    portalUrl: (data?.portalUrl as string) ?? '',
     refreshInterval: (data?.refreshInterval as number) ?? 5,
     showCapacityBar: (data?.showCapacityBar as boolean) ?? true,
     showHours: (data?.showHours as boolean) ?? true,
@@ -30,7 +30,7 @@ export default function ClimbingGymOptions({ data, onChange }: WidgetOptionsProp
     if (data) {
       setState({
         gymName: (data.gymName as string) ?? 'OVERhang',
-        portalUrl: (data.portalUrl as string) ?? DEFAULT_PORTAL_URL,
+        portalUrl: (data.portalUrl as string) ?? '',
         refreshInterval: (data.refreshInterval as number) ?? 5,
         showCapacityBar: (data.showCapacityBar as boolean) ?? true,
         showHours: (data.showHours as boolean) ?? true,

@@ -597,7 +597,7 @@ export default function CafeteriaMenu({
   theme,
 }: WidgetComponentProps) {
   const cfg = config as CafeteriaConfig | undefined;
-  const menuUrl = cfg?.menuUrl?.trim() || 'https://unbc.icaneat.ca/menu/';
+  const menuUrl = cfg?.menuUrl?.trim() || '';
   const danaLocations = cfg?.danaLocations?.trim() || '48784';
   const refreshInterval = cfg?.refreshInterval ?? 30;
   const useCorsProxy = cfg?.useCorsProxy ?? true;
@@ -628,7 +628,7 @@ export default function CafeteriaMenu({
   //   3. Generic HTML parse of the menu page
 
   const fetchMenu = useCallback(async () => {
-    if (!useCorsProxy || !getCorsProxyUrl()) return; // stay on demo data
+    if (!menuUrl || !useCorsProxy || !getCorsProxyUrl()) return; // stay on demo data
 
     try {
       setError(null);
@@ -1017,8 +1017,9 @@ registerWidget({
   defaultH: 3,
   component: CafeteriaMenu,
   OptionsComponent: CafeteriaMenuOptions,
+  acceptsSources: [{ propName: 'menuUrl', types: ['api'] }],
   defaultProps: {
-    menuUrl: 'https://unbc.icaneat.ca/menu/',
+    menuUrl: '',
     danaLocations: '48784',
     refreshInterval: 30,
     weekdayBreakfastStart: '07:00',

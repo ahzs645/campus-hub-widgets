@@ -17,8 +17,8 @@ interface ClubSpotlightData {
 
 export default function ClubSpotlightOptions({ data, onChange }: WidgetOptionsProps) {
   const [state, setState] = useState<ClubSpotlightData>({
-    apiUrl: (data?.apiUrl as string) ?? DEFAULT_API_URL,
-    pageUrl: (data?.pageUrl as string) ?? 'https://overtheedge.unbc.ca/clubs/',
+    apiUrl: (data?.apiUrl as string) ?? '',
+    pageUrl: (data?.pageUrl as string) ?? '',
     rotationSeconds: (data?.rotationSeconds as number) ?? 10,
     useCorsProxy: (data?.useCorsProxy as boolean) ?? false,
     refreshMinutes: (data?.refreshMinutes as number) ?? 30,
@@ -29,8 +29,8 @@ export default function ClubSpotlightOptions({ data, onChange }: WidgetOptionsPr
   useEffect(() => {
     if (data) {
       setState({
-        apiUrl: (data.apiUrl as string) ?? DEFAULT_API_URL,
-        pageUrl: (data.pageUrl as string) ?? 'https://overtheedge.unbc.ca/clubs/',
+        apiUrl: (data.apiUrl as string) ?? '',
+        pageUrl: (data.pageUrl as string) ?? '',
         rotationSeconds: (data.rotationSeconds as number) ?? 10,
         useCorsProxy: (data.useCorsProxy as boolean) ?? false,
         refreshMinutes: (data.refreshMinutes as number) ?? 30,

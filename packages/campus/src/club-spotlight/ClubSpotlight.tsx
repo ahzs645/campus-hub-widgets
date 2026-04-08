@@ -176,8 +176,8 @@ function parseClubsFromHtml(html: string): ClubItem[] {
 
 export default function ClubSpotlight({ config, theme }: WidgetComponentProps) {
   const cfg = config as ClubSpotlightConfig | undefined;
-  const apiUrl = cfg?.apiUrl?.trim() || DEFAULT_API_URL;
-  const pageUrl = cfg?.pageUrl?.trim() || DEFAULT_PAGE_URL;
+  const apiUrl = cfg?.apiUrl?.trim() || '';
+  const pageUrl = cfg?.pageUrl?.trim() || '';
   const rotationSeconds = Math.max(4, Math.min(120, cfg?.rotationSeconds ?? 10));
   const useCorsProxy = cfg?.useCorsProxy ?? false;
   const refreshMinutes = Math.max(5, Math.min(1440, cfg?.refreshMinutes ?? 30));
@@ -193,9 +193,15 @@ export default function ClubSpotlight({ config, theme }: WidgetComponentProps) {
   const fetchClubs = useCallback(async () => {
     setError(null);
     const ttlMs = refreshMinutes * 60 * 1000;
+    if (!apiUrl && !pageUrl) {
+      setClubs(DEFAULT_CLUBS);
+      setUsingDefaults(true);
+      return;
+    }
 
     // Strategy 1: Try the WordPress REST API (returns structured JSON with images)
     try {
+      if (!apiUrl) throw new Error('Missing API URL');
       const apiFetchUrl = useCorsProxy ? buildProxyUrl(apiUrl) : apiUrl;
       const { data: posts } = await fetchJsonWithCache<WpClubPost[]>(apiFetchUrl, {
         cacheKey: buildCacheKey('club-spotlight-api', apiUrl),
@@ -215,6 +221,7 @@ export default function ClubSpotlight({ config, theme }: WidgetComponentProps) {
 
     // Strategy 2: Scrape the HTML page directly
     try {
+      if (!pageUrl) throw new Error('Missing page URL');
       const pageFetchUrl = useCorsProxy ? buildProxyUrl(pageUrl) : pageUrl;
       const { text } = await fetchTextWithCache(pageFetchUrl, {
         cacheKey: buildCacheKey('club-spotlight-page', pageUrl),
@@ -379,9 +386,10 @@ registerWidget({
   defaultH: 3,
   component: ClubSpotlight,
   OptionsComponent: ClubSpotlightOptions,
+  acceptsSources: [{ propName: 'apiUrl', types: ['api'] }],
   defaultProps: {
-    apiUrl: 'https://overtheedge.unbc.ca/wp-json/wp/v2/organization?per_page=100&_embed=wp:featuredmedia&org_status=181,183,182',
-    pageUrl: DEFAULT_PAGE_URL,
+    apiUrl: '',
+    pageUrl: '',
     rotationSeconds: 10,
     useCorsProxy: false,
     refreshMinutes: 30,

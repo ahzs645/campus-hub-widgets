@@ -300,7 +300,7 @@ export default function LibraryAvailability({
   const widgetConfig = config as LibraryAvailabilityConfig | undefined;
   const title = widgetConfig?.title?.trim() || 'Library Study Room Availability';
   const mode = (widgetConfig?.mode ?? 'grid') as DisplayMode;
-  const endpoint = widgetConfig?.endpoint?.trim() || DEFAULT_ENDPOINT;
+  const endpoint = widgetConfig?.endpoint?.trim() || '';
   const lid = String(widgetConfig?.lid ?? 1637);
   const gid = String(widgetConfig?.gid ?? 2928);
   const pageSize = clamp(Math.round(widgetConfig?.pageSize ?? 99), 1, 500);
@@ -365,6 +365,14 @@ export default function LibraryAvailability({
     async (signal?: AbortSignal) => {
       const firstDay = dayMeta[0]?.date;
       if (!firstDay) return;
+      if (!endpoint || (useCorsProxy && !getCorsProxyUrl())) {
+        setResponse(generateDemoResponse());
+        setError(null);
+        setLastUpdated(null);
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
 
       const start = formatDateKey(firstDay);
       const end = formatDateKey(addDays(firstDay, dayMeta.length));
@@ -1238,10 +1246,11 @@ registerWidget({
   defaultH: 4,
   component: LibraryAvailability,
   OptionsComponent: LibraryAvailabilityOptions,
+  acceptsSources: [{ propName: 'endpoint', types: ['api'] }],
   defaultProps: {
     title: 'Library Study Room Availability',
     mode: 'grid',
-    endpoint: DEFAULT_ENDPOINT,
+    endpoint: '',
     lid: 1637,
     gid: 2928,
     pageSize: 99,

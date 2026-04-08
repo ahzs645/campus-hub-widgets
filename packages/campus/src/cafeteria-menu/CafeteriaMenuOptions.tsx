@@ -22,7 +22,7 @@ interface CafeteriaData {
 
 export default function CafeteriaMenuOptions({ data, onChange }: WidgetOptionsProps) {
   const state: CafeteriaData = {
-    menuUrl: (data?.menuUrl as string) ?? 'https://unbc.icaneat.ca/menu/',
+    menuUrl: (data?.menuUrl as string) ?? '',
     danaLocations: (data?.danaLocations as string) ?? '48784',
     refreshInterval: (data?.refreshInterval as number) ?? 30,
     useCorsProxy: (data?.useCorsProxy as boolean) ?? true,

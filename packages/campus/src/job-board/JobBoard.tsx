@@ -343,6 +343,14 @@ registerWidget({
   defaultH: 1,
   component: JobBoard,
   OptionsComponent: JobBoardOptions,
+  acceptsSources: [{
+    propName: 'apiUrl',
+    types: ['api', 'feed'],
+    applySource: (source) => ({
+      apiUrl: source.url,
+      sourceType: source.sourceType === 'feed' ? 'rss' : 'json',
+    }),
+  }],
   defaultProps: {
     speed: 35,
     scale: 1,

@@ -170,7 +170,7 @@ export default function GroupFitness({
 }: WidgetComponentProps) {
   const cfg = config as GroupFitnessConfig | undefined;
   const title = cfg?.title?.trim() || 'Group Fitness';
-  const scheduleUrl = cfg?.scheduleUrl?.trim() || DEFAULT_GROUP_FITNESS_URL;
+  const scheduleUrl = cfg?.scheduleUrl?.trim() || '';
   const viewMode = cfg?.viewMode ?? 'day';
   const selectedDay = cfg?.selectedDay ?? 'today';
   const selectedClass = cfg?.selectedClass?.trim() ?? '';
@@ -188,6 +188,12 @@ export default function GroupFitness({
   const refreshMs = refreshInterval * 60 * 1000;
 
   const fetchSchedule = useCallback(async () => {
+    if (!scheduleUrl) {
+      setSchedule(DEMO_SCHEDULE);
+      setError(null);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
 
     try {
@@ -385,9 +391,10 @@ registerWidget({
   defaultH: 4,
   component: GroupFitness,
   OptionsComponent: GroupFitnessOptions,
+  acceptsSources: [{ propName: 'scheduleUrl', types: ['api'] }],
   defaultProps: {
     title: 'Group Fitness',
-    scheduleUrl: DEFAULT_GROUP_FITNESS_URL,
+    scheduleUrl: '',
     viewMode: 'day',
     selectedDay: 'today',
     selectedClass: '',
