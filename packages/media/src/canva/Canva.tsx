@@ -22,12 +22,13 @@ function buildCanvaEmbedUrl(url: string): string | null {
 
   try {
     const u = new URL(trimmed);
-    // Ensure it ends with the embed param
     if (u.hostname.includes('canva.com')) {
-      if (!u.searchParams.has('embed')) {
-        u.searchParams.set('embed', '');
+      if (u.search.includes('embed')) {
+        return u.toString();
       }
-      return u.toString();
+
+      const query = u.search ? `${u.search}&embed` : '?embed';
+      return `${u.origin}${u.pathname}${query}${u.hash}`;
     }
     // Non-Canva URL - use as-is
     return trimmed;

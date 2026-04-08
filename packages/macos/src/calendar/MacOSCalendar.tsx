@@ -105,8 +105,8 @@ export default function MacOSCalendar({ config }: WidgetComponentProps) {
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] gap-3">
         <MacOSInset className="flex min-h-0 flex-col p-3">
           <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-black/45">
-            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day) => (
-              <div key={day}>{day}</div>
+            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+              <div key={`${day}-${index}`}>{day}</div>
             ))}
           </div>
           <div className="mt-2 grid flex-1 grid-cols-7 gap-1">
