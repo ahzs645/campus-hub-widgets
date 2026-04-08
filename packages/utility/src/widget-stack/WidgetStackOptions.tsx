@@ -1,7 +1,12 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { FormInput, FormSelect } from '@firstform/campus-hub-widget-sdk';
-import { getAllWidgets, getWidget } from '@firstform/campus-hub-widget-sdk';
+import {
+  FormInput,
+  FormSelect,
+  buildWidgetInitialProps,
+  getAllWidgets,
+  getWidget,
+} from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 import type { ChildWidgetDef } from './WidgetStack';
 import { AppIcon } from '@firstform/campus-hub-widget-sdk';
@@ -57,7 +62,7 @@ export default function WidgetStackOptions({ data, onChange }: WidgetOptionsProp
     const newChild: ChildWidgetDef = {
       id: `${type}-${Date.now()}`,
       type,
-      props: widgetDef?.defaultProps ?? {},
+      props: widgetDef ? buildWidgetInitialProps(widgetDef) : {},
     };
     propagate({ ...state, children: [...state.children, newChild] });
     setShowAddPicker(false);

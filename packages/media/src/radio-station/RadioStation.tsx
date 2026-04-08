@@ -288,7 +288,7 @@ export default function RadioStation({ config, theme }: WidgetComponentProps) {
 
   const trackArtwork = nowPlaying?.artworkUrl || artworkUrl;
   const effectiveStationName = stationName || 'CFUR 88.7 FM';
-  const effectiveProvider = provider || (demoMode ? 'Demo Station' : stationTagline || 'Live audio');
+  const effectiveProvider = provider || stationTagline || 'Radio Station';
   const topLine =
     nowPlaying?.showName ||
     stationTagline ||
@@ -300,6 +300,9 @@ export default function RadioStation({ config, theme }: WidgetComponentProps) {
     (metadataUrl ? 'Polling station metadata' : 'Link a source or enter a metadata URL.');
 
   const statusDetail = useMemo(() => {
+    if (demoMode) {
+      return null;
+    }
     if (metadataState === 'live' && lastSuccessAt) {
       return `Updated ${formatTime(lastSuccessAt)}`;
     }
@@ -309,9 +312,6 @@ export default function RadioStation({ config, theme }: WidgetComponentProps) {
     if (metadataState === 'loading') {
       return 'Checking for current track information';
     }
-    if (demoMode) {
-      return 'Demo metadata preview. Link a live source to switch this widget to real station data.';
-    }
     if (metadataError) {
       return metadataError;
     }
@@ -319,7 +319,7 @@ export default function RadioStation({ config, theme }: WidgetComponentProps) {
       return 'Waiting for the station to publish track metadata';
     }
     return 'No metadata source linked yet';
-  }, [lastSuccessAt, metadataError, metadataState, metadataUrl]);
+  }, [demoMode, lastSuccessAt, metadataError, metadataState, metadataUrl]);
 
   const togglePlayback = async () => {
     const audio = audioRef.current;
@@ -342,80 +342,67 @@ export default function RadioStation({ config, theme }: WidgetComponentProps) {
       className="relative flex h-full w-full flex-col overflow-hidden rounded-2xl border border-white/10 text-white"
       style={{
         background: `linear-gradient(160deg, ${theme.background} 0%, ${theme.primary}44 48%, ${theme.accent}55 100%)`,
+        containerType: 'size',
       }}
     >
-      {trackArtwork && showArtwork ? (
-        <>
-          <div
-            className="absolute inset-0 opacity-20"
-            style={{
-              backgroundImage: `url(${trackArtwork})`,
-              backgroundPosition: 'center',
-              backgroundSize: 'cover',
-            }}
-          />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.12),transparent_35%),linear-gradient(180deg,rgba(4,8,14,0.2),rgba(4,8,14,0.75))]" />
-        </>
-      ) : (
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.08),transparent_28%),linear-gradient(180deg,rgba(4,8,14,0.08),rgba(4,8,14,0.32))]" />
-      )}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.08),transparent_28%),linear-gradient(180deg,rgba(4,8,14,0.08),rgba(4,8,14,0.32))]" />
 
       <div className="relative z-10 flex h-full flex-col p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/55">
-              {effectiveProvider}
-            </div>
-            <div className="mt-1 text-xl font-semibold leading-tight">
+            <div className="break-words text-[clamp(1rem,3.1cqi,2rem)] font-semibold leading-tight">
               {effectiveStationName}
             </div>
-            <div className="mt-1 text-sm text-white/65">{topLine}</div>
+            <div className="mt-1 break-words text-[clamp(0.8rem,1.45cqi,1.15rem)] text-white/65">
+              {topLine || effectiveProvider}
+            </div>
           </div>
           <div className="flex flex-col items-end gap-2">
             <StatusChip state={metadataState} hasTrack={Boolean(nowPlaying)} />
-            {demoMode ? (
-              <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/65">
-                Demo
-              </span>
-            ) : null}
           </div>
         </div>
 
-        <div className="mt-5 flex min-h-0 flex-1 gap-4">
+        <div className="mt-4 flex min-h-0 flex-1 items-end gap-4">
           {showArtwork ? (
-            <div className="hidden w-28 shrink-0 overflow-hidden rounded-3xl border border-white/10 bg-black/20 sm:block">
+            <div className="hidden h-20 shrink-0 self-end sm:block">
               {trackArtwork ? (
-                <img src={trackArtwork} alt="" className="h-full w-full object-cover" />
+                <img
+                  src={trackArtwork}
+                  alt=""
+                  className="block h-full w-auto max-w-[7rem] object-contain object-left-bottom"
+                />
               ) : (
-                <div className="flex h-full items-center justify-center">
-                  <AppIcon name="music" className="h-10 w-10 text-white/55" />
+                <div className="flex h-full w-20 items-center justify-center">
+                  <AppIcon name="music" className="h-8 w-8 text-white/55" />
                 </div>
               )}
             </div>
           ) : null}
 
           <div className="min-w-0 flex-1">
-            <div className="text-[12px] font-semibold uppercase tracking-[0.18em] text-emerald-100/70">
+            <div className="text-[clamp(0.66rem,1.05cqi,0.9rem)] font-semibold uppercase tracking-[0.18em] text-emerald-100/70">
               {nowPlaying?.showName ? 'On Air' : 'Now Playing'}
             </div>
-            <div className="mt-2 text-2xl font-semibold leading-tight">
+            <div className="mt-2 break-words text-[clamp(1.1rem,4.8cqi,3rem)] font-semibold leading-tight">
               {nowPlaying?.title || 'No current track title'}
             </div>
-            <div className="mt-2 text-base text-white/72">
+            <div className="mt-2 break-words text-[clamp(0.92rem,1.8cqi,1.4rem)] text-white/72">
               {secondaryLine}
             </div>
 
             {nowPlaying?.album ? (
-              <div className="mt-2 text-sm text-white/55">
+              <div className="mt-2 break-words text-[clamp(0.76rem,1.45cqi,1.1rem)] text-white/55">
                 Album: {nowPlaying.album}
               </div>
             ) : null}
 
-            <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white/65">
-              {statusDetail}
-            </div>
+            {statusDetail ? (
+              <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white/65">
+                {statusDetail}
+              </div>
+            ) : null}
 
-            {(showTimestamp && (lastCheckedAt || nowPlaying?.timestamp)) ? (
+            {(showTimestamp && !demoMode && (lastCheckedAt || nowPlaying?.timestamp)) ? (
               <div className="mt-3 text-xs text-white/45">
                 {nowPlaying?.timestamp
                   ? `Station timestamp: ${nowPlaying.timestamp}`
@@ -483,29 +470,19 @@ export default function RadioStation({ config, theme }: WidgetComponentProps) {
           </div>
         ) : null}
 
-        {websiteUrl || demoMode ? (
+        {websiteUrl && !demoMode ? (
           <div className="relative z-10 mt-4 flex items-center justify-between text-sm text-white/60">
             <span>
-              {demoMode
-                ? 'Demo tracks rotate automatically'
-                : metadataUrl
-                  ? `Polling every ${pollIntervalSeconds}s`
-                  : 'Station link configured'}
+              {metadataUrl ? `Polling every ${pollIntervalSeconds}s` : 'Station link configured'}
             </span>
-            {websiteUrl ? (
-              <a
-                href={websiteUrl}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-white/80 transition hover:bg-white/20"
-              >
-                Open station
-              </a>
-            ) : (
-              <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-white/70">
-                Link live source
-              </span>
-            )}
+            <a
+              href={websiteUrl}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-white/80 transition hover:bg-white/20"
+            >
+              Open station
+            </a>
           </div>
         ) : null}
       </div>
@@ -527,7 +504,7 @@ registerWidget({
   defaultProps: {
     stationName: 'CFUR 88.7 FM',
     stationTagline: 'Community-Campus Radio',
-    provider: 'Demo Station',
+    provider: '',
     metadataUrl: '',
     audioUrl: '',
     embedUrl: '',

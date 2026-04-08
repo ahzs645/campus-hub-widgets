@@ -20,6 +20,8 @@ interface ClimbingGymConfig {
   showCapacityBar?: boolean;
   showHours?: boolean;
   useCorsProxy?: boolean;
+  galleryDemo?: boolean;
+  forceOpen?: boolean;
 }
 
 interface DaySchedule {
@@ -125,6 +127,8 @@ export default function ClimbingGym({ config, theme }: WidgetComponentProps) {
   const showCapacityBar = cfg?.showCapacityBar ?? true;
   const showHours = cfg?.showHours ?? true;
   const useCorsProxy = cfg?.useCorsProxy ?? true;
+  const galleryDemo = cfg?.galleryDemo ?? false;
+  const forceOpen = cfg?.forceOpen ?? false;
 
   const [data, setData] = useState<OccupancyData | null>(DEMO_OCCUPANCY);
   const [error, setError] = useState<string | null>(null);
@@ -133,7 +137,7 @@ export default function ClimbingGym({ config, theme }: WidgetComponentProps) {
   const refreshMs = refreshInterval * 60 * 1000;
 
   const fetchOccupancy = useCallback(async () => {
-    if (!portalUrl) {
+    if (!portalUrl || galleryDemo) {
       setData(DEMO_OCCUPANCY);
       setError(null);
       setLastFetched(null);
@@ -150,14 +154,17 @@ export default function ClimbingGym({ config, theme }: WidgetComponentProps) {
       if (parsed) {
         setData(parsed);
         setLastFetched(new Date());
+        setError(null);
       } else {
-        setError('Could not parse occupancy data');
+        setData((current) => current ?? DEMO_OCCUPANCY);
+        setError(null);
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(msg);
+      console.warn('Failed to load climbing gym occupancy:', err);
+      setData((current) => current ?? DEMO_OCCUPANCY);
+      setError(null);
     }
-  }, [portalUrl, refreshMs, useCorsProxy]);
+  }, [portalUrl, galleryDemo, refreshMs, useCorsProxy]);
 
   useEffect(() => {
     let isMounted = true;
@@ -186,11 +193,12 @@ export default function ClimbingGym({ config, theme }: WidgetComponentProps) {
   const levelColor = LEVEL_COLORS[level];
   const pct = capacity > 0 ? Math.min((count / capacity) * 100, 100) : 0;
 
-  const isOpen = openStatus.isOpen;
+  const isOpen = forceOpen || openStatus.isOpen;
+  const statusText = forceOpen ? 'Open now' : openStatus.closesOrOpensAt;
 
   const { containerRef, scale, designWidth: DESIGN_W, designHeight: DESIGN_H, isLandscape } = useAdaptiveFitScale({
-    landscape: { w: 340, h: 240 },
-    portrait: { w: 240, h: 340 },
+    landscape: { w: 320, h: 234 },
+    portrait: { w: 232, h: 340 },
   });
 
   return (
@@ -199,34 +207,35 @@ export default function ClimbingGym({ config, theme }: WidgetComponentProps) {
       theme={theme}
       color="primary"
       opacity="20"
+      className="flex items-center justify-center"
     >
       <div
         style={{
           width: DESIGN_W,
           height: DESIGN_H,
           transform: `scale(${scale})`,
-          transformOrigin: 'top left',
+          transformOrigin: 'center center',
         }}
-        className={`flex flex-col ${isLandscape ? 'justify-center' : 'items-center justify-center'} p-6`}
+        className={`flex h-full w-full flex-col ${isLandscape ? 'justify-center' : 'items-center justify-center'} p-4`}
       >
         {/* Gym name */}
-        <div className={`text-lg font-medium opacity-70 mb-1 ${!isLandscape ? 'text-center' : ''}`} style={{ color: theme.accent }}>
+        <div className={`text-xl font-medium opacity-70 mb-1.5 ${!isLandscape ? 'text-center' : ''}`} style={{ color: theme.accent }}>
           {gymName}
         </div>
 
         {isOpen ? (
           <>
             {/* Main count display */}
-            <div className={`flex ${isLandscape ? 'items-center gap-4' : 'flex-col items-center gap-2'}`}>
-              <AppIcon name="mountain" className="w-16 h-16 text-white" />
-              <div>
+            <div className={`flex w-full ${isLandscape ? 'items-center gap-5' : 'flex-col items-center gap-2'}`}>
+              <AppIcon name="mountain" className="w-[4.5rem] h-[4.5rem] text-white shrink-0" />
+              <div className={isLandscape ? 'min-w-0 flex-1' : 'text-center'}>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-6xl font-bold leading-tight" style={{ color: levelColor }}>
+                  <span className="text-7xl font-bold leading-tight" style={{ color: levelColor }}>
                     {count}
                   </span>
                   <span className="text-2xl text-white/50 font-medium">/ {capacity}</span>
                 </div>
-                <div className="text-base text-white/70">
+                <div className="text-[1.05rem] text-white/70 leading-tight">
                   {data?.subLabel ?? 'Current Climber Count'}
                 </div>
               </div>
@@ -234,7 +243,7 @@ export default function ClimbingGym({ config, theme }: WidgetComponentProps) {
 
             {/* Capacity bar */}
             {showCapacityBar && (
-              <div className="mt-4">
+              <div className="mt-4 w-full">
                 <div
                   className="w-full h-3 rounded-full overflow-hidden"
                   style={{ backgroundColor: `${theme.primary}40` }}
@@ -259,12 +268,12 @@ export default function ClimbingGym({ config, theme }: WidgetComponentProps) {
               <div className={`mt-3 flex items-center gap-2 text-sm ${!isLandscape ? 'justify-center' : ''}`}>
                 <span className="inline-block w-2 h-2 rounded-full flex-shrink-0 bg-green-500" />
                 <span className="font-medium text-green-500">Open</span>
-                <span className="text-white/40">{openStatus.closesOrOpensAt}</span>
+                <span className="text-white/40">{statusText}</span>
               </div>
             )}
 
             {/* Error */}
-            {error && (
+            {error && !data && (
               <div className="mt-2 text-sm text-red-400 truncate">{error}</div>
             )}
 
@@ -278,7 +287,7 @@ export default function ClimbingGym({ config, theme }: WidgetComponentProps) {
           <div className="flex-1 flex flex-col items-center justify-center text-center gap-3">
             <AppIcon name="mountain" className="w-14 h-14 text-white" />
             <div className="text-3xl font-bold text-white">Closed</div>
-            <div className="text-sm text-white/40">{openStatus.closesOrOpensAt}</div>
+            <div className="text-sm text-white/40">{statusText}</div>
             {showHours && (
               <div className="mt-1 text-xs text-white/30 space-y-0.5">
                 <div>Mon–Fri: 4:30 – 10:00 PM</div>

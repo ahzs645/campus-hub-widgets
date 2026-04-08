@@ -11,6 +11,14 @@ interface StationPrice {
   address: string;
 }
 
+interface GasPricesConfig {
+  url?: string;
+  refreshInterval?: number;
+  useCorsProxy?: boolean;
+  maxStations?: number;
+  galleryDemo?: boolean;
+}
+
 function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
   const normalized = hex.trim().replace('#', '');
   const expanded =
@@ -89,18 +97,30 @@ function parseGasPrices(html: string): StationPrice[] {
 }
 
 export default function GasPrices({ config: cfg, theme }: WidgetComponentProps) {
+  const gasConfig = (cfg ?? {}) as GasPricesConfig;
   const [stations, setStations] = useState<StationPrice[]>(DEMO_STATIONS);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const url = (cfg?.url as string) || DEFAULT_URL;
-  const refreshInterval = (cfg?.refreshInterval as number) ?? 30;
-  const useCorsProxy = (cfg?.useCorsProxy as boolean) ?? true;
-  const maxStations = (cfg?.maxStations as number) ?? 10;
+  const galleryDemo = gasConfig.galleryDemo ?? false;
+  const url = gasConfig.url?.trim() || DEFAULT_URL;
+  const refreshInterval = gasConfig.refreshInterval ?? 30;
+  const useCorsProxy = gasConfig.useCorsProxy ?? true;
+  const maxStations = gasConfig.maxStations ?? 10;
+  const effectiveMaxStations = galleryDemo ? Math.min(maxStations, 4) : maxStations;
 
   const fetchPrices = useCallback(async () => {
+    if (galleryDemo) {
+      setStations(DEMO_STATIONS.slice(0, effectiveMaxStations));
+      setError(null);
+      setLastUpdated(null);
+      setLoading(false);
+      return;
+    }
+
     try {
+      setLoading(true);
       setError(null);
       const fetchUrl = useCorsProxy ? buildProxyUrl(url) : url;
       const { text } = await fetchTextWithCache(fetchUrl, {
@@ -109,17 +129,21 @@ export default function GasPrices({ config: cfg, theme }: WidgetComponentProps) 
       });
       const parsed = parseGasPrices(text);
       if (parsed.length === 0) {
-        setError('No prices found');
+        setStations((current) => (current.length > 0 ? current : DEMO_STATIONS.slice(0, effectiveMaxStations)));
+        setError(null);
+        setLastUpdated(null);
       } else {
-        setStations(parsed.slice(0, maxStations));
+        setStations(parsed.slice(0, effectiveMaxStations));
         setLastUpdated(new Date());
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to fetch');
+      console.warn('Failed to fetch gas prices:', e);
+      setStations((current) => (current.length > 0 ? current : DEMO_STATIONS.slice(0, effectiveMaxStations)));
+      setError(null);
     } finally {
       setLoading(false);
     }
-  }, [url, useCorsProxy, refreshInterval, maxStations]);
+  }, [effectiveMaxStations, galleryDemo, url, useCorsProxy, refreshInterval]);
 
   useEffect(() => {
     fetchPrices();
@@ -156,7 +180,7 @@ export default function GasPrices({ config: cfg, theme }: WidgetComponentProps) 
     <ThemedContainer
       theme={theme}
       color="background"
-      className="flex flex-col h-full p-4 gap-2 overflow-hidden"
+      className="flex h-full flex-col gap-2 overflow-hidden p-3"
       style={{
         backgroundColor: panelBg,
         backgroundImage: 'linear-gradient(var(--widget-theme-tint, transparent), var(--widget-theme-tint, transparent))',
@@ -164,9 +188,9 @@ export default function GasPrices({ config: cfg, theme }: WidgetComponentProps) 
     >
       {/* Header */}
       <div className="flex items-center gap-2">
-        <span className="text-2xl">⛽</span>
+        <span className="text-xl">⛽</span>
         <div>
-          <h2 className="text-lg font-bold leading-tight" style={{ color: headlineColor }}>Gas Prices</h2>
+          <h2 className="text-base font-bold leading-tight" style={{ color: headlineColor }}>Gas Prices</h2>
           <p className="text-xs" style={{ color: tertiaryText }}>Prince George, BC</p>
         </div>
       </div>
@@ -177,7 +201,7 @@ export default function GasPrices({ config: cfg, theme }: WidgetComponentProps) 
         </div>
       )}
 
-      {error && (
+      {error && !stations.length && (
         <div className="text-sm" style={{ color: theme.accent }}>{error}</div>
       )}
 
@@ -185,15 +209,15 @@ export default function GasPrices({ config: cfg, theme }: WidgetComponentProps) 
         <>
           {/* Average price banner */}
           <div
-            className="rounded-lg p-3 text-center"
+            className="rounded-lg p-2.5 text-center"
             style={{
               backgroundColor: bannerBg,
               border: `1px solid ${bannerBorder}`,
             }}
           >
             <div className="text-xs uppercase tracking-wide" style={{ color: secondaryText }}>Average Price</div>
-            <div className="text-3xl font-bold" style={{ color: headlineColor }}>
-              {avgPrice.toFixed(1)}<span className="text-lg">¢/L</span>
+            <div className="text-[1.75rem] font-bold leading-none" style={{ color: headlineColor }}>
+              {avgPrice.toFixed(1)}<span className="text-base">¢/L</span>
             </div>
             <div className="flex justify-center gap-4 mt-1 text-xs" style={{ color: secondaryText }}>
               <span>Low: {lowestPrice.toFixed(1)}¢</span>
@@ -206,7 +230,7 @@ export default function GasPrices({ config: cfg, theme }: WidgetComponentProps) 
             {stations.map((st, i) => (
               <div
                 key={i}
-                className="flex items-center justify-between rounded px-2 py-1.5 transition-colors"
+                className="flex items-center justify-between rounded px-2 py-1 transition-colors"
                 style={{ backgroundColor: rowBg }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = rowHoverBg;
@@ -216,11 +240,11 @@ export default function GasPrices({ config: cfg, theme }: WidgetComponentProps) 
                 }}
               >
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium truncate" style={{ color: headlineColor }}>{st.name}</div>
+                  <div className="text-[13px] font-medium truncate" style={{ color: headlineColor }}>{st.name}</div>
                   <div className="text-xs truncate" style={{ color: tertiaryText }}>{st.address}</div>
                 </div>
                 <div
-                  className="text-sm font-bold ml-2 whitespace-nowrap"
+                  className="text-[13px] font-bold ml-2 whitespace-nowrap"
                   style={{
                     color:
                       st.price === lowestPrice

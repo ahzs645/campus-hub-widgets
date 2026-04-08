@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
-import { useEvents, type CalendarEvent, buildProxyUrl } from '@firstform/campus-hub-widget-sdk';
+import { useEvents, type CalendarEvent } from '@firstform/campus-hub-widget-sdk';
 import {
   ThemedCard,
   Badge,
@@ -56,16 +56,15 @@ export default function EventsList({ config, theme }: WidgetComponentProps) {
   const selectedCategories = eventsConfig?.selectedCategories;
   const useCorsProxy = eventsConfig?.useCorsProxy ?? true;
 
-  const resolvedApiUrl = apiUrl && useCorsProxy ? buildProxyUrl(apiUrl) : apiUrl;
-
   const events = useEvents({
-    apiUrl: resolvedApiUrl,
+    apiUrl,
     sourceType,
     cacheTtlSeconds,
     maxItems,
     pollIntervalMs: 30_000,
     defaultEvents: eventsConfig?.events ?? DEFAULT_EVENTS,
     selectedCategories,
+    useCorsProxy,
   });
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -222,6 +221,7 @@ export default function EventsList({ config, theme }: WidgetComponentProps) {
             {displayEvents.map((event, index) => (
               <div
                 key={event.id ?? index}
+                data-layout-diagnostic-ignore={index === currentIndex ? undefined : 'true'}
                 className="absolute inset-0 flex items-start transition-all duration-500 ease-in-out"
                 style={{
                   opacity: index === currentIndex ? 1 : 0,
@@ -253,6 +253,7 @@ export default function EventsList({ config, theme }: WidgetComponentProps) {
               return (
                 <div
                   key={pageIdx}
+                  data-layout-diagnostic-ignore={isActive ? undefined : 'true'}
                   className="absolute inset-0 transition-all duration-500 ease-in-out"
                   style={{
                     opacity: isActive ? 1 : 0,

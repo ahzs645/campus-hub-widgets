@@ -170,7 +170,7 @@ export default function AuroraForecast({
   return (
     <div
       ref={containerRef}
-      className="w-full h-full overflow-hidden"
+      className="flex h-full w-full items-center justify-center overflow-hidden"
       style={{ background: AURORA_GRADIENT }}
     >
       <div
@@ -178,7 +178,7 @@ export default function AuroraForecast({
           width: DW,
           height: DH,
           transform: `scale(${scale})`,
-          transformOrigin: 'top left',
+          transformOrigin: 'center center',
         }}
         className={`flex flex-col p-6 ${!isLandscape ? 'items-center' : ''}`}
       >

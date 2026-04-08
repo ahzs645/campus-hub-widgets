@@ -84,7 +84,7 @@ export default function GoogleCalendar({ config, theme }: WidgetComponentProps) 
   const [calTitle, setCalTitle] = useState(customTitle || 'Campus Calendar');
   const [error, setError] = useState<string | null>(null);
 
-  const { containerRef, scale } = useFitScale(480, 600);
+  const { containerRef, scale } = useFitScale(410, 600);
 
   const fetchEvents = useCallback(async () => {
     if (!calendarId || !apiKey) {
@@ -153,13 +153,14 @@ export default function GoogleCalendar({ config, theme }: WidgetComponentProps) 
       theme={theme}
       color="primary"
       opacity="10"
+      className="flex items-center justify-center"
     >
       <div
         style={{
-          width: 480,
+          width: 410,
           height: 600,
           transform: `scale(${scale})`,
-          transformOrigin: 'top left',
+          transformOrigin: 'center center',
         }}
         className="flex flex-col h-full"
       >

@@ -9,6 +9,7 @@ import './coin-dice/CoinDice';
 import './word-of-the-day/WordOfTheDay';
 import './flashcard/Flashcard';
 import './trivia/TriviaGame';
+import './fortune-cookie/FortuneCookie';
 
 // Register lazy loaders for display mode
 registerWidgetLoader('nothing-glyph', () => import('./nothing-glyph/NothingGlyph'));
@@ -19,6 +20,7 @@ registerWidgetLoader('coin-dice', () => import('./coin-dice/CoinDice'));
 registerWidgetLoader('word-of-the-day', () => import('./word-of-the-day/WordOfTheDay'));
 registerWidgetLoader('flashcard', () => import('./flashcard/Flashcard'));
 registerWidgetLoader('trivia-game', () => import('./trivia/TriviaGame'));
+registerWidgetLoader('fortune-cookie', () => import('./fortune-cookie/FortuneCookie'));
 
 // Re-export MODES from nothing-glyph for external consumers
 export { MODES as NOTHING_GLYPH_MODES } from './nothing-glyph/NothingGlyph';

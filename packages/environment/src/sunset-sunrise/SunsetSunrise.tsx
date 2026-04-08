@@ -237,10 +237,10 @@ export default function SunsetSunrise({ config, theme }: WidgetComponentProps) {
   const showCompactDetails = showDetails && !compact;
   const padX = clamp(resolvedWidth * 0.065, 12, 24);
   const padY = clamp(resolvedHeight * 0.07, 10, 20);
-  const titleSize = clamp(Math.min(resolvedWidth * 0.048, resolvedHeight * 0.11), 11, 16);
-  const statusSize = clamp(Math.min(resolvedWidth * 0.055, resolvedHeight * 0.12), 12, 18);
-  const labelSize = clamp(Math.min(resolvedWidth * 0.042, resolvedHeight * 0.1), 11, 14);
-  const valueSize = clamp(Math.min(resolvedWidth * 0.072, resolvedHeight * 0.18), 20, 32);
+  const titleSize = clamp(Math.min(resolvedWidth * 0.052, resolvedHeight * 0.115), 11, 18);
+  const statusSize = clamp(Math.min(resolvedWidth * 0.06, resolvedHeight * 0.13), 12, 20);
+  const labelSize = clamp(Math.min(resolvedWidth * 0.044, resolvedHeight * 0.102), 11, 15);
+  const valueSize = clamp(Math.min(resolvedWidth * 0.08, resolvedHeight * 0.19), 20, 38);
   const metaSize = clamp(Math.min(resolvedWidth * 0.038, resolvedHeight * 0.09), 10, 13);
   const twilightSize = clamp(metaSize * 0.92, 9, 12);
   const contentGap = clamp(resolvedHeight * 0.025, 6, 12);

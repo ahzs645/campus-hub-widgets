@@ -23,6 +23,7 @@ interface CalendarConfig {
   daysAhead?: number;
   title?: string;
   useCorsProxy?: boolean;
+  galleryDemo?: boolean;
 }
 
 const DEMO_EVENTS: CalendarEvent[] = [
@@ -97,14 +98,16 @@ export default function CalendarWidget({ config, theme }: WidgetComponentProps) 
   const daysAhead = c?.daysAhead ?? 7;
   const customTitle = c?.title?.trim() || '';
   const useCorsProxy = c?.useCorsProxy ?? true;
+  const galleryDemo = c?.galleryDemo ?? false;
 
   const [events, setEvents] = useState<CalendarEvent[]>(DEMO_EVENTS);
   const [error, setError] = useState<string | null>(null);
-  const { containerRef, scale } = useFitScale(480, 600);
+  const { containerRef, scale } = useFitScale(410, 600);
 
   const fetchEvents = useCallback(async () => {
-    if (!calendarUrl) {
+    if (!calendarUrl || galleryDemo) {
       setEvents(DEMO_EVENTS);
+      setError(null);
       return;
     }
     try {
@@ -136,10 +139,13 @@ export default function CalendarWidget({ config, theme }: WidgetComponentProps) 
         .slice(0, maxEvents);
 
       setEvents(mapped.length > 0 ? mapped : DEMO_EVENTS);
+      setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load calendar');
+      console.warn('Failed to load calendar:', err);
+      setEvents((current) => (current.length > 0 ? current : DEMO_EVENTS));
+      setError(null);
     }
-  }, [calendarUrl, sourceFormat, refreshInterval, daysAhead, maxEvents, useCorsProxy]);
+  }, [calendarUrl, galleryDemo, sourceFormat, refreshInterval, daysAhead, maxEvents, useCorsProxy]);
 
   useEffect(() => {
     fetchEvents();
@@ -163,21 +169,27 @@ export default function CalendarWidget({ config, theme }: WidgetComponentProps) 
   }
 
   return (
-    <ThemedContainer ref={containerRef} theme={theme} color="primary" opacity="10">
+    <ThemedContainer
+      ref={containerRef}
+      theme={theme}
+      color="primary"
+      opacity="10"
+      className="flex items-center justify-center"
+    >
       <div
-        style={{ width: 480, height: 600, transform: `scale(${scale})`, transformOrigin: 'top left' }}
+        style={{ width: 410, height: 600, transform: `scale(${scale})`, transformOrigin: 'center center' }}
         className="flex flex-col h-full"
       >
         {/* Header */}
         <div className="flex items-center gap-3 px-5 py-4 shrink-0" style={{ borderBottom: `1px solid ${theme.accent}20` }}>
           <span style={{ color: theme.accent }}><AppIcon name="calendarRange" className="w-5 h-5" /></span>
           <span className="text-lg font-semibold text-white truncate">{customTitle || 'Calendar'}</span>
-          {!calendarUrl && (
+          {(!calendarUrl || galleryDemo) && (
             <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/50 ml-auto">Demo</span>
           )}
         </div>
 
-        {error && <div className="px-5 py-3 text-sm text-red-400 shrink-0">{error}</div>}
+        {error && events.length === 0 && <div className="px-5 py-3 text-sm text-red-400 shrink-0">{error}</div>}
 
         {/* Events */}
         <div className="flex-1 overflow-hidden px-5 py-3">

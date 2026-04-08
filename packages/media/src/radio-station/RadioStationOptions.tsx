@@ -236,23 +236,25 @@ export default function RadioStationOptions({ data, onChange }: WidgetOptionsPro
       <div className="border-t border-[color:var(--ui-item-border)] pt-6">
         <h4 className="mb-4 font-semibold text-[var(--ui-text)]">Preview</h4>
         <div className="overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(145deg,#08131f_0%,#11283d_55%,#1c3c5d_100%)] p-5 text-white">
-          <div className="flex items-center gap-4">
-            <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/10">
-              {state.showArtwork && state.artworkUrl ? (
-                <img src={state.artworkUrl} alt="" className="h-full w-full object-cover" />
-              ) : (
-                <AppIcon name="music" className="h-8 w-8 text-white/80" />
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-200/80">
-                {state.provider || 'Radio Station'}
+          <div className="flex items-end gap-4">
+            <div className="shrink-0">
+              <div className="flex h-16 items-end justify-start">
+                {state.showArtwork && state.artworkUrl ? (
+                  <img src={state.artworkUrl} alt="" className="block h-full w-auto max-w-[5rem] object-contain object-left-bottom" />
+                ) : (
+                  <div className="flex h-full w-16 items-center justify-center">
+                    <AppIcon name="music" className="h-8 w-8 text-white/80" />
+                  </div>
+                )}
               </div>
+            </div>
+
+            <div className="min-w-0 flex-1">
               <div className="truncate text-lg font-semibold">
                 {state.stationName || 'Station name'}
               </div>
               <div className="truncate text-sm text-white/65">
-                {state.stationTagline || 'Current track metadata will appear here'}
+                {state.stationTagline || state.provider || 'Current track metadata will appear here'}
               </div>
             </div>
           </div>

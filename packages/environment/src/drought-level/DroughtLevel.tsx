@@ -150,7 +150,7 @@ export default function DroughtLevel({
   }, [fetchData, refreshMs]);
 
   const { containerRef, scale, designWidth: DESIGN_W, designHeight: DESIGN_H, isLandscape } = useAdaptiveFitScale({
-    landscape: { w: 380, h: 300 },
+    landscape: { w: 340, h: 280 },
     portrait: { w: 260, h: 400 },
   });
 
@@ -365,13 +365,14 @@ export default function DroughtLevel({
       theme={theme}
       color="primary"
       opacity="20"
+      className="flex items-center justify-center"
     >
       <div
         style={{
           width: DESIGN_W,
           height: DESIGN_H,
           transform: `scale(${scale})`,
-          transformOrigin: 'top left',
+          transformOrigin: 'center center',
         }}
         className={`flex flex-col p-6 ${!isLandscape ? 'items-center' : ''}`}
       >

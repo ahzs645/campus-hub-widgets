@@ -187,13 +187,14 @@ export default function UvIndex({ config, theme }: WidgetComponentProps) {
       theme={theme}
       color="primary"
       opacity="20"
+      className="flex items-center justify-center"
     >
       <div
         style={{
           width: DESIGN_W,
           height: DESIGN_H,
           transform: `scale(${scale})`,
-          transformOrigin: 'top left',
+          transformOrigin: 'center center',
         }}
         className={`flex flex-col p-6 ${!isLandscape ? 'items-center' : ''}`}
       >

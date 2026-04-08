@@ -320,24 +320,32 @@ export default function Countdown({ config, theme }: WidgetComponentProps) {
 
   const useCompactLayout =
     !isLandscape ||
-    (containerWidth > 0 && units.length > 0 && containerWidth / units.length < 135);
+    (containerWidth > 0 && units.length > 0 && containerWidth / units.length < 92);
 
   const resolvedWidth = DESIGN_W;
   const resolvedHeight = containerHeight > 0 ? Math.max(DESIGN_H, containerHeight / scale) : DESIGN_H;
-  const sidePaddingX = clamp(resolvedWidth * (useCompactLayout ? 0.06 : 0.05), 16, 36);
-  const sidePaddingY = clamp(resolvedHeight * (useCompactLayout ? 0.1 : 0.08), 16, 28);
+  const sidePaddingX = clamp(resolvedWidth * (useCompactLayout ? 0.045 : 0.04), 12, 28);
+  const sidePaddingY = clamp(resolvedHeight * (useCompactLayout ? 0.07 : 0.065), 12, 24);
   const contentWidth = Math.max(resolvedWidth - sidePaddingX * 2, 220);
   const expandedLayout = !useCompactLayout && units.length > 0;
-  const titleFontSize = clamp(Math.min(resolvedWidth * 0.04, resolvedHeight * 0.16), 14, 28);
-  const titleMarginBottom = clamp(resolvedHeight * 0.055, 10, 18);
-  const dateFontSize = clamp(Math.min(resolvedWidth * 0.022, resolvedHeight * 0.075), 10, 16);
-  const dateMarginTop = clamp(resolvedHeight * 0.05, 10, 18);
+  const titleFontSize = clamp(Math.min(resolvedWidth * 0.052, resolvedHeight * 0.19), 16, 34);
+  const titleMarginBottom = clamp(resolvedHeight * 0.04, 8, 16);
+  const dateFontSize = clamp(Math.min(resolvedWidth * 0.026, resolvedHeight * 0.09), 10, 18);
+  const dateMarginTop = clamp(resolvedHeight * 0.038, 8, 14);
   const compactGap = clamp(contentWidth * 0.03, 10, 18);
   const separatorFontSize = clamp(Math.min(contentWidth / 18, resolvedHeight * 0.2), 22, 48);
   const separatorMarginX = clamp(separatorFontSize * 0.12, 2, 8);
   const separatorMarginTop = clamp(resolvedHeight * 0.01, 2, 8);
   const separatorSlot = separatorFontSize * 0.55 + separatorMarginX * 2;
   const expandedGap = clamp(contentWidth * 0.012, 8, 18);
+  const compactUnitWidth = useCompactLayout
+    ? clamp(
+        (contentWidth - compactGap * Math.max(units.length - 1, 0)) /
+          Math.max(units.length, 1),
+        56,
+        108
+      )
+    : undefined;
   const unitWidth = expandedLayout
     ? clamp(
         (contentWidth - separatorSlot * Math.max(units.length - 1, 0) - expandedGap * Math.max(units.length - 1, 0)) /
@@ -348,12 +356,26 @@ export default function Countdown({ config, theme }: WidgetComponentProps) {
     : undefined;
   const valueFontSize = expandedLayout && unitWidth
     ? clamp(Math.min(unitWidth * 0.58, resolvedHeight * 0.28), 36, 64)
-    : 36;
-  const chipPaddingX = expandedLayout && unitWidth ? clamp(unitWidth * 0.12, 10, 16) : 8;
-  const chipPaddingY = expandedLayout ? clamp(valueFontSize * 0.2, 7, 14) : 6;
-  const chipRadius = expandedLayout && unitWidth ? clamp(unitWidth * 0.14, 10, 18) : 8;
-  const labelFontSize = expandedLayout ? clamp(valueFontSize * 0.27, 11, 16) : 12;
-  const labelMarginTop = expandedLayout ? clamp(resolvedHeight * 0.03, 6, 12) : 6;
+    : clamp(
+        Math.min((compactUnitWidth ?? 72) * 0.6, resolvedHeight * 0.28),
+        34,
+        56
+      );
+  const chipPaddingX = expandedLayout && unitWidth
+    ? clamp(unitWidth * 0.12, 10, 16)
+    : clamp((compactUnitWidth ?? 72) * 0.14, 8, 14);
+  const chipPaddingY = expandedLayout
+    ? clamp(valueFontSize * 0.2, 7, 14)
+    : clamp(valueFontSize * 0.18, 6, 12);
+  const chipRadius = expandedLayout && unitWidth
+    ? clamp(unitWidth * 0.14, 10, 18)
+    : clamp((compactUnitWidth ?? 72) * 0.16, 8, 16);
+  const labelFontSize = expandedLayout
+    ? clamp(valueFontSize * 0.27, 11, 16)
+    : clamp(valueFontSize * 0.24, 11, 15);
+  const labelMarginTop = expandedLayout
+    ? clamp(resolvedHeight * 0.03, 6, 12)
+    : clamp(resolvedHeight * 0.022, 4, 8);
 
   const eventLabel = currentMilestone?.label || '';
   const eventEmoji = currentMilestone?.emoji || '';
@@ -445,7 +467,7 @@ export default function Countdown({ config, theme }: WidgetComponentProps) {
                   label={unit.label}
                   padWidth={unit.padWidth}
                   accent={theme.accent}
-                  width={unitWidth}
+                  width={expandedLayout ? unitWidth : compactUnitWidth}
                   valueFontSize={valueFontSize}
                   labelFontSize={labelFontSize}
                   chipPaddingX={chipPaddingX}

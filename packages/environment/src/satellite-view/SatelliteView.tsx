@@ -160,6 +160,7 @@ export default function SatelliteView({ config, theme }: WidgetComponentProps) {
           return (
             <img
               key={key}
+              data-layout-diagnostic-ignore="true"
               src={isError ? undefined : tileUrl(tx, ty, zoom, year)}
               alt=""
               width={TILE_SIZE}
@@ -182,6 +183,7 @@ export default function SatelliteView({ config, theme }: WidgetComponentProps) {
 
         {/* Center crosshair */}
         <div
+          data-layout-diagnostic-ignore="true"
           style={{
             position: 'absolute',
             left: viewportWidth / 2 - crosshairSize / 2,
@@ -208,6 +210,7 @@ export default function SatelliteView({ config, theme }: WidgetComponentProps) {
         {/* Label overlay */}
         {showLabel && (
           <div
+            data-layout-diagnostic-ignore="true"
             style={{
               position: 'absolute',
               bottom: 0,

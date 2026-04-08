@@ -535,7 +535,7 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
 
   // Adaptive design dimensions: landscape uses wide layout, portrait stacks vertically
   const { containerRef, scale, designWidth, designHeight, isLandscape } = useAdaptiveFitScale({
-    landscape: { w: 340, h: 260 },
+    landscape: { w: 340, h: 208 },
     portrait: { w: 240, h: 360 },
   });
 
@@ -668,13 +668,14 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
       theme={theme}
       color="primary"
       opacity="20"
+      className="flex items-center justify-center"
     >
       <div
         style={{
           width: designWidth,
           height: designHeight,
           transform: `scale(${scale})`,
-          transformOrigin: 'top left',
+          transformOrigin: 'center center',
         }}
         className={`flex flex-col ${isLandscape ? 'justify-center' : 'items-center justify-center'} p-6`}
       >

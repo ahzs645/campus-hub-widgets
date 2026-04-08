@@ -15,6 +15,7 @@ interface WeatherConfig {
   location?: string;
   units?: 'metric' | 'imperial';
   showForecast?: boolean;
+  useSampleData?: boolean;
 }
 
 interface GeoResult {
@@ -41,6 +42,30 @@ interface ForecastResponse {
     weather_code: number[];
   };
 }
+
+const SAMPLE_WEATHER_DATA: ForecastResponse = {
+  current: {
+    temperature_2m: 18,
+    weather_code: 2,
+    wind_speed_10m: 11,
+    relative_humidity_2m: 62,
+    is_day: 1,
+  },
+  daily: {
+    time: [
+      '2026-04-08',
+      '2026-04-09',
+      '2026-04-10',
+      '2026-04-11',
+      '2026-04-12',
+      '2026-04-13',
+      '2026-04-14',
+    ],
+    temperature_2m_max: [19, 18, 16, 17, 20, 21, 19],
+    temperature_2m_min: [11, 10, 9, 8, 10, 11, 9],
+    weather_code: [2, 3, 61, 1, 0, 2, 45],
+  },
+};
 
 function getWeatherEmoji(code: number, isDay: boolean) {
   if (code === 0) return isDay ? '☀️' : '🌙';
@@ -109,13 +134,24 @@ export default function MacOSWeather({ config }: WidgetComponentProps) {
   const location = weatherConfig.location?.trim() || 'San Francisco';
   const units = weatherConfig.units ?? 'metric';
   const showForecast = weatherConfig.showForecast ?? true;
+  const useSampleData = weatherConfig.useSampleData ?? false;
 
   const [label, setLabel] = useState(location);
-  const [data, setData] = useState<ForecastResponse | null>(null);
+  const [data, setData] = useState<ForecastResponse | null>(
+    useSampleData ? SAMPLE_WEATHER_DATA : null,
+  );
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!useSampleData);
 
   useEffect(() => {
+    if (useSampleData) {
+      setLabel('San Francisco, US');
+      setData(SAMPLE_WEATHER_DATA);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     let cancelled = false;
 
     const run = async () => {
@@ -179,7 +215,7 @@ export default function MacOSWeather({ config }: WidgetComponentProps) {
       cancelled = true;
       window.clearInterval(refresh);
     };
-  }, [location, units]);
+  }, [location, units, useSampleData]);
 
   const gradient = useMemo(() => {
     if (!data) return 'linear-gradient(180deg, #5A8AAF 0%, #8BAFC5 40%, #B0C8D8 100%)';
