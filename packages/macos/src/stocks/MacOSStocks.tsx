@@ -10,7 +10,6 @@ import {
 import MacOSStocksOptions from './MacOSStocksOptions';
 import {
   EmptyState,
-  MACOS_MONO_FONT,
 } from '../shared/ui';
 
 interface StocksConfig {
@@ -65,11 +64,6 @@ function buildLinePath(points: ChartPoint[], width: number, height: number) {
       return `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
     })
     .join(' ');
-}
-
-function shortName(symbol: string, name: string) {
-  if (symbol.startsWith('^')) return symbol.slice(1);
-  return name.length > 18 ? symbol : name;
 }
 
 export default function MacOSStocks({ config }: WidgetComponentProps) {
@@ -128,8 +122,6 @@ export default function MacOSStocks({ config }: WidgetComponentProps) {
     };
   }, [range, selectedSymbol, symbols]);
 
-  const selectedQuote =
-    data?.quotes.find((quote) => quote.symbol === selectedSymbol) ?? data?.quotes[0] ?? null;
   const chartPath = data?.chart.length
     ? buildLinePath(data.chart, 320, 120)
     : '';
@@ -186,6 +178,7 @@ export default function MacOSStocks({ config }: WidgetComponentProps) {
                         ? '1px solid rgba(255,255,255,0.06)'
                         : '1px solid transparent',
                   }}
+                  onPointerDown={(event) => event.stopPropagation()}
                   onClick={() => setSelectedSymbol(quote.symbol)}
                 >
                   <span
@@ -238,17 +231,19 @@ export default function MacOSStocks({ config }: WidgetComponentProps) {
                 <button
                   key={option.value}
                   type="button"
+                  onPointerDown={(event) => event.stopPropagation()}
                   onClick={() => setRange(option.value)}
                   style={{
                     fontSize: 11,
                     fontWeight: range === option.value ? 700 : 400,
                     color: range === option.value ? '#FFF' : 'rgba(255,255,255,0.45)',
                     background:
-                      range === option.value ? 'rgba(255,255,255,0.12)' : 'transparent',
-                    borderRadius: 4,
-                    padding: '1px 6px',
+                      range === option.value ? 'rgba(255,255,255,0.15)' : 'transparent',
+                    borderRadius: 9999,
+                    padding: '2px 8px',
                     border: 'none',
                     cursor: 'pointer',
+                    letterSpacing: '0.02em',
                   }}
                 >
                   {option.label}
@@ -256,10 +251,7 @@ export default function MacOSStocks({ config }: WidgetComponentProps) {
               ))}
             </div>
 
-            <div
-              className="overflow-hidden rounded-[12px]"
-              style={{ background: 'rgba(255,255,255,0.05)' }}
-            >
+            <div className="flex flex-1 items-end justify-center">
               {chartPath ? (
                 <svg viewBox="0 0 320 120" className="block h-28 w-full">
                   <defs>
@@ -283,6 +275,10 @@ export default function MacOSStocks({ config }: WidgetComponentProps) {
                     strokeLinejoin="round"
                   />
                 </svg>
+              ) : data ? (
+                <div className="flex h-28 items-center justify-center text-sm text-white/35">
+                  History unavailable
+                </div>
               ) : (
                 <div className="flex h-28 items-center justify-center text-sm text-white/45">
                   Loading chart…
@@ -291,14 +287,14 @@ export default function MacOSStocks({ config }: WidgetComponentProps) {
             </div>
 
             <div
-              className="pt-1 text-center"
+              className="mt-1 text-center"
               style={{
-                color: 'rgba(255,255,255,0.4)',
-                fontSize: 9,
-                fontFamily: MACOS_MONO_FONT,
+                fontSize: 10,
+                color: 'rgba(255,255,255,0.3)',
+                letterSpacing: '0.02em',
               }}
             >
-              {selectedQuote ? shortName(selectedQuote.symbol, selectedQuote.name) : 'Market snapshot'}
+              Delayed
             </div>
           </div>
         </>

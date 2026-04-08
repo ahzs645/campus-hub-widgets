@@ -1,6 +1,11 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { FormInput, FormSelect, FormSwitch } from '@firstform/campus-hub-widget-sdk';
+import {
+  FormInput,
+  FormSelect,
+  FormSwitch,
+  useWidgetOptionsSurface,
+} from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
 interface RichTextData {
@@ -13,6 +18,7 @@ interface RichTextData {
 }
 
 export default function RichTextOptions({ data, onChange }: WidgetOptionsProps) {
+  const surface = useWidgetOptionsSurface();
   const [state, setState] = useState<RichTextData>({
     content: (data?.content as string) ?? '',
     scrollSpeed: (data?.scrollSpeed as number) ?? 40,
@@ -49,25 +55,27 @@ export default function RichTextOptions({ data, onChange }: WidgetOptionsProps) 
 
   return (
     <div className="space-y-6 w-full max-w-xl mx-auto">
-      <div className="space-y-4">
-        <h3 className="font-semibold text-[var(--ui-text)] text-center">Content</h3>
+      {surface !== 'gallery' && (
+        <div className="space-y-4">
+          <h3 className="font-semibold text-[var(--ui-text)] text-center">Content</h3>
 
-        <div>
-          <label className="block text-sm font-medium text-[var(--ui-text)] mb-1">
-            Text Content (Markdown supported)
-          </label>
-          <textarea
-            value={state.content}
-            onChange={handleContentChange}
-            rows={10}
-            placeholder="## Heading&#10;&#10;**Bold text** and *italic text*&#10;&#10;> Blockquote&#10;&#10;---&#10;&#10;Regular paragraph text..."
-            className="w-full rounded-lg border border-[color:var(--ui-item-border)] bg-[var(--ui-item-bg)] text-[var(--ui-text)] px-3 py-2 text-sm font-mono resize-y focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
-          />
-          <div className="text-xs text-[var(--ui-text-muted)] mt-1">
-            Supports: # headings, **bold**, *italic*, &gt; blockquotes, --- horizontal rules
+          <div>
+            <label className="block text-sm font-medium text-[var(--ui-text)] mb-1">
+              Text Content (Markdown supported)
+            </label>
+            <textarea
+              value={state.content}
+              onChange={handleContentChange}
+              rows={10}
+              placeholder="## Heading&#10;&#10;**Bold text** and *italic text*&#10;&#10;> Blockquote&#10;&#10;---&#10;&#10;Regular paragraph text..."
+              className="w-full rounded-lg border border-[color:var(--ui-item-border)] bg-[var(--ui-item-bg)] text-[var(--ui-text)] px-3 py-2 text-sm font-mono resize-y focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+            />
+            <div className="text-xs text-[var(--ui-text-muted)] mt-1">
+              Supports: # headings, **bold**, *italic*, &gt; blockquotes, --- horizontal rules
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       <div className="space-y-4 border-t border-[color:var(--ui-item-border)] pt-6">
         <h3 className="font-semibold text-[var(--ui-text)] text-center">Scroll Settings</h3>

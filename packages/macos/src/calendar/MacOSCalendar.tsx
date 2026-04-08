@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import {
   registerWidget,
   useEvents,
+  useFitScale,
   type WidgetComponentProps,
 } from '@firstform/campus-hub-widget-sdk';
 import MacOSCalendarOptions from './MacOSCalendarOptions';
@@ -62,6 +63,7 @@ function isSameDay(left: Date, right: Date) {
 
 export default function MacOSCalendar({ config }: WidgetComponentProps) {
   const calendarConfig = (config ?? {}) as CalendarConfig;
+  const { containerRef, containerWidth, containerHeight } = useFitScale(384, 288);
   const now = new Date();
   const monthStart = startOfMonth(now);
   const gridStart = new Date(monthStart);
@@ -109,9 +111,18 @@ export default function MacOSCalendar({ config }: WidgetComponentProps) {
   const brown = '#A33A2A';
   const brownDark = '#7C2418';
   const brownLight = '#C4503A';
+  const isCompact =
+    containerWidth > 0 &&
+    containerHeight > 0 &&
+    (containerWidth < 340 || containerHeight < 270);
+  const dayHeaderSize = isCompact ? 11 : 14;
+  const dayChipSize = isCompact ? 22 : 26;
+  const dayNumberSize = isCompact ? 13 : 15;
+  const rowPaddingY = isCompact ? 4 : 6;
 
   return (
     <div
+      ref={containerRef}
       className="flex h-full min-h-0 flex-col overflow-hidden rounded-[20px]"
       style={{
         background: `linear-gradient(180deg, ${brownLight} 0%, ${brown} 30%, ${brownDark} 100%)`,
@@ -119,58 +130,106 @@ export default function MacOSCalendar({ config }: WidgetComponentProps) {
           '0 8px 24px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.16)',
       }}
     >
-      <div className="flex gap-2 px-3 pt-3 pb-2">
-        <div
-          className="relative flex flex-1 flex-col items-center justify-center"
-          style={{
-            aspectRatio: '1',
-            borderRadius: 8,
-            background: 'linear-gradient(180deg, #FFFFFF 0%, #F0EDE8 100%)',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.8)',
-          }}
-        >
-          <div
-            className="font-bold"
-            style={{
-              fontSize: 16,
-              color: brown,
-              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-            }}
-          >
-            {dayAbbrev}
+      {isCompact ? (
+        <div className="flex items-center justify-between px-3 pt-3 pb-2">
+          <div className="min-w-0">
+            <div
+              className="font-bold"
+              style={{
+                fontSize: 12,
+                color: 'rgba(255,255,255,0.72)',
+                fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                letterSpacing: '0.08em',
+              }}
+            >
+              {dayAbbrev}
+            </div>
+            <div
+              className="truncate font-bold leading-none"
+              style={{
+                fontSize: 26,
+                color: '#FFF',
+                fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+              }}
+            >
+              {monthAbbrev} {now.getDate()}
+            </div>
           </div>
           <div
-            className="font-bold leading-tight"
+            className="shrink-0 rounded-full px-3 py-1"
             style={{
-              fontSize: 24,
-              color: brown,
-              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+              background: 'rgba(255,255,255,0.18)',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.2)',
             }}
           >
-            {monthAbbrev}
-          </div>
-        </div>
-        <div
-          className="relative flex flex-1 items-center justify-center"
-          style={{
-            aspectRatio: '1',
-            borderRadius: 8,
-            background: 'linear-gradient(180deg, #FFFFFF 0%, #F0EDE8 100%)',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.8)',
-          }}
-        >
-          <div
-            className="font-bold leading-none"
-            style={{
-              fontSize: 56,
-              color: brown,
-              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-            }}
-          >
-            {now.getDate()}
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                color: 'rgba(255,255,255,0.85)',
+                fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+              }}
+            >
+              {events.length} event{events.length === 1 ? '' : 's'}
+            </span>
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="flex gap-2 px-3 pt-3 pb-2">
+          <div
+            className="relative flex flex-1 flex-col items-center justify-center"
+            style={{
+              aspectRatio: '1',
+              borderRadius: 8,
+              background: 'linear-gradient(180deg, #FFFFFF 0%, #F0EDE8 100%)',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.8)',
+            }}
+          >
+            <div
+              className="font-bold"
+              style={{
+                fontSize: 16,
+                color: brown,
+                fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+              }}
+            >
+              {dayAbbrev}
+            </div>
+            <div
+              className="font-bold leading-tight"
+              style={{
+                fontSize: 24,
+                color: brown,
+                fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+              }}
+            >
+              {monthAbbrev}
+            </div>
+          </div>
+          <div
+            className="relative flex flex-1 items-center justify-center"
+            style={{
+              aspectRatio: '1',
+              borderRadius: 8,
+              background: 'linear-gradient(180deg, #FFFFFF 0%, #F0EDE8 100%)',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.8)',
+            }}
+          >
+            <div
+              className="font-bold leading-none"
+              style={{
+                fontSize: 56,
+                color: brown,
+                fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+              }}
+            >
+              {now.getDate()}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex min-h-0 flex-1 flex-col px-3 pb-2">
         <div
@@ -182,7 +241,7 @@ export default function MacOSCalendar({ config }: WidgetComponentProps) {
               key={`${day}-${index}`}
               className="text-center font-bold"
               style={{
-                fontSize: 14,
+                fontSize: dayHeaderSize,
                 color: 'rgba(255,255,255,0.6)',
                 fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
               }}
@@ -205,14 +264,18 @@ export default function MacOSCalendar({ config }: WidgetComponentProps) {
               {days.slice(weekIndex * 7, weekIndex * 7 + 7).map((day) => (
                 <div
                   key={day.date.toISOString()}
-                  className="relative flex items-center justify-center py-[6px]"
-                  style={{ opacity: day.inMonth ? 1 : 0 }}
+                  className="relative flex items-center justify-center"
+                  style={{
+                    opacity: day.inMonth ? 1 : 0,
+                    paddingTop: rowPaddingY,
+                    paddingBottom: rowPaddingY,
+                  }}
                 >
                   <span
                     className="flex items-center justify-center leading-none"
                     style={{
-                      width: 26,
-                      height: 26,
+                      width: dayChipSize,
+                      height: dayChipSize,
                       borderRadius: 6,
                       backgroundColor: day.isToday
                         ? 'rgba(255,255,255,0.25)'
@@ -221,7 +284,7 @@ export default function MacOSCalendar({ config }: WidgetComponentProps) {
                         ? '#FFF'
                         : 'rgba(255,255,255,0.55)',
                       fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-                      fontSize: 15,
+                      fontSize: dayNumberSize,
                       fontWeight: day.isToday ? 800 : 700,
                     }}
                   >
@@ -257,6 +320,7 @@ export default function MacOSCalendar({ config }: WidgetComponentProps) {
             fontSize: 10,
             color: 'rgba(255,255,255,0.45)',
             fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+            opacity: isCompact ? 0 : 1,
           }}
         >
           {events.length} event{events.length === 1 ? '' : 's'}

@@ -11,7 +11,7 @@ Widget packages for the Campus Hub Engine, organized by category.
 | `@firstform/campus-hub-widgets-campus` | Cafeteria Menu, Club Spotlight, Confessions, Group Fitness, Library Availability, Job Board, Events List, Climbing Gym, Google Calendar |
 | `@firstform/campus-hub-widgets-transit` | Bus Connection |
 | `@firstform/campus-hub-widgets-info` | News Ticker, Exchange Rate, Crypto Tracker, ISS Tracker, RSS Reader, Home Assistant |
-| `@firstform/campus-hub-widgets-media` | Poster Carousel, Poster Feed, Slideshow, Image, Media Player, YouTube, Web, Rich Text |
+| `@firstform/campus-hub-widgets-media` | Poster Carousel, Poster Feed, Slideshow, Image, Media Player, Radio Station, YouTube, Web, Rich Text |
 | `@firstform/campus-hub-widgets-fun` | Nothing Glyph, Bottle Spin, Rock Paper Scissors, Kaomoji, Coin Dice, Word of the Day, Flashcard |
 | `@firstform/campus-hub-widgets-utility` | QR Code, Widget Stack, Simple Table |
 

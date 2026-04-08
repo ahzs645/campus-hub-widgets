@@ -1,8 +1,12 @@
 'use client';
 import { useState } from 'react';
-import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
+import {
+  useWidgetOptionsSurface,
+  type WidgetOptionsProps,
+} from '@firstform/campus-hub-widget-sdk';
 
 export default function HomeAssistantOptions({ data, onChange }: WidgetOptionsProps) {
+  const surface = useWidgetOptionsSurface();
   const mode = (data.mode as 'signaling' | 'http') === 'http' ? 'http' : 'signaling';
   const signalUrl = (data.signalUrl as string) || '';
   const displayId = (data.displayId as string) || '';
@@ -26,6 +30,14 @@ export default function HomeAssistantOptions({ data, onChange }: WidgetOptionsPr
   const removeEntity = (id: string) => {
     update({ entityIds: entityIds.filter((e) => e !== id) });
   };
+
+  if (surface === 'gallery') {
+    return (
+      <div className="rounded-2xl border border-[color:var(--ui-item-border)] bg-[var(--ui-item-bg)] px-4 py-5 text-sm text-[var(--ui-text-muted)]">
+        Home Assistant connection and entity mapping fields are hidden in the gallery. The preview keeps using its sample state while you tweak display-level settings elsewhere.
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

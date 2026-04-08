@@ -1,6 +1,11 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { FormSelect, FormSwitch, FormInput, OptionsSection } from '@firstform/campus-hub-widget-sdk';
+import {
+  FormSelect,
+  FormSwitch,
+  OptionsSection,
+  useWidgetOptionsSurface,
+} from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 import type { TriviaQuestion } from './TriviaGame';
 
@@ -71,6 +76,7 @@ function parseCSV(text: string): TriviaQuestion[] {
 }
 
 export default function TriviaOptions({ data, onChange }: WidgetOptionsProps) {
+  const surface = useWidgetOptionsSurface();
   const [state, setState] = useState<TriviaData>(() => ({
     category: (data?.category as string) ?? 'all',
     rotationInterval: (data?.rotationInterval as number) ?? 15,
@@ -209,67 +215,68 @@ export default function TriviaOptions({ data, onChange }: WidgetOptionsProps) {
         onChange={handleChange}
       />
 
-      {/* Custom questions upload */}
-      <OptionsSection title="Custom Questions">
-        <p style={{ color: '#9E9E9E', fontSize: '0.75rem', marginBottom: 12 }}>
-          Upload a JSON or CSV file to add your own trivia questions. CSV format:
-          <br />
-          <code style={{ color: '#81C784', fontSize: '0.7rem' }}>
-            question, optionA, optionB, optionC, optionD, answerIndex
-          </code>
-        </p>
+      {surface !== 'gallery' && (
+        <OptionsSection title="Custom Questions">
+          <p style={{ color: '#9E9E9E', fontSize: '0.75rem', marginBottom: 12 }}>
+            Upload a JSON or CSV file to add your own trivia questions. CSV format:
+            <br />
+            <code style={{ color: '#81C784', fontSize: '0.7rem' }}>
+              question, optionA, optionB, optionC, optionD, answerIndex
+            </code>
+          </p>
 
-        <div className="flex items-center gap-3">
-          <label
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '8px 14px',
-              borderRadius: 8,
-              backgroundColor: '#2A2A2D',
-              border: '1px solid #3A3A3D',
-              color: '#CDCDCD',
-              fontSize: '0.75rem',
-              fontWeight: 500,
-              cursor: 'pointer',
-            }}
-          >
-            Upload File
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".json,.csv,.tsv,.txt"
-              onChange={handleFileUpload}
-              style={{ display: 'none' }}
-            />
-          </label>
+          <div className="flex items-center gap-3">
+            <label
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '8px 14px',
+                borderRadius: 8,
+                backgroundColor: '#2A2A2D',
+                border: '1px solid #3A3A3D',
+                color: '#CDCDCD',
+                fontSize: '0.75rem',
+                fontWeight: 500,
+                cursor: 'pointer',
+              }}
+            >
+              Upload File
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json,.csv,.tsv,.txt"
+                onChange={handleFileUpload}
+                style={{ display: 'none' }}
+              />
+            </label>
 
-          {customCount > 0 && (
-            <>
-              <span style={{ color: '#81C784', fontSize: '0.75rem', fontWeight: 500 }}>
-                {customCount} custom question{customCount !== 1 ? 's' : ''} loaded
-              </span>
-              <button
-                type="button"
-                onClick={clearCustom}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: 8,
-                  backgroundColor: 'rgba(239, 83, 80, 0.1)',
-                  border: '1px solid rgba(239, 83, 80, 0.3)',
-                  color: '#EF5350',
-                  fontSize: '0.7rem',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                }}
-              >
-                Clear
-              </button>
-            </>
-          )}
-        </div>
-      </OptionsSection>
+            {customCount > 0 && (
+              <>
+                <span style={{ color: '#81C784', fontSize: '0.75rem', fontWeight: 500 }}>
+                  {customCount} custom question{customCount !== 1 ? 's' : ''} loaded
+                </span>
+                <button
+                  type="button"
+                  onClick={clearCustom}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: 8,
+                    backgroundColor: 'rgba(239, 83, 80, 0.1)',
+                    border: '1px solid rgba(239, 83, 80, 0.3)',
+                    color: '#EF5350',
+                    fontSize: '0.7rem',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Clear
+                </button>
+              </>
+            )}
+          </div>
+        </OptionsSection>
+      )}
     </div>
   );
 }

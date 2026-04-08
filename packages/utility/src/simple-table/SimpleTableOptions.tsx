@@ -1,6 +1,13 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { FormInput, FormSelect, FormSwitch, OptionsPanel, OptionsSection } from '@firstform/campus-hub-widget-sdk';
+import {
+  FormInput,
+  FormSelect,
+  FormSwitch,
+  OptionsPanel,
+  OptionsSection,
+  useWidgetOptionsSurface,
+} from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
 interface TableData {
@@ -17,6 +24,7 @@ interface TableData {
 }
 
 export default function SimpleTableOptions({ data, onChange }: WidgetOptionsProps) {
+  const surface = useWidgetOptionsSurface();
   const [state, setState] = useState<TableData>({
     source: (data?.source as 'url' | 'manual') ?? 'manual',
     csvUrl: (data?.csvUrl as string) ?? '',
@@ -56,61 +64,63 @@ export default function SimpleTableOptions({ data, onChange }: WidgetOptionsProp
   return (
     <OptionsPanel>
       {/* Data Source */}
-      <OptionsSection title="Data Source">
+      {surface !== 'gallery' && (
+        <OptionsSection title="Data Source">
 
-        <FormSelect
-          label="Source"
-          name="source"
-          value={state.source}
-          options={[
-            { value: 'manual', label: 'Manual Entry' },
-            { value: 'url', label: 'CSV URL' },
-          ]}
-          onChange={handleChange}
-        />
+          <FormSelect
+            label="Source"
+            name="source"
+            value={state.source}
+            options={[
+              { value: 'manual', label: 'Manual Entry' },
+              { value: 'url', label: 'CSV URL' },
+            ]}
+            onChange={handleChange}
+          />
 
-        {state.source === 'url' ? (
-          <>
-            <FormInput
-              label="CSV URL"
-              name="csvUrl"
-              type="text"
-              value={state.csvUrl}
-              placeholder="https://example.com/data.csv"
-              onChange={handleChange}
-            />
-            <div className="text-sm text-[var(--ui-text-muted)]">
-              Point to a publicly accessible CSV file. The first row is used as column headers.
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="space-y-1">
-              <label className="block text-sm font-medium text-[var(--ui-text-muted)]">Table Data (CSV format)</label>
-              <textarea
-                value={state.manualData}
-                onChange={(e) => handleChange('manualData', e.target.value)}
-                placeholder={'Room,Status,Hours\nLibrary 3A,Available,8am – 10pm\nStudy Room,Occupied,9am – 9pm'}
-                rows={8}
-                className="w-full px-3 py-2 rounded-lg bg-[var(--ui-input-bg)] text-[var(--ui-text)] placeholder:text-[var(--ui-text-muted)] focus:ring-2 outline-none transition-colors font-mono text-sm"
-                style={{ border: '1px solid var(--ui-input-border)' }}
+          {state.source === 'url' ? (
+            <>
+              <FormInput
+                label="CSV URL"
+                name="csvUrl"
+                type="text"
+                value={state.csvUrl}
+                placeholder="https://example.com/data.csv"
+                onChange={handleChange}
               />
-            </div>
-            <div className="text-sm text-[var(--ui-text-muted)]">
-              Enter data in CSV format. First row becomes column headers. Use commas to separate columns.
-            </div>
-          </>
-        )}
+              <div className="text-sm text-[var(--ui-text-muted)]">
+                Point to a publicly accessible CSV file. The first row is used as column headers.
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="space-y-1">
+                <label className="block text-sm font-medium text-[var(--ui-text-muted)]">Table Data (CSV format)</label>
+                <textarea
+                  value={state.manualData}
+                  onChange={(e) => handleChange('manualData', e.target.value)}
+                  placeholder={'Room,Status,Hours\nLibrary 3A,Available,8am – 10pm\nStudy Room,Occupied,9am – 9pm'}
+                  rows={8}
+                  className="w-full px-3 py-2 rounded-lg bg-[var(--ui-input-bg)] text-[var(--ui-text)] placeholder:text-[var(--ui-text-muted)] focus:ring-2 outline-none transition-colors font-mono text-sm"
+                  style={{ border: '1px solid var(--ui-input-border)' }}
+                />
+              </div>
+              <div className="text-sm text-[var(--ui-text-muted)]">
+                Enter data in CSV format. First row becomes column headers. Use commas to separate columns.
+              </div>
+            </>
+          )}
 
-        <FormInput
-          label="Table Title (optional)"
-          name="title"
-          type="text"
-          value={state.title}
-          placeholder="No title"
-          onChange={handleChange}
-        />
-      </OptionsSection>
+          <FormInput
+            label="Table Title (optional)"
+            name="title"
+            type="text"
+            value={state.title}
+            placeholder="No title"
+            onChange={handleChange}
+          />
+        </OptionsSection>
+      )}
 
       {/* Appearance */}
       <OptionsSection title="Appearance" divider>
@@ -156,7 +166,7 @@ export default function SimpleTableOptions({ data, onChange }: WidgetOptionsProp
       </OptionsSection>
 
       {/* Refresh (URL source only) */}
-      {state.source === 'url' && (
+      {surface !== 'gallery' && state.source === 'url' && (
         <OptionsSection title="Refresh" divider>
 
           <FormSelect

@@ -1,6 +1,10 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { FormInput, FormSelect } from '@firstform/campus-hub-widget-sdk';
+import {
+  FormInput,
+  FormSelect,
+  useWidgetOptionsSurface,
+} from '@firstform/campus-hub-widget-sdk';
 import { AppIcon } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
@@ -15,6 +19,7 @@ function isSvgDataUrl(url: string) {
 }
 
 export default function ImageOptions({ data, onChange }: WidgetOptionsProps) {
+  const surface = useWidgetOptionsSurface();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [state, setState] = useState<ImageData>({
     url: (data?.url as string) ?? '',
@@ -66,52 +71,56 @@ export default function ImageOptions({ data, onChange }: WidgetOptionsProps) {
       <div className="space-y-4">
         <h3 className="font-semibold text-[var(--ui-text)]">Image Settings</h3>
 
-        {/* SVG Upload */}
-        <div className="space-y-1">
-          <label className="block text-sm font-medium text-[var(--ui-text-muted)]">Upload SVG</label>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-              style={{
-                backgroundColor: 'var(--ui-input-bg)',
-                color: 'var(--ui-text)',
-                border: '1px solid var(--ui-input-border)',
-              }}
-            >
-              Choose SVG File
-            </button>
-            {isSvgDataUrl(state.url) && (
-              <button
-                type="button"
-                onClick={handleClearSvg}
-                className="px-3 py-2 rounded-lg text-sm transition-colors text-red-400 hover:text-red-300"
-                style={{
-                  backgroundColor: 'var(--ui-input-bg)',
-                  border: '1px solid var(--ui-input-border)',
-                }}
-              >
-                Clear
-              </button>
-            )}
-          </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".svg,image/svg+xml"
-            onChange={handleSvgUpload}
-            className="hidden"
-          />
-          {isSvgDataUrl(state.url) && (
-            <p className="text-xs text-[var(--ui-text-muted)]">SVG embedded in configuration</p>
-          )}
-        </div>
+        {surface !== 'gallery' && (
+          <>
+            {/* SVG Upload */}
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-[var(--ui-text-muted)]">Upload SVG</label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  style={{
+                    backgroundColor: 'var(--ui-input-bg)',
+                    color: 'var(--ui-text)',
+                    border: '1px solid var(--ui-input-border)',
+                  }}
+                >
+                  Choose SVG File
+                </button>
+                {isSvgDataUrl(state.url) && (
+                  <button
+                    type="button"
+                    onClick={handleClearSvg}
+                    className="px-3 py-2 rounded-lg text-sm transition-colors text-red-400 hover:text-red-300"
+                    style={{
+                      backgroundColor: 'var(--ui-input-bg)',
+                      border: '1px solid var(--ui-input-border)',
+                    }}
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".svg,image/svg+xml"
+                onChange={handleSvgUpload}
+                className="hidden"
+              />
+              {isSvgDataUrl(state.url) && (
+                <p className="text-xs text-[var(--ui-text-muted)]">SVG embedded in configuration</p>
+              )}
+            </div>
 
-        <div className="relative">
-          <div className="absolute inset-x-0 top-1/2 border-t border-[var(--ui-input-border)]" />
-          <p className="relative text-center text-xs text-[var(--ui-text-muted)] bg-[var(--ui-bg)] w-fit mx-auto px-2">or use a URL</p>
-        </div>
+            <div className="relative">
+              <div className="absolute inset-x-0 top-1/2 border-t border-[var(--ui-input-border)]" />
+              <p className="relative text-center text-xs text-[var(--ui-text-muted)] bg-[var(--ui-bg)] w-fit mx-auto px-2">or use a URL</p>
+            </div>
+          </>
+        )}
 
         <FormInput
           label="Image URL"
@@ -145,28 +154,29 @@ export default function ImageOptions({ data, onChange }: WidgetOptionsProps) {
         />
       </div>
 
-      {/* Preview */}
-      <div className="border-t border-[color:var(--ui-item-border)] pt-6">
-        <h4 className="font-semibold text-[var(--ui-text)] mb-4">Preview</h4>
-        <div className="bg-[var(--ui-item-bg)] rounded-xl aspect-video flex items-center justify-center overflow-hidden">
-          {state.url ? (
-            <img
-              src={state.url}
-              alt={state.alt}
-              className="max-w-full max-h-full"
-              style={{ objectFit: state.fit }}
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
-              }}
-            />
-          ) : (
-            <div className="text-center">
-              <AppIcon name="image" className="w-9 h-9 opacity-50 mx-auto text-white/70" />
-              <div className="text-white/50 text-sm mt-2">No image URL</div>
-            </div>
-          )}
+      {surface !== 'gallery' && (
+        <div className="border-t border-[color:var(--ui-item-border)] pt-6">
+          <h4 className="font-semibold text-[var(--ui-text)] mb-4">Preview</h4>
+          <div className="bg-[var(--ui-item-bg)] rounded-xl aspect-video flex items-center justify-center overflow-hidden">
+            {state.url ? (
+              <img
+                src={state.url}
+                alt={state.alt}
+                className="max-w-full max-h-full"
+                style={{ objectFit: state.fit }}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+            ) : (
+              <div className="text-center">
+                <AppIcon name="image" className="w-9 h-9 opacity-50 mx-auto text-white/70" />
+                <div className="text-white/50 text-sm mt-2">No image URL</div>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
