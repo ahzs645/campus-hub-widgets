@@ -208,8 +208,9 @@ export default function TriviaGame({ config, theme }: WidgetComponentProps) {
   const badgeColor = mixColors(theme.background, '#ffffff', 0.18);
   const revealedSurface = mixColors(theme.background, theme.accent, 0.18);
   const revealedText = mixColors(theme.background, '#ffffff', 0.92);
-  const outerPadX = 12;
-  const outerPadY = 12;
+  const outerPadX = 8;
+  const outerPadTop = 8;
+  const outerPadBottom = 18;
 
   if (allQuestions.length === 0) {
     return (
@@ -240,7 +241,7 @@ export default function TriviaGame({ config, theme }: WidgetComponentProps) {
           style={{
             width: '100%',
             height: '100%',
-            padding: `${outerPadY}px ${outerPadX}px`,
+            padding: `${outerPadTop}px ${outerPadX}px ${outerPadBottom}px`,
             boxSizing: 'border-box',
           }}
           className="flex flex-col"

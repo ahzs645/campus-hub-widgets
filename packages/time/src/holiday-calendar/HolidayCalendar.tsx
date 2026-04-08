@@ -103,6 +103,12 @@ function getEmojis(holiday: string, month: number): string[] {
 }
 
 const BAUHAUS_WORD_COLORS = ['#FDCA21', '#0C4E82', '#48525B'] as const;
+const DESIGN_SIZE = 220;
+const CONTENT_HORIZONTAL_PADDING = 24;
+const CONTENT_WIDTH = DESIGN_SIZE - CONTENT_HORIZONTAL_PADDING;
+const DOT_MATRIX_CHAR_WIDTH = 5;
+const DOT_MATRIX_SPACE_WIDTH = 3;
+const DOT_MATRIX_CHAR_SPACING = 1;
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
   const normalized = hex.trim().replace('#', '');
@@ -134,14 +140,30 @@ function mixColors(base: string, target: string, weight: number): string {
   return `rgb(${mix(baseRgb.r, targetRgb.r)}, ${mix(baseRgb.g, targetRgb.g)}, ${mix(baseRgb.b, targetRgb.b)})`;
 }
 
-/** Break text into lines that fit within maxCols characters */
-function wrapText(text: string, maxCols: number): string[] {
+function getDotMatrixUnits(text: string): number {
+  let total = 0;
+
+  for (let i = 0; i < text.length; i += 1) {
+    if (i > 0) total += DOT_MATRIX_CHAR_SPACING;
+    total += text[i] === ' ' ? DOT_MATRIX_SPACE_WIDTH : DOT_MATRIX_CHAR_WIDTH;
+  }
+
+  return total;
+}
+
+function getDotMatrixWidth(text: string, dotSize: number, gap: number): number {
+  return getDotMatrixUnits(text) * (dotSize + gap);
+}
+
+/** Break text into lines that fit the rendered dot-matrix width */
+function wrapText(text: string, maxWidth: number, dotSize: number, gap: number): string[] {
   const words = text.toUpperCase().split(' ');
   const lines: string[] = [];
   let current = '';
+
   for (const word of words) {
     const test = current ? `${current} ${word}` : word;
-    if (test.length > maxCols && current) {
+    if (current && getDotMatrixWidth(test, dotSize, gap) > maxWidth) {
       lines.push(current);
       current = word;
     } else {
@@ -155,7 +177,7 @@ function wrapText(text: string, maxCols: number): string[] {
 export default function HolidayCalendar({ config, theme }: WidgetComponentProps) {
   const calConfig = config as HolidayCalendarConfig | undefined;
   const style = calConfig?.style ?? 'modern';
-  const { containerRef, scale } = useFitScale(220, 220);
+  const { containerRef, scale } = useFitScale(DESIGN_SIZE, DESIGN_SIZE);
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
@@ -170,7 +192,10 @@ export default function HolidayCalendar({ config, theme }: WidgetComponentProps)
   const month = now.getMonth();
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const dateLabel = `${monthNames[month]} ${now.getDate()}`;
-  const holidayLines = useMemo(() => wrapText(holiday, 12), [holiday]);
+  const holidayLines = useMemo(
+    () => wrapText(holiday, CONTENT_WIDTH, style === 'bauhaus' ? 4.5 : 3, style === 'bauhaus' ? 1.2 : 0.8),
+    [holiday, style],
+  );
   const headlineColor = mixColors(theme.background, '#ffffff', 0.96);
   const mutedColor = mixColors(theme.background, '#ffffff', 0.68);
   const emptyDotColor = mixColors(theme.background, '#ffffff', 0.12);
@@ -202,13 +227,30 @@ export default function HolidayCalendar({ config, theme }: WidgetComponentProps)
     return (
       <DarkContainer ref={containerRef} bg={lightSurface} className="flex items-center justify-center">
         <div
-          style={{ transform: `scale(${scale})`, transformOrigin: 'center center', width: 220, height: 220 }}
+          style={{ transform: `scale(${scale})`, transformOrigin: 'center center', width: DESIGN_SIZE, height: DESIGN_SIZE }}
           className="flex flex-col items-center justify-center gap-3 px-3"
         >
-          <DotMatrixText chars={dateChars} dotSize={3.5} gap={1} emptyColor={surfaceEmptyColor} showEmpty />
+          <DotMatrixText
+            chars={dateChars}
+            dotSize={3.5}
+            gap={1}
+            emptyColor={surfaceEmptyColor}
+            showEmpty
+            className="block max-w-full h-auto"
+            style={{ maxWidth: '100%', height: 'auto' }}
+          />
           <div className="flex flex-col items-center gap-2">
             {holidayCharsPerLine.map((lineChars, i) => (
-              <DotMatrixText key={i} chars={lineChars} dotSize={4.5} gap={1.2} emptyColor={surfaceEmptyColor} showEmpty />
+              <DotMatrixText
+                key={i}
+                chars={lineChars}
+                dotSize={4.5}
+                gap={1.2}
+                emptyColor={surfaceEmptyColor}
+                showEmpty
+                className="block max-w-full h-auto"
+                style={{ maxWidth: '100%', height: 'auto' }}
+              />
             ))}
           </div>
         </div>
@@ -222,7 +264,7 @@ export default function HolidayCalendar({ config, theme }: WidgetComponentProps)
   return (
     <DarkContainer ref={containerRef} bg={theme.background} className="flex items-center justify-center">
       <div
-        style={{ transform: `scale(${scale})`, transformOrigin: 'center center', width: 220, height: 220 }}
+        style={{ transform: `scale(${scale})`, transformOrigin: 'center center', width: DESIGN_SIZE, height: DESIGN_SIZE }}
         className="flex flex-col items-center justify-center gap-2 px-3"
       >
         {/* Emoji row */}
@@ -243,6 +285,8 @@ export default function HolidayCalendar({ config, theme }: WidgetComponentProps)
               gap={0.8}
               emptyColor={emptyDotColor}
               showEmpty
+              className="block max-w-full h-auto"
+              style={{ maxWidth: '100%', height: 'auto' }}
             />
           ))}
         </div>
@@ -253,6 +297,8 @@ export default function HolidayCalendar({ config, theme }: WidgetComponentProps)
             chars={textToChars(dateLabel, mutedColor)}
             dotSize={2.5}
             gap={0.8}
+            className="block max-w-full h-auto"
+            style={{ maxWidth: '100%', height: 'auto' }}
           />
         </div>
       </div>

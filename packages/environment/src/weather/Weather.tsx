@@ -52,10 +52,11 @@ interface WeatherConfig {
   location?: string;
   units?: 'celsius' | 'fahrenheit';
   apiKey?: string;
+  apiUrl?: string;
   showDetails?: boolean; // legacy, ignored if displayMode is set
   displayMode?: DisplayMode;
   displayItems?: DisplayItems;
-  dataSource?: 'openweathermap' | 'unbc-rooftop';
+  dataSource?: 'openweathermap' | 'unbc-rooftop' | 'msc-geomet';
   refreshInterval?: number; // minutes
   useCorsProxy?: boolean;
 }
@@ -105,6 +106,45 @@ interface OpenWeatherResponse {
   };
 }
 
+interface GeoMetLocalizedValue<T> {
+  en?: T;
+  fr?: T;
+}
+
+interface GeoMetMeasurement<T> {
+  value?: GeoMetLocalizedValue<T>;
+}
+
+interface GeoMetCurrentConditions {
+  condition?: GeoMetLocalizedValue<string>;
+  temperature?: GeoMetMeasurement<number>;
+  relativeHumidity?: GeoMetMeasurement<number>;
+  pressure?: GeoMetMeasurement<number>;
+  dewpoint?: GeoMetMeasurement<number>;
+  wind?: {
+    speed?: GeoMetMeasurement<number | string>;
+    bearing?: GeoMetMeasurement<number>;
+    gust?: GeoMetMeasurement<number | string>;
+  };
+  timestamp?: GeoMetLocalizedValue<string>;
+}
+
+interface GeoMetFeature {
+  id?: string;
+  properties?: {
+    lastUpdated?: string;
+    name?: GeoMetLocalizedValue<string>;
+    currentConditions?: GeoMetCurrentConditions;
+  };
+}
+
+interface GeoMetFeatureCollection {
+  type?: 'FeatureCollection';
+  features?: GeoMetFeature[];
+}
+
+type GeoMetResponse = GeoMetFeature | GeoMetFeatureCollection;
+
 const WEATHER_ICONS: Record<WeatherIconKey, IconName> = {
   sunny: 'sun',
   cloudy: 'cloud',
@@ -129,6 +169,13 @@ const MOCK_WEATHER: WeatherData = {
 
 const mapWeatherIcon = (condition: string): WeatherIconKey => {
   const key = condition.toLowerCase();
+  if (
+    key.includes('partly') ||
+    key.includes('few clouds') ||
+    key.includes('mix of sun and cloud')
+  ) {
+    return 'partly-cloudy';
+  }
   if (key.includes('clear') || key.includes('sunny')) return 'sunny';
   if (key.includes('cloud')) return 'cloudy';
   if (key.includes('rain')) return 'rainy';
@@ -140,6 +187,7 @@ const mapWeatherIcon = (condition: string): WeatherIconKey => {
 };
 
 const UNBC_URL = 'https://cyclone.unbc.ca/wx/data-table-std-1m.html';
+const GEOMET_PRINCE_GEORGE_URL = 'https://api.weather.gc.ca/collections/citypageweather-realtime/items/bc-79?f=json&lang=en';
 
 
 /** Derive a simple condition string from UNBC rooftop sensor readings */
@@ -222,10 +270,83 @@ const parseUNBCWeatherData = (html: string, units: 'celsius' | 'fahrenheit'): We
   };
 };
 
+const getGeoMetLocalizedValue = <T,>(value?: GeoMetLocalizedValue<T>): T | undefined =>
+  value?.en ?? value?.fr;
+
+const parseGeoMetNumber = (value: number | string | undefined): number | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (!normalized || normalized === 'calm') return 0;
+    const parsed = Number.parseFloat(normalized);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return null;
+};
+
+const convertTemperature = (valueC: number, units: 'celsius' | 'fahrenheit'): number =>
+  units === 'fahrenheit'
+    ? Math.round((valueC * 9) / 5 + 32)
+    : Math.round(valueC * 10) / 10;
+
+const convertWindSpeed = (valueKph: number, units: 'celsius' | 'fahrenheit'): number =>
+  units === 'fahrenheit'
+    ? Math.round(valueKph * 0.621371)
+    : Math.round((valueKph / 3.6) * 10) / 10;
+
+const pickGeoMetFeature = (data: GeoMetResponse): GeoMetFeature | null => {
+  if ('features' in data && Array.isArray(data.features)) {
+    return data.features[0] ?? null;
+  }
+  return data;
+};
+
+const parseGeoMetWeatherData = (
+  data: GeoMetResponse,
+  units: 'celsius' | 'fahrenheit',
+): { weather: WeatherData; observedAt?: Date } | null => {
+  const feature = pickGeoMetFeature(data);
+  const current = feature?.properties?.currentConditions;
+  if (!feature || !current) return null;
+
+  const locationName = getGeoMetLocalizedValue(feature.properties?.name) ?? 'WeatherCAN';
+  const condition = getGeoMetLocalizedValue(current.condition) ?? 'Clear';
+  const tempC = parseGeoMetNumber(getGeoMetLocalizedValue(current.temperature?.value));
+  const humidity = parseGeoMetNumber(getGeoMetLocalizedValue(current.relativeHumidity?.value));
+  const windKph = parseGeoMetNumber(getGeoMetLocalizedValue(current.wind?.speed?.value));
+
+  if (tempC == null || humidity == null || windKph == null) return null;
+
+  const windGustKph = parseGeoMetNumber(getGeoMetLocalizedValue(current.wind?.gust?.value));
+  const pressureKpa = parseGeoMetNumber(getGeoMetLocalizedValue(current.pressure?.value));
+  const dewPointC = parseGeoMetNumber(getGeoMetLocalizedValue(current.dewpoint?.value));
+  const windBearing = parseGeoMetNumber(getGeoMetLocalizedValue(current.wind?.bearing?.value));
+  const observedAtRaw =
+    getGeoMetLocalizedValue(current.timestamp) ??
+    feature.properties?.lastUpdated;
+
+  return {
+    weather: {
+      temp: convertTemperature(tempC, units),
+      condition,
+      icon: mapWeatherIcon(condition),
+      humidity: Math.round(humidity),
+      wind: convertWindSpeed(windKph, units),
+      location: locationName,
+      pressure: pressureKpa != null ? Math.round(pressureKpa * 10) : undefined,
+      dewPoint: dewPointC != null ? convertTemperature(dewPointC, units) : undefined,
+      windDir: windBearing != null ? Math.round(windBearing) : undefined,
+      windGust: windGustKph != null ? convertWindSpeed(windGustKph, units) : undefined,
+    },
+    observedAt: observedAtRaw ? new Date(observedAtRaw) : undefined,
+  };
+};
+
 export default function Weather({ config, theme }: WidgetComponentProps) {
   const weatherConfig = config as WeatherConfig | undefined;
   const units = weatherConfig?.units ?? 'fahrenheit';
   const location = weatherConfig?.location ?? 'Campus';
+  const apiUrl = weatherConfig?.apiUrl?.trim() || GEOMET_PRINCE_GEORGE_URL;
   const show = resolveDisplayItems(weatherConfig);
   const apiKey = weatherConfig?.apiKey?.trim();
   const dataSource = weatherConfig?.dataSource ?? 'openweathermap';
@@ -262,6 +383,27 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
       setError(msg);
     }
   }, [units, refreshMs, useCorsProxy]);
+
+  const fetchGeoMet = useCallback(async () => {
+    try {
+      setError(null);
+      const fetchUrl = useCorsProxy ? buildProxyUrl(apiUrl) : apiUrl;
+      const { data } = await fetchJsonWithCache<GeoMetResponse>(fetchUrl, {
+        cacheKey: buildCacheKey('weather-geomet', apiUrl),
+        ttlMs: refreshMs,
+      });
+      const parsed = parseGeoMetWeatherData(data, units);
+      if (parsed) {
+        setWeather(parsed.weather);
+        setLastUpdated(parsed.observedAt ?? new Date());
+      } else {
+        setError('Failed to parse GeoMet weather data');
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(msg);
+    }
+  }, [apiUrl, refreshMs, units, useCorsProxy]);
 
   // OpenWeatherMap data source
   const fetchOWM = useCallback(async () => {
@@ -307,6 +449,8 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
       if (!isMounted) return;
       if (dataSource === 'unbc-rooftop') {
         await fetchUNBC();
+      } else if (dataSource === 'msc-geomet') {
+        await fetchGeoMet();
       } else {
         await fetchOWM();
       }
@@ -318,7 +462,7 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
       isMounted = false;
       clearInterval(interval);
     };
-  }, [dataSource, fetchUNBC, fetchOWM, refreshMs]);
+  }, [dataSource, fetchGeoMet, fetchUNBC, fetchOWM, refreshMs]);
 
   const displayTemp = weather.temp;
   const tempUnit = units === 'celsius' ? '°C' : '°F';
@@ -467,8 +611,26 @@ registerWidget({
     displayMode: 'full',
     displayItems: DISPLAY_MODE_PRESETS.full,
     apiKey: '',
+    apiUrl: GEOMET_PRINCE_GEORGE_URL,
     dataSource: 'openweathermap',
     refreshInterval: 10,
     useCorsProxy: true,
   },
+  acceptsSources: [{
+    propName: 'apiUrl',
+    types: ['api'],
+    matchSource: (source) =>
+      source.url.includes('api.weather.gc.ca/collections/citypageweather-realtime') ||
+      source.url.includes('cyclone.unbc.ca/wx/data-table-std-1m'),
+    applySource: (source, currentData) => ({
+      apiUrl: source.url,
+      dataSource: source.url.includes('cyclone.unbc.ca/wx/data-table-std-1m')
+        ? 'unbc-rooftop'
+        : 'msc-geomet',
+      location: source.name,
+      useCorsProxy: source.url.includes('api.weather.gc.ca')
+        ? false
+        : (currentData.useCorsProxy as boolean | undefined) ?? true,
+    }),
+  }],
 });
