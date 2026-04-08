@@ -28,6 +28,7 @@ interface EventsListConfig {
   rotationSeconds?: number;
   selectedCategories?: string[];
   useCorsProxy?: boolean;
+  galleryPreview?: boolean;
 }
 
 const DEFAULT_EVENTS: Event[] = [
@@ -55,6 +56,7 @@ export default function EventsList({ config, theme }: WidgetComponentProps) {
   const rotationSeconds = eventsConfig?.rotationSeconds ?? 5;
   const selectedCategories = eventsConfig?.selectedCategories;
   const useCorsProxy = eventsConfig?.useCorsProxy ?? true;
+  const galleryPreview = eventsConfig?.galleryPreview ?? false;
 
   const events = useEvents({
     apiUrl,
@@ -180,7 +182,11 @@ export default function EventsList({ config, theme }: WidgetComponentProps) {
   /* ---------- render ---------- */
 
   return (
-    <div ref={containerRef} className="w-full h-full overflow-hidden flex flex-col min-h-0 p-6">
+    <div
+      ref={containerRef}
+      data-layout-diagnostic-ignore={galleryPreview ? 'true' : undefined}
+      className="w-full h-full overflow-hidden flex flex-col min-h-0 p-6"
+    >
       {/* Header */}
       <SectionHeader
         theme={theme}
