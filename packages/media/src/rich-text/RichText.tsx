@@ -28,9 +28,18 @@ Registration for Summer 2026 courses opens **March 15th**. Visit the registrar's
 
 The campus **recycling program** has been expanded — new bins are now available in all buildings.`;
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 /** Very minimal markdown-to-HTML converter for signage use */
 function markdownToHtml(md: string): string {
-  return md
+  return escapeHtml(md)
     // Horizontal rule
     .replace(/^---+$/gm, '<hr class="my-4 border-t border-current opacity-20" />')
     // Headers
