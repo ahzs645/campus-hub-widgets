@@ -9,6 +9,7 @@ import './media-player/MediaPlayer';
 import './radio-station/RadioStation';
 import './youtube/YouTube';
 import './web/Web';
+import './web-region/WebRegion';
 import './rich-text/RichText';
 import './google-sheets/GoogleSheets';
 import './canva/Canva';
@@ -23,6 +24,7 @@ registerWidgetLoader('media-player', () => import('./media-player/MediaPlayer'))
 registerWidgetLoader('radio-station', () => import('./radio-station/RadioStation'));
 registerWidgetLoader('youtube', () => import('./youtube/YouTube'));
 registerWidgetLoader('web', () => import('./web/Web'));
+registerWidgetLoader('web-region', () => import('./web-region/WebRegion'));
 registerWidgetLoader('rich-text', () => import('./rich-text/RichText'));
 registerWidgetLoader('google-sheets', () => import('./google-sheets/GoogleSheets'));
 registerWidgetLoader('canva', () => import('./canva/Canva'));
