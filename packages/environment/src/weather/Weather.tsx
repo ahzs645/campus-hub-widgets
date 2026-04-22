@@ -362,7 +362,7 @@ const pickGeoMetFeature = (data: GeoMetResponse): GeoMetFeature | null => {
   if ('features' in data && Array.isArray(data.features)) {
     return data.features[0] ?? null;
   }
-  return data;
+  return data as GeoMetFeature;
 };
 
 const parseGeoMetWeatherData = (

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type Hls from 'hls.js';
 import {
   AppIcon,
   WidgetComponentProps,
@@ -275,7 +276,7 @@ export default function StreamPlayer({ config, theme }: WidgetComponentProps) {
     }
 
     let disposed = false;
-    let hlsInstance: { destroy: () => void } | null = null;
+    let hlsInstance: Hls | null = null;
 
     const attachHls = async () => {
       const { default: Hls } = await import('hls.js');

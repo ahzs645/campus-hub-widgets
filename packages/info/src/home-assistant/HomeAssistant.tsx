@@ -326,7 +326,7 @@ function HomeAssistantWidget({ config, theme }: WidgetComponentProps) {
 
       client.on('disconnected', () => setConnected(false));
       client.on('ha-state', handleState);
-      client.on('ha-error', (data) => setError(data.message as string));
+      client.on('ha-error', (data: Record<string, unknown>) => setError(String(data.message ?? 'Home Assistant error')));
 
       await client.connect();
     };

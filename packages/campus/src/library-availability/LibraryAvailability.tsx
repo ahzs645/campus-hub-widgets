@@ -3,12 +3,16 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { buildProxyUrl, getCorsProxyUrl } from '@firstform/campus-hub-widget-sdk';
 import { registerWidget, WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import LibraryAvailabilityOptions from './LibraryAvailabilityOptions';
+import { ROOM_MAP, roomSortValue, type RoomInfo } from './libraryAvailabilityRooms';
 
 type DisplayMode = 'grid' | 'calendar' | 'cards';
+type RoomScope = 'all' | 'single';
 
 interface LibraryAvailabilityConfig {
   title?: string;
   mode?: DisplayMode;
+  roomScope?: RoomScope;
+  selectedRoomId?: string | number;
   endpoint?: string;
   lid?: number;
   gid?: number;
@@ -24,7 +28,7 @@ interface LibraryAvailabilityConfig {
 interface LibCalSlot {
   start?: string;
   end?: string;
-  itemId?: number;
+  itemId?: number | string;
   className?: string;
 }
 
@@ -33,12 +37,6 @@ interface LibCalGridResponse {
   bookings?: unknown[];
   windowEnd?: boolean;
   isPreCreatedBooking?: boolean;
-}
-
-interface RoomInfo {
-  id: number;
-  name: string;
-  capacity?: number;
 }
 
 interface TimeWindow {
@@ -94,7 +92,6 @@ interface CompactPage {
 
 type WidgetPage = GridPage | CalendarPage | CardsPage | CompactPage;
 
-const DEFAULT_ENDPOINT = 'https://unbc.libcal.com/spaces/availability/grid';
 const SLOT_MINUTES = 30;
 
 const HATCH_BG =
@@ -111,25 +108,6 @@ const DAY_LONG_FORMAT = new Intl.DateTimeFormat('en-US', {
   month: 'short',
   day: 'numeric',
 });
-
-const ROOM_MAP: RoomInfo[] = [
-  { id: 11258, name: 'Room 01', capacity: 4 },
-  { id: 11261, name: 'Room 02', capacity: 4 },
-  { id: 11262, name: 'Room 03', capacity: 4 },
-  { id: 11263, name: 'Room 04', capacity: 4 },
-  { id: 11264, name: 'Room 05', capacity: 4 },
-  { id: 11265, name: 'Room 06', capacity: 4 },
-  { id: 11266, name: 'Room 07', capacity: 6 },
-  { id: 11267, name: 'Room 08', capacity: 4 },
-  { id: 11268, name: 'Room 10', capacity: 2 },
-  { id: 11271, name: 'Room 11', capacity: 2 },
-  { id: 11272, name: 'Room 12', capacity: 2 },
-  { id: 11269, name: 'Room 13', capacity: 2 },
-  { id: 11270, name: 'Room 14', capacity: 2 },
-  { id: 20467, name: 'Room 15', capacity: 2 },
-];
-
-const ROOM_ORDER = new Map<number, number>(ROOM_MAP.map((room, index) => [room.id, index]));
 
 const pad2 = (value: number): string => String(value).padStart(2, '0');
 
@@ -223,12 +201,6 @@ const buildMetrics = (slots: boolean[]): RoomDayMetrics => {
   };
 };
 
-const roomSortValue = (room: RoomInfo): number => {
-  const known = ROOM_ORDER.get(room.id);
-  if (typeof known === 'number') return known;
-  return 1000 + room.id;
-};
-
 const describeError = (err: unknown): string => {
   if (err instanceof Error) return err.message;
   return String(err);
@@ -293,6 +265,13 @@ function availabilityColor(ratio: number): string {
   return 'rgba(239, 68, 68, 0.2)';
 }
 
+function parseSelectedRoomId(value: string | number | undefined): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value !== 'string' || !value.trim()) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 export default function LibraryAvailability({
   config,
   theme,
@@ -300,6 +279,8 @@ export default function LibraryAvailability({
   const widgetConfig = config as LibraryAvailabilityConfig | undefined;
   const title = widgetConfig?.title?.trim() || 'Library Study Room Availability';
   const mode = (widgetConfig?.mode ?? 'grid') as DisplayMode;
+  const roomScope: RoomScope = widgetConfig?.roomScope === 'single' ? 'single' : 'all';
+  const selectedRoomId = parseSelectedRoomId(widgetConfig?.selectedRoomId);
   const endpoint = widgetConfig?.endpoint?.trim() || '';
   const lid = String(widgetConfig?.lid ?? 1637);
   const gid = String(widgetConfig?.gid ?? 2928);
@@ -563,6 +544,26 @@ export default function LibraryAvailability({
     [emptyMetrics, processed.metricsByRoomDay],
   );
 
+  const visibleRooms = useMemo(() => {
+    if (roomScope !== 'single') return processed.rooms;
+    if (processed.rooms.length === 0) return processed.rooms;
+
+    const selectedRoom = selectedRoomId === null
+      ? null
+      : processed.rooms.find((room) => room.id === selectedRoomId);
+
+    return [selectedRoom ?? processed.rooms[0]];
+  }, [processed.rooms, roomScope, selectedRoomId]);
+
+  const selectedRoom = roomScope === 'single' ? visibleRooms[0] ?? null : null;
+  const describeRoomRange = useCallback(
+    (roomStart: number, roomEnd: number): string =>
+      selectedRoom
+        ? selectedRoom.name
+        : `Rooms ${roomStart + 1}-${roomEnd} of ${visibleRooms.length}`,
+    [selectedRoom, visibleRooms.length],
+  );
+
   const viewportWidth = size.width || 960;
   const viewportHeight = size.height || 540;
   const compactMode = viewportWidth < 540 || viewportHeight < 360;
@@ -571,7 +572,7 @@ export default function LibraryAvailability({
   const pages = useMemo<WidgetPage[]>(() => {
     const width = viewportWidth;
     const height = viewportHeight;
-    const roomCount = processed.rooms.length;
+    const roomCount = visibleRooms.length;
 
     if (compactMode) {
       const compactChromeHeight = tinyMode ? 188 : 204;
@@ -706,16 +707,16 @@ export default function LibraryAvailability({
     compactMode,
     dayMeta,
     mode,
-    processed.rooms.length,
     slotCount,
     tinyMode,
+    visibleRooms.length,
     viewportHeight,
     viewportWidth,
   ]);
 
   useEffect(() => {
     setPageIndex(0);
-  }, [mode, dayMeta.length, processed.rooms.length, size.height, size.width, slotCount]);
+  }, [mode, dayMeta.length, visibleRooms.length, size.height, size.width, slotCount]);
 
   useEffect(() => {
     if (pageIndex < pages.length) return;
@@ -849,7 +850,7 @@ export default function LibraryAvailability({
             <div className="h-full flex flex-col min-h-0">
               {(() => {
                 const day = dayMeta[activePage.dayIndex];
-                const roomCards = processed.rooms
+                const roomCards = visibleRooms
                   .slice(activePage.roomStart, activePage.roomEnd)
                   .map((room) => {
                     const metrics = day ? getMetrics(room.id, day.key) : emptyMetrics;
@@ -904,8 +905,7 @@ export default function LibraryAvailability({
                           backgroundColor: 'rgba(255,255,255,0.06)',
                         }}
                       >
-                        {day?.shortLabel ?? ''} · Rooms {activePage.roomStart + 1}-{activePage.roomEnd} of{' '}
-                        {processed.rooms.length}
+                        {day?.shortLabel ?? ''} · {describeRoomRange(activePage.roomStart, activePage.roomEnd)}
                       </span>
                     </div>
 
@@ -1015,7 +1015,7 @@ export default function LibraryAvailability({
                 <span>Red: booked</span>
                 <span style={{ background: HATCH_BG, padding: '0 4px', borderRadius: 2 }}>Hatched: past</span>
                 <span>
-                  Rooms {activePage.roomStart + 1}-{activePage.roomEnd} of {processed.rooms.length}
+                  {describeRoomRange(activePage.roomStart, activePage.roomEnd)}
                 </span>
               </div>
 
@@ -1046,7 +1046,7 @@ export default function LibraryAvailability({
                   );
                 })}
 
-                {processed.rooms
+                {visibleRooms
                   .slice(activePage.roomStart, activePage.roomEnd)
                   .map((room) => {
                     const day = dayMeta[activePage.dayIndex];
@@ -1110,7 +1110,7 @@ export default function LibraryAvailability({
                   </div>
                 ))}
 
-                {processed.rooms.slice(activePage.roomStart, activePage.roomEnd).map((room) => (
+                {visibleRooms.slice(activePage.roomStart, activePage.roomEnd).map((room) => (
                   <Fragment key={`calendar-room-${room.id}`}>
                     <div
                       className="rounded-md p-2 text-xs text-white/80"
@@ -1161,7 +1161,7 @@ export default function LibraryAvailability({
                   gridAutoRows: '132px',
                 }}
               >
-                {processed.rooms
+                {visibleRooms
                   .slice(activePage.roomStart, activePage.roomEnd)
                   .map((room) => {
                     const day = dayMeta[activePage.dayIndex];
@@ -1250,6 +1250,8 @@ registerWidget({
   defaultProps: {
     title: 'Library Study Room Availability',
     mode: 'grid',
+    roomScope: 'all',
+    selectedRoomId: '',
     endpoint: '',
     lid: 1637,
     gid: 2928,
