@@ -21,6 +21,7 @@ interface JobBoardData {
   apiUrl: string;
   sourceType: 'json' | 'rss';
   cacheTtlSeconds: number;
+  qrEnabled: boolean;
   qrUrl: string;
   qrLabel: string;
   useCorsProxy: boolean;
@@ -55,6 +56,7 @@ export default function JobBoardOptions({ data, onChange }: WidgetOptionsProps) 
     apiUrl: (data?.apiUrl as string) ?? '',
     sourceType: (data?.sourceType as 'json' | 'rss') ?? 'json',
     cacheTtlSeconds: (data?.cacheTtlSeconds as number) ?? 120,
+    qrEnabled: (data?.qrEnabled as boolean) ?? false,
     qrUrl: (data?.qrUrl as string) ?? '',
     qrLabel: (data?.qrLabel as string) ?? 'Scan to apply',
     useCorsProxy: (data?.useCorsProxy as boolean) ?? true,
@@ -71,6 +73,7 @@ export default function JobBoardOptions({ data, onChange }: WidgetOptionsProps) 
         apiUrl: (data.apiUrl as string) ?? '',
         sourceType: (data.sourceType as 'json' | 'rss') ?? 'json',
         cacheTtlSeconds: (data.cacheTtlSeconds as number) ?? 120,
+        qrEnabled: (data.qrEnabled as boolean) ?? false,
         qrUrl: (data.qrUrl as string) ?? '',
         qrLabel: (data.qrLabel as string) ?? 'Scan to apply',
         useCorsProxy: (data.useCorsProxy as boolean) ?? true,
@@ -205,26 +208,37 @@ export default function JobBoardOptions({ data, onChange }: WidgetOptionsProps) 
 
       {/* QR Code */}
       <OptionsSection title="QR Code" divider>
-        <FormInput
-          label="QR Code URL"
-          name="qrUrl"
-          type="text"
-          value={state.qrUrl}
-          placeholder="https://careers.example.edu/jobs"
+        <FormSwitch
+          label="Show QR Code"
+          name="qrEnabled"
+          checked={state.qrEnabled}
           onChange={handleChange}
         />
         <div className="text-xs text-[var(--ui-text-muted)]">
-          URL encoded in the QR code, shown as a panel beside the job listings. Leave blank to hide the QR code.
+          When on, a QR code panel appears beside the job listings so viewers can scan to open a link.
         </div>
 
-        <FormInput
-          label="QR Label"
-          name="qrLabel"
-          type="text"
-          value={state.qrLabel}
-          placeholder="Scan to apply"
-          onChange={handleChange}
-        />
+        {state.qrEnabled && (
+          <>
+            <FormInput
+              label="QR Code URL"
+              name="qrUrl"
+              type="text"
+              value={state.qrUrl}
+              placeholder="https://careers.example.edu/jobs"
+              onChange={handleChange}
+            />
+
+            <FormInput
+              label="QR Label"
+              name="qrLabel"
+              type="text"
+              value={state.qrLabel}
+              placeholder="Scan to apply"
+              onChange={handleChange}
+            />
+          </>
+        )}
       </OptionsSection>
 
       {/* Job type legend */}

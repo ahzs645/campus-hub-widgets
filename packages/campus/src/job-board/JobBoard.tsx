@@ -32,6 +32,7 @@ interface JobBoardConfig {
   rotationSeconds?: number;
   /** Seconds per full loop for the auto-infinite vertical scroll mode. */
   speed?: number;
+  qrEnabled?: boolean;
   qrUrl?: string;
   qrLabel?: string;
   useCorsProxy?: boolean;
@@ -98,6 +99,8 @@ export default function JobBoard({
   const displayMode: DisplayMode = cfg?.displayMode ?? 'scroll';
   const rotationSeconds = cfg?.rotationSeconds ?? 5;
   const speed = cfg?.speed ?? 35;
+  // Default true for backward compatibility — existing widgets with qrUrl set keep showing the QR.
+  const qrEnabled = cfg?.qrEnabled ?? true;
   const qrUrl = cfg?.qrUrl ?? '';
   const qrLabel = cfg?.qrLabel ?? 'Scan to apply';
   const useCorsProxy = cfg?.useCorsProxy ?? true;
@@ -188,7 +191,7 @@ export default function JobBoard({
   // QR code generation
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   useEffect(() => {
-    if (!qrUrl) {
+    if (!qrEnabled || !qrUrl) {
       setQrDataUrl(null);
       return;
     }
@@ -200,7 +203,7 @@ export default function JobBoard({
     })
       .then(setQrDataUrl)
       .catch(() => setQrDataUrl(null));
-  }, [qrUrl]);
+  }, [qrEnabled, qrUrl]);
 
   /* ---------- container measurement for paginate mode ---------- */
 
@@ -491,6 +494,7 @@ registerWidget({
     displayMode: 'scroll',
     rotationSeconds: 5,
     speed: 35,
+    qrEnabled: false,
     qrUrl: '',
     qrLabel: 'Scan to apply',
     useCorsProxy: true,
