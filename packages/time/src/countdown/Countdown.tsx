@@ -124,6 +124,7 @@ function UnitDisplay({
         className="font-bold font-mono tabular-nums leading-none"
         style={{
           backgroundColor: 'rgba(255,255,255,0.08)',
+          color: '#ffffff',
           fontSize: valueFontSize,
           padding: `${chipPaddingY}px ${chipPaddingX}px`,
           borderRadius: chipRadius,

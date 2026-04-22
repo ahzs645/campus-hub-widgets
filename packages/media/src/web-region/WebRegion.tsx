@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AppIcon,
+  buildProxyUrl,
   registerWidget,
   useFitScale,
   type WidgetComponentProps,
@@ -19,6 +20,7 @@ export interface WebRegionConfig {
   regionW?: number;
   regionH?: number;
   fit?: 'cover' | 'contain';
+  useCorsProxy?: boolean;
 }
 
 const APP_ROUTE_PREFIX_PATTERN =
@@ -47,6 +49,11 @@ export function resolveEmbedUrl(value: string) {
   }
 }
 
+export function resolveWebRegionFrameUrl(value: string, useCorsProxy = false) {
+  const resolvedUrl = resolveEmbedUrl(value);
+  return useCorsProxy ? buildProxyUrl(resolvedUrl) : resolvedUrl;
+}
+
 export default function WebRegion({ config, theme }: WidgetComponentProps) {
   const webConfig = config as WebRegionConfig | undefined;
   const url = webConfig?.url ?? '';
@@ -56,29 +63,31 @@ export default function WebRegion({ config, theme }: WidgetComponentProps) {
   const regionW = webConfig?.regionW ?? VIEWPORT_W;
   const regionH = webConfig?.regionH ?? VIEWPORT_H;
   const fit = webConfig?.fit ?? 'cover';
+  const useCorsProxy = webConfig?.useCorsProxy ?? false;
 
-  const [iframeSrc, setIframeSrc] = useState(resolveEmbedUrl(url));
+  const [iframeSrc, setIframeSrc] = useState(resolveWebRegionFrameUrl(url, useCorsProxy));
   const { containerRef, containerWidth, containerHeight } = useFitScale(regionW, regionH);
 
   useEffect(() => {
-    setIframeSrc(resolveEmbedUrl(url));
-  }, [url]);
+    setIframeSrc(resolveWebRegionFrameUrl(url, useCorsProxy));
+  }, [url, useCorsProxy]);
 
   useEffect(() => {
     if (!url || refreshInterval <= 0) return;
     const updateSrc = () => {
       try {
-        const next = new URL(resolveEmbedUrl(url));
+        const next = new URL(resolveWebRegionFrameUrl(url, useCorsProxy));
         next.searchParams.set('_ts', Date.now().toString());
         setIframeSrc(next.toString());
       } catch {
-        const sep = url.includes('?') ? '&' : '?';
-        setIframeSrc(`${url}${sep}_ts=${Date.now()}`);
+        const frameUrl = resolveWebRegionFrameUrl(url, useCorsProxy);
+        const sep = frameUrl.includes('?') ? '&' : '?';
+        setIframeSrc(`${frameUrl}${sep}_ts=${Date.now()}`);
       }
     };
     const interval = setInterval(updateSrc, refreshInterval * 1000);
     return () => clearInterval(interval);
-  }, [url, refreshInterval]);
+  }, [url, refreshInterval, useCorsProxy]);
 
   const { scale, tx, ty } = useMemo(() => {
     if (containerWidth === 0 || containerHeight === 0 || regionW === 0 || regionH === 0) {
@@ -148,5 +157,6 @@ registerWidget({
     regionW: VIEWPORT_W,
     regionH: VIEWPORT_H,
     fit: 'cover',
+    useCorsProxy: false,
   },
 });

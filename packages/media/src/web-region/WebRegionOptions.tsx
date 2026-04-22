@@ -4,9 +4,11 @@ import {
   AppIcon,
   FormInput,
   FormSelect,
+  FormSwitch,
+  getCorsProxyUrl,
   type WidgetOptionsProps,
 } from '@firstform/campus-hub-widget-sdk';
-import { VIEWPORT_H, VIEWPORT_W, resolveEmbedUrl } from './WebRegion';
+import { VIEWPORT_H, VIEWPORT_W, resolveWebRegionFrameUrl } from './WebRegion';
 
 interface WebRegionData {
   url: string;
@@ -16,6 +18,7 @@ interface WebRegionData {
   regionW: number;
   regionH: number;
   fit: 'cover' | 'contain';
+  useCorsProxy: boolean;
 }
 
 type DragMode =
@@ -51,6 +54,7 @@ export default function WebRegionOptions({ data, onChange }: WidgetOptionsProps)
     regionW: (data?.regionW as number) ?? VIEWPORT_W,
     regionH: (data?.regionH as number) ?? VIEWPORT_H,
     fit: ((data?.fit as 'cover' | 'contain') ?? 'cover'),
+    useCorsProxy: (data?.useCorsProxy as boolean) ?? false,
   }));
   const [committedUrl, setCommittedUrl] = useState(state.url);
   const [lockAspect, setLockAspect] = useState(false);
@@ -69,6 +73,7 @@ export default function WebRegionOptions({ data, onChange }: WidgetOptionsProps)
         regionW: (data.regionW as number) ?? VIEWPORT_W,
         regionH: (data.regionH as number) ?? VIEWPORT_H,
         fit: ((data.fit as 'cover' | 'contain') ?? 'cover'),
+        useCorsProxy: (data.useCorsProxy as boolean) ?? false,
       });
     }
   }, [data]);
@@ -189,7 +194,10 @@ export default function WebRegionOptions({ data, onChange }: WidgetOptionsProps)
     dragRef.current = null;
   };
 
-  const iframeSrc = committedUrl ? resolveEmbedUrl(committedUrl) : '';
+  const iframeSrc = committedUrl
+    ? resolveWebRegionFrameUrl(committedUrl, state.useCorsProxy)
+    : '';
+  const hasCorsProxy = !!getCorsProxyUrl();
   const regionAspect =
     state.regionH > 0 ? (state.regionW / state.regionH).toFixed(2) : '—';
 
@@ -227,6 +235,24 @@ export default function WebRegionOptions({ data, onChange }: WidgetOptionsProps)
           max={3600}
           onChange={handleField}
         />
+
+        <div className="space-y-2">
+          <FormSwitch
+            label="Use CORS Proxy"
+            name="useCorsProxy"
+            checked={state.useCorsProxy}
+            onChange={handleField}
+          />
+          <p className="text-xs text-[var(--ui-text-muted)]">
+            Loads the page through the system proxy when direct iframe embedding is blocked.
+            The target domain must be allowed by the proxy.
+          </p>
+          {state.useCorsProxy && !hasCorsProxy && (
+            <p className="text-xs text-[var(--color-accent)]">
+              No system CORS proxy is configured, so this will use the direct URL.
+            </p>
+          )}
+        </div>
 
         <FormSelect
           label="Fit Mode"
@@ -348,8 +374,8 @@ export default function WebRegionOptions({ data, onChange }: WidgetOptionsProps)
           <AppIcon name="warning" className="w-4 h-4 mt-0.5 flex-shrink-0" />
           <div className="text-sm text-[var(--color-accent)]">
             <strong>Note:</strong> Many sites block iframe embedding (X-Frame-Options / CSP).
-            If the preview is blank, the site may not allow embedding — the region selector
-            still works but you won&apos;t see the page contents.
+            If the preview is blank, enable the CORS proxy option. The region selector still
+            works even when the page contents are hidden.
           </div>
         </div>
       </div>

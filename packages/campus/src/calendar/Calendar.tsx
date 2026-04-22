@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
-import { useFitScale, AppIcon, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
+import { AppIcon, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, buildProxyUrl, fetchTextWithCache } from '@firstform/campus-hub-widget-sdk';
 import { parseICal } from '@firstform/campus-hub-widget-sdk';
 import CalendarOptions from './CalendarOptions';
@@ -102,7 +102,6 @@ export default function CalendarWidget({ config, theme }: WidgetComponentProps) 
 
   const [events, setEvents] = useState<CalendarEvent[]>(DEMO_EVENTS);
   const [error, setError] = useState<string | null>(null);
-  const { containerRef, scale } = useFitScale(410, 600);
 
   const fetchEvents = useCallback(async () => {
     if (!calendarUrl || galleryDemo) {
@@ -170,16 +169,12 @@ export default function CalendarWidget({ config, theme }: WidgetComponentProps) 
 
   return (
     <ThemedContainer
-      ref={containerRef}
       theme={theme}
       color="primary"
       opacity="10"
-      className="flex items-center justify-center"
+      className="flex min-h-0"
     >
-      <div
-        style={{ width: 410, height: 600, transform: `scale(${scale})`, transformOrigin: 'center center' }}
-        className="flex flex-col h-full"
-      >
+      <div className="flex h-full min-h-0 w-full flex-col">
         {/* Header */}
         <div className="flex items-center gap-3 px-5 py-4 shrink-0" style={{ borderBottom: `1px solid ${theme.accent}20` }}>
           <span style={{ color: theme.accent }}><AppIcon name="calendarRange" className="w-5 h-5" /></span>

@@ -4,6 +4,7 @@ import { FormInput, FormSelect, FormSwitch } from '@firstform/campus-hub-widget-
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
 type DataSource = 'default' | 'api' | 'unbc-news';
+type UNBCImageQuality = 'original' | 'thumbnail';
 
 interface PosterCarouselData {
   rotationSeconds: number;
@@ -12,6 +13,7 @@ interface PosterCarouselData {
   maxStories: number;
   refreshInterval: number;
   useCorsProxy: boolean;
+  imageQuality: UNBCImageQuality;
 }
 
 export default function PosterCarouselOptions({ data, onChange }: WidgetOptionsProps) {
@@ -22,6 +24,7 @@ export default function PosterCarouselOptions({ data, onChange }: WidgetOptionsP
     maxStories: (data?.maxStories as number) ?? 5,
     refreshInterval: (data?.refreshInterval as number) ?? 30,
     useCorsProxy: (data?.useCorsProxy as boolean) ?? true,
+    imageQuality: (data?.imageQuality as UNBCImageQuality) ?? 'original',
   });
 
   useEffect(() => {
@@ -33,6 +36,7 @@ export default function PosterCarouselOptions({ data, onChange }: WidgetOptionsP
         maxStories: (data.maxStories as number) ?? 5,
         refreshInterval: (data.refreshInterval as number) ?? 30,
         useCorsProxy: (data.useCorsProxy as boolean) ?? true,
+        imageQuality: (data.imageQuality as UNBCImageQuality) ?? 'original',
       });
     }
   }, [data]);
@@ -128,6 +132,21 @@ export default function PosterCarouselOptions({ data, onChange }: WidgetOptionsP
               max={20}
               onChange={handleChange}
             />
+
+            <FormSelect
+              label="Image Quality"
+              name="imageQuality"
+              value={state.imageQuality}
+              options={[
+                { value: 'original', label: 'Original upload (best)' },
+                { value: 'thumbnail', label: 'Listing thumbnail (fastest)' },
+              ]}
+              onChange={handleChange}
+            />
+
+            <div className="text-sm text-[var(--ui-text-muted)]">
+              Original upload uses the public source image from UNBC instead of the small thumbnail from the releases list.
+            </div>
 
             <FormSwitch
               label="Use CORS Proxy"

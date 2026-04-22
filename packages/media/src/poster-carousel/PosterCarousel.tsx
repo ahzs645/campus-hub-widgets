@@ -9,9 +9,11 @@ interface Poster {
   title: string;
   subtitle?: string;
   image: string;
+  fallbackImage?: string;
 }
 
 type DataSource = 'default' | 'api' | 'unbc-news';
+type UNBCImageQuality = 'original' | 'thumbnail';
 
 interface PosterCarouselConfig {
   rotationSeconds?: number;
@@ -21,6 +23,7 @@ interface PosterCarouselConfig {
   maxStories?: number;
   refreshInterval?: number;
   useCorsProxy?: boolean;
+  imageQuality?: UNBCImageQuality;
 }
 
 const DEFAULT_POSTERS: Poster[] = [
@@ -52,9 +55,27 @@ const DEFAULT_POSTERS: Poster[] = [
 
 const UNBC_NEWS_URL = 'https://www.unbc.ca/our-stories/releases';
 
+function resolveUNBCImageUrl(imageSrc: string) {
+  return new URL(imageSrc, 'https://www.unbc.ca').toString();
+}
+
+function getOriginalUNBCImageUrl(imageSrc: string) {
+  const url = new URL(imageSrc, 'https://www.unbc.ca');
+
+  url.pathname = url.pathname
+    .replace(/\/sites\/default\/files\/styles\/[^/]+\/public\//, '/sites/default/files/')
+    .replace(/\.(jpe?g|png|gif)\.webp$/i, '.$1');
+  url.search = '';
+
+  return url.toString();
+}
 
 /** Parse the UNBC news releases page HTML into poster items */
-const parseUNBCNewsPage = (html: string, maxStories: number): Poster[] => {
+const parseUNBCNewsPage = (
+  html: string,
+  maxStories: number,
+  imageQuality: UNBCImageQuality
+): Poster[] => {
   const posters: Poster[] = [];
 
   // Match story blocks: an <a> with image followed by <h3> with title link
@@ -69,10 +90,10 @@ const parseUNBCNewsPage = (html: string, maxStories: number): Poster[] => {
 
     if (!title || !imageSrc) continue;
 
-    // Make image URL absolute
-    const imageUrl = imageSrc.startsWith('http')
-      ? imageSrc
-      : `https://www.unbc.ca${imageSrc}`;
+    const thumbnailUrl = resolveUNBCImageUrl(imageSrc);
+    const imageUrl = imageQuality === 'original'
+      ? getOriginalUNBCImageUrl(imageSrc)
+      : thumbnailUrl;
 
     // Try to extract date text after the </h3> tag
     const afterH3 = html.substring(match.index + match[0].length, match.index + match[0].length + 200);
@@ -84,6 +105,7 @@ const parseUNBCNewsPage = (html: string, maxStories: number): Poster[] => {
       title,
       subtitle,
       image: imageUrl,
+      fallbackImage: imageUrl !== thumbnailUrl ? thumbnailUrl : undefined,
     });
   }
 
@@ -98,6 +120,7 @@ export default function PosterCarousel({ config, theme }: WidgetComponentProps) 
   const maxStories = carouselConfig?.maxStories ?? 5;
   const refreshInterval = carouselConfig?.refreshInterval ?? 30; // minutes
   const useCorsProxy = carouselConfig?.useCorsProxy ?? true;
+  const imageQuality = carouselConfig?.imageQuality ?? 'original';
 
   const [posters, setPosters] = useState<Poster[]>(carouselConfig?.posters ?? DEFAULT_POSTERS);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -150,7 +173,7 @@ export default function PosterCarousel({ config, theme }: WidgetComponentProps) 
           ttlMs: refreshInterval * 60 * 1000,
           allowStale: true,
         });
-        const stories = parseUNBCNewsPage(text, maxStories);
+        const stories = parseUNBCNewsPage(text, maxStories, imageQuality);
         if (stories.length > 0) {
           setPosters(stories);
           setCurrentIndex(0);
@@ -168,7 +191,7 @@ export default function PosterCarousel({ config, theme }: WidgetComponentProps) 
     fetchNews();
     const interval = setInterval(fetchNews, refreshInterval * 60 * 1000);
     return () => clearInterval(interval);
-  }, [dataSource, maxStories, refreshInterval, useCorsProxy]);
+  }, [dataSource, maxStories, refreshInterval, useCorsProxy, imageQuality]);
 
   const nextSlide = useCallback(() => {
     setIsTransitioning(true);
@@ -224,6 +247,10 @@ export default function PosterCarousel({ config, theme }: WidgetComponentProps) 
           src={current.image}
           alt={current.title}
           className="w-full h-full object-cover animate-ken-burns"
+          onError={(event) => {
+            if (!current.fallbackImage || event.currentTarget.src === current.fallbackImage) return;
+            event.currentTarget.src = current.fallbackImage;
+          }}
           style={{
             animationDuration: `${rotationSeconds}s`,
           }}

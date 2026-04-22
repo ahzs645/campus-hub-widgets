@@ -65,6 +65,47 @@ const EVENT_DOT_COLORS = [
 
 const DEFAULT_SIMCITY_API_URL = '/data/simcity_news_tickers.json';
 const DEFAULT_SIMCITY_MAX_ITEMS = 40;
+const DEFAULT_SIMCITY_TICKER_DATA = {
+  items: [
+    {
+      id: 'city-council-1',
+      label: 'CITY',
+      text: '{{cityName}} council approves new plaza lighting after midnight foot traffic doubles.',
+    },
+    {
+      id: 'mayor-briefing-1',
+      label: 'MAYOR',
+      text: '{{mayorName}} asks residents to report potholes before the spring resurfacing blitz.',
+    },
+  ],
+  categories: {
+    city_news: [
+      'New bus shelters open across {{cityName}} as commuter demand grows.',
+      '{{cityName}} parks department adds weekend cleanup crews after record picnic turnout.',
+      'Downtown permit office extends Thursday hours for small business applicants.',
+    ],
+    traffic: [
+      'Traffic alert: bridge inspections will narrow two lanes near the west interchange.',
+      'Transit control reports five-minute delays on the blue line after signal maintenance.',
+      "Parking meters in the arts district are free after 6 PM for tonight's gallery walk.",
+    ],
+    weather: [
+      'Light rain expected this afternoon; road crews are monitoring low-lying intersections.',
+      'Warm front moving in tomorrow with a high of 72 and clear evening skies.',
+      'Harbor winds ease overnight, clearing the way for morning ferry service.',
+    ],
+    sims: [
+      '{{randomSimName}} wins commuter of the week after taking the tram 42 days in a row.',
+      '{{randomWorkplaceName}} adds a rooftop garden and invites {{sims}} to volunteer Saturday.',
+      '{{sim}} advisory: keep umbrellas handy near City Hall until the clouds move east.',
+    ],
+    public_safety: [
+      'Fire department reminds residents to test smoke alarms before the weekend.',
+      'Emergency drill scheduled at Central Station at 10 AM; sirens are only a test.',
+      'Neighborhood watch expands patrols around the library and student housing.',
+    ],
+  },
+};
 const HANDLEBARS_TOKEN = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g;
 const LEGACY_TOKEN = /~([A-Za-z0-9_]+)~/g;
 const SIM_CATEGORY_TOKEN = /(^|_)sims?(_|$)/i;
@@ -353,6 +394,29 @@ export default function NewsTicker({ config, theme }: WidgetComponentProps) {
 
     const fetchTicker = async () => {
       try {
+        const mapCurrentSimCityData = (data: unknown) =>
+          mapSimCityTickerItems(data, {
+            fallbackLabel: label,
+            templateValues: buildTemplateValues({
+              templateCityName,
+              templateMayorName,
+              templateRandomSimName,
+              templateRandomWorkplaceName,
+              templateSim,
+              templateSims,
+            }),
+            categoryFilter: parseCategoryFilter(simcityCategories),
+            maxItems: simcityMaxItems,
+          });
+
+        if (sourceType === 'simcity-template' && announcementsApiUrl === DEFAULT_SIMCITY_API_URL) {
+          const mapped = mapCurrentSimCityData(DEFAULT_SIMCITY_TICKER_DATA);
+          if (isMounted && mapped.length > 0) {
+            queueFetchedItems(mapped);
+          }
+          return;
+        }
+
         const fetchUrl = useCorsProxy ? buildProxyUrl(announcementsApiUrl) : announcementsApiUrl;
         if (sourceType === 'rss') {
           const { text } = await fetchTextWithCache(fetchUrl, {
@@ -374,19 +438,7 @@ export default function NewsTicker({ config, theme }: WidgetComponentProps) {
             cacheKey: buildCacheKey('ticker-simcity-json', fetchUrl),
             ttlMs: cacheTtlSeconds * 1000,
           });
-          const mapped = mapSimCityTickerItems(data, {
-            fallbackLabel: label,
-            templateValues: buildTemplateValues({
-              templateCityName,
-              templateMayorName,
-              templateRandomSimName,
-              templateRandomWorkplaceName,
-              templateSim,
-              templateSims,
-            }),
-            categoryFilter: parseCategoryFilter(simcityCategories),
-            maxItems: simcityMaxItems,
-          });
+          const mapped = mapCurrentSimCityData(data);
           if (isMounted && mapped.length > 0) {
             queueFetchedItems(mapped);
           }
