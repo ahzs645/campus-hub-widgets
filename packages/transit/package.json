@@ -16,6 +16,7 @@
     "@firstform/campus-hub-widget-sdk": "^0.1.0"
   },
   "dependencies": {
+    "fflate": "^0.8.2",
     "gtfs-realtime-bindings": "^1.1.1",
     "react-pixel-display": "^1.0.0"
   },

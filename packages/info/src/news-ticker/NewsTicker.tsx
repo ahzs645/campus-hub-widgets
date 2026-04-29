@@ -492,8 +492,6 @@ export default function NewsTicker({ config, theme }: WidgetComponentProps) {
   });
 
   const isEventsMode = dataSource === 'events';
-  const tickerContent = isEventsMode ? [] : [...items, ...items];
-  const tickerEvents = isEventsMode ? [...events, ...events] : [];
 
   // Uniformly scale the ticker to fill its row height (designed at 70px),
   // then apply user scale from widget options.
@@ -517,6 +515,77 @@ export default function NewsTicker({ config, theme }: WidgetComponentProps) {
   }, [updateScale]);
 
   const renderScale = Math.max(0.01, fitScale * userScale);
+
+  const renderAnnouncementSegment = (segment: 'primary' | 'duplicate') => (
+    <div
+      className="flex h-full shrink-0 items-center py-4 pl-48"
+      aria-hidden={segment === 'duplicate'}
+    >
+      {items.map((item) => (
+        <div key={`${segment}-${item.id}`} className="inline-flex items-center mx-10">
+          <span
+            className="px-4 py-1.5 rounded-full text-sm font-bold uppercase mr-4 tracking-wide"
+            style={{ backgroundColor: theme.primary, color: theme.accent }}
+          >
+            {item.label}
+          </span>
+          <span className="font-semibold text-xl" style={{ color: theme.primary }}>
+            {item.text}
+          </span>
+          <span className="mx-10 text-3xl" style={{ color: `${theme.primary}50` }}>
+            &bull;
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderEventSegment = (segment: 'primary' | 'duplicate') => (
+    <div
+      className="flex h-full shrink-0 items-center py-4 pl-48"
+      aria-hidden={segment === 'duplicate'}
+    >
+      {events.map((event, idx) => (
+        <div key={`${segment}-${event.id}`} className="inline-flex items-center mx-6 gap-3">
+          {event.time && (
+            <span
+              className="px-3 py-1.5 rounded-lg text-sm font-bold tracking-wide whitespace-nowrap"
+              style={{
+                backgroundColor: theme.primary,
+                color: theme.accent,
+              }}
+            >
+              {event.time}
+            </span>
+          )}
+          <span
+            className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+            style={{
+              backgroundColor: EVENT_DOT_COLORS[idx % EVENT_DOT_COLORS.length],
+              boxShadow: `0 0 8px ${EVENT_DOT_COLORS[idx % EVENT_DOT_COLORS.length]}80`,
+            }}
+          />
+          <span
+            className="font-semibold text-xl whitespace-nowrap"
+            style={{ color: theme.primary }}
+          >
+            {event.title}
+          </span>
+          {event.date && (
+            <span
+              className="text-sm opacity-60 whitespace-nowrap"
+              style={{ color: theme.primary }}
+            >
+              {event.date}
+            </span>
+          )}
+          <span className="mx-6 text-3xl" style={{ color: `${theme.primary}50` }}>
+            &bull;
+          </span>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div
@@ -544,69 +613,15 @@ export default function NewsTicker({ config, theme }: WidgetComponentProps) {
 
         {/* Scrolling Content */}
         <div
-          className="flex whitespace-nowrap py-4 pl-48 items-center animate-ticker h-full"
+          data-layout-diagnostic-ignore="true"
+          className="absolute inset-0 flex whitespace-nowrap animate-ticker will-change-transform"
           style={{
             animationDuration: `${speed}s`,
           }}
           onAnimationIteration={applyPendingItemsAtLoop}
         >
-          {isEventsMode
-            ? tickerEvents.map((event, idx) => (
-                <div key={`${event.id}-${idx}`} className="inline-flex items-center mx-6 gap-3">
-                  {event.time && (
-                    <span
-                      className="px-3 py-1.5 rounded-lg text-sm font-bold tracking-wide whitespace-nowrap"
-                      style={{
-                        backgroundColor: theme.primary,
-                        color: theme.accent,
-                      }}
-                    >
-                      {event.time}
-                    </span>
-                  )}
-                  <span
-                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                    style={{
-                      backgroundColor: EVENT_DOT_COLORS[idx % EVENT_DOT_COLORS.length],
-                      boxShadow: `0 0 8px ${EVENT_DOT_COLORS[idx % EVENT_DOT_COLORS.length]}80`,
-                    }}
-                  />
-                  <span
-                    className="font-semibold text-xl whitespace-nowrap"
-                    style={{ color: theme.primary }}
-                  >
-                    {event.title}
-                  </span>
-                  {event.date && (
-                    <span
-                      className="text-sm opacity-60 whitespace-nowrap"
-                      style={{ color: theme.primary }}
-                    >
-                      {event.date}
-                    </span>
-                  )}
-                  <span className="mx-6 text-3xl" style={{ color: `${theme.primary}50` }}>
-                    &bull;
-                  </span>
-                </div>
-              ))
-            : tickerContent.map((item, idx) => (
-                <div key={`${item.id}-${idx}`} className="inline-flex items-center mx-10">
-                  <span
-                    className="px-4 py-1.5 rounded-full text-sm font-bold uppercase mr-4 tracking-wide"
-                    style={{ backgroundColor: theme.primary, color: theme.accent }}
-                  >
-                    {item.label}
-                  </span>
-                  <span className="font-semibold text-xl" style={{ color: theme.primary }}>
-                    {item.text}
-                  </span>
-                  <span className="mx-10 text-3xl" style={{ color: `${theme.primary}50` }}>
-                    &bull;
-                  </span>
-                </div>
-              ))
-          }
+          {isEventsMode ? renderEventSegment('primary') : renderAnnouncementSegment('primary')}
+          {isEventsMode ? renderEventSegment('duplicate') : renderAnnouncementSegment('duplicate')}
         </div>
       </div>
     </div>

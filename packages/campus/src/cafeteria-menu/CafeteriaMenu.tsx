@@ -36,6 +36,7 @@ interface ParsedMenu {
 
 type MealPeriod = 'breakfast' | 'lunch' | 'dinner';
 type ServicePeriod = MealPeriod | 'closed';
+type MenuStatus = 'ready' | 'seasonClosed' | 'unavailable';
 
 interface ServiceWindows {
   breakfastStart: string;
@@ -161,6 +162,11 @@ const MEAL_LABELS: Record<ServicePeriod, string> = {
   lunch: 'Lunch',
   dinner: 'Dinner',
   closed: 'Closed',
+};
+
+const MENU_STATUS_MESSAGES: Record<Exclude<MenuStatus, 'ready'>, string> = {
+  seasonClosed: 'Cafeteria is closed for the season.',
+  unavailable: 'Cafeteria menu is temporarily unavailable.',
 };
 
 /* ------------------------------------------------------------------ */
@@ -496,6 +502,28 @@ const stripHtml = (html: string): string =>
     .replace(/&#\d+;/g, '')
     .trim();
 
+const getMenuStatusFromHtml = (html: string): MenuStatus => {
+  const text = stripHtml(html).replace(/\s+/g, ' ').toLowerCase();
+
+  if (
+    /\bclosed\s+for\s+(?:the\s+)?season\b/.test(text) ||
+    /\bclosed\s+for\s+(?:the\s+)?summer\b/.test(text) ||
+    /\bclosed\s+for\s+(?:winter|spring|fall|autumn)\s+break\b/.test(text)
+  ) {
+    return 'seasonClosed';
+  }
+
+  if (
+    /\bmenu\s+for\s+this\s+location\s+is\s+temporarily\s+unavailable\b/.test(text) ||
+    /\bmenu\s+is\s+temporarily\s+unavailable\b/.test(text) ||
+    /\bplease\s+try\s+again\s+later\b/.test(text)
+  ) {
+    return 'unavailable';
+  }
+
+  return 'ready';
+};
+
 const hasAnyMenuContent = (parsed: ParsedMenu): boolean =>
   parsed.weekly.length + parsed.breakfast.length + parsed.lunch.length +
   parsed.dinner.length + parsed.showtime.length > 0;
@@ -605,6 +633,7 @@ export default function CafeteriaMenu({
   const [menu, setMenu] = useState<ParsedMenu>(DEMO_MENU);
   const [isDemo, setIsDemo] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [menuStatus, setMenuStatus] = useState<MenuStatus>('ready');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [servicePeriod, setServicePeriod] = useState<ServicePeriod>(() =>
@@ -632,7 +661,14 @@ export default function CafeteriaMenu({
 
     try {
       setError(null);
+      setMenuStatus('ready');
       let result: ParsedMenu | null = null;
+      let detectedStatus: MenuStatus = 'ready';
+      const rememberStatus = (status: MenuStatus) => {
+        if (status === 'seasonClosed' || detectedStatus === 'ready') {
+          detectedStatus = status;
+        }
+      };
 
       // --- Strategy 1: Dana Hospitality direct endpoints ---
       if (danaLocations) {
@@ -649,6 +685,7 @@ export default function CafeteriaMenu({
                 ttlMs: refreshMs,
               },
             );
+            rememberStatus(getMenuStatusFromHtml(text));
             const sections = parseDanaMenuHtml(text);
             allSections.push(...sections);
           } catch {
@@ -658,6 +695,11 @@ export default function CafeteriaMenu({
 
         if (allSections.length > 0) {
           result = categorizeDanaSections(allSections);
+        } else if (detectedStatus !== 'ready') {
+          setMenuStatus(detectedStatus);
+          setIsDemo(false);
+          setLastUpdated(new Date());
+          return;
         }
       }
 
@@ -691,6 +733,7 @@ export default function CafeteriaMenu({
                       ttlMs: refreshMs,
                     },
                   );
+                  rememberStatus(getMenuStatusFromHtml(text));
                   allSections.push(...parseDanaMenuHtml(text));
                 } catch {
                   // continue
@@ -698,11 +741,23 @@ export default function CafeteriaMenu({
               }
               if (allSections.length > 0) {
                 result = categorizeDanaSections(allSections);
+              } else if (detectedStatus !== 'ready') {
+                setMenuStatus(detectedStatus);
+                setIsDemo(false);
+                setLastUpdated(new Date());
+                return;
               }
             }
 
             // If no Dana iframes found, parse the WP content directly
             if (!result && content) {
+              const status = getMenuStatusFromHtml(content);
+              if (status !== 'ready') {
+                setMenuStatus(status);
+                setIsDemo(false);
+                setLastUpdated(new Date());
+                return;
+              }
               const parsed = categoriseWpContent(content);
               const hasContent = hasAnyMenuContent(parsed);
               if (hasContent) result = parsed;
@@ -722,6 +777,13 @@ export default function CafeteriaMenu({
             ttlMs: refreshMs,
           },
         );
+        const status = getMenuStatusFromHtml(text);
+        if (status !== 'ready') {
+          setMenuStatus(status);
+          setIsDemo(false);
+          setLastUpdated(new Date());
+          return;
+        }
         const parsed = categoriseWpContent(text);
         const hasContent = hasAnyMenuContent(parsed);
         if (hasContent) result = parsed;
@@ -730,6 +792,7 @@ export default function CafeteriaMenu({
       if (result) {
         setMenu(result);
         setIsDemo(false);
+        setMenuStatus('ready');
         setLastUpdated(new Date());
       } else {
         setError('No menu items found');
@@ -761,8 +824,11 @@ export default function CafeteriaMenu({
   );
   const weeklySections = menu.weekly;
   const isOpen = servicePeriod !== 'closed';
+  const statusMessage = menuStatus === 'ready' ? null : MENU_STATUS_MESSAGES[menuStatus];
 
   const displaySections = useMemo(() => {
+    if (menuStatus !== 'ready') return [];
+
     const showtimeSections = servicePeriod === 'lunch' || servicePeriod === 'dinner'
       ? menu.showtime
       : [];
@@ -783,7 +849,7 @@ export default function CafeteriaMenu({
     }
 
     return sections;
-  }, [weeklySections, currentMealSections, menu, servicePeriod]);
+  }, [weeklySections, currentMealSections, menu, servicePeriod, menuStatus]);
 
   useEffect(() => {
     const container = contentRef.current;
@@ -871,13 +937,17 @@ export default function CafeteriaMenu({
 
       {/* Content */}
       <div ref={contentRef} className="flex-1 overflow-y-auto scrollbar-hide px-4 py-3 space-y-4 min-h-0">
-        {!isOpen && (
+        {statusMessage ? (
+          <div className="rounded-md border border-amber-300/30 bg-amber-400/10 px-3 py-3 text-sm font-medium text-amber-100">
+            {statusMessage}
+          </div>
+        ) : !isOpen && (
           <div className="rounded-md border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
             Cafeteria is currently closed.
           </div>
         )}
 
-        {displaySections.length === 0 && !error && (
+        {displaySections.length === 0 && !error && !statusMessage && (
           <div className="text-white/50 text-sm text-center mt-4">
             No menu available
           </div>
@@ -937,13 +1007,13 @@ export default function CafeteriaMenu({
 
       {/* Footer */}
       <div className="shrink-0 px-4 py-2 flex items-center justify-between text-[11px] text-white/30">
-        {isDemo && !error && (
+        {isDemo && !error && !statusMessage && (
           <span>Demo data – set CORS proxy for live menu</span>
         )}
         {error && (
           <span className="text-red-400/70 truncate max-w-[70%]">{error}</span>
         )}
-        {!isDemo && !error && lastUpdated && (
+        {!isDemo && !error && !statusMessage && lastUpdated && (
           <span>
             Updated{' '}
             {lastUpdated.toLocaleTimeString([], {

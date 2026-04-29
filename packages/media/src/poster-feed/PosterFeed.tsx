@@ -83,7 +83,10 @@ function StackMode({
   }, []);
 
   return (
-    <div className="relative w-full h-full flex items-center justify-center p-4">
+    <div
+      data-layout-diagnostic-ignore="true"
+      className="relative w-full h-full flex items-center justify-center p-4"
+    >
       {posters.map((poster, i) => {
         const rotation = STACK_ROTATIONS[i % STACK_ROTATIONS.length];
         const isActive = i === activeIndex;
@@ -162,6 +165,7 @@ function CarouselMode({
 }) {
   return (
     <div
+      data-layout-diagnostic-ignore="true"
       className="relative w-full h-full flex items-center justify-center overflow-hidden"
       style={{ perspective: '1000px' }}
     >

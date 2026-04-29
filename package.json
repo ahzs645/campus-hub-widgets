@@ -9,6 +9,7 @@
     "typescript": "^5.7.2"
   },
   "dependencies": {
+    "fflate": "^0.8.2",
     "gtfs-realtime-bindings": "^1.1.1",
     "lottie-web": "^5.13.0",
     "qrcode": "^1.5.4",

@@ -5,10 +5,12 @@
  */
 
 import GtfsRealtimeBindings from 'gtfs-realtime-bindings';
-import { buildProxyUrl, getCorsProxyUrl } from '@firstform/campus-hub-widget-sdk';
-import { ROUTES, STOP_SCHEDULE, SERVICE_DATES, STOP_INFO } from './gtfsData';
+import { buildProxyUrl, getCorsProxyUrl } from './corsProxy';
+import { BAKED_STATIC_GTFS, getBestStaticGtfsSnapshot, type StaticGtfsData } from './staticGtfs';
 
 const POLL_INTERVAL = 30000;
+const STATIC_REFRESH_INTERVAL = 1000 * 60 * 60 * 6;
+const STATIC_RETRY_INTERVAL = 1000 * 60 * 5;
 
 /** Default BC Transit GTFS-Realtime trip updates endpoint (Prince George, operator 22). */
 const GTFS_RT_TRIP_UPDATES_URL =
@@ -32,9 +34,9 @@ function dateToStr(d: Date): string {
   return `${y}${m}${day}`;
 }
 
-function getActiveServiceIds(dateStr: string): string[] {
+function getActiveServiceIds(dateStr: string, staticData: StaticGtfsData): string[] {
   const active: string[] = [];
-  for (const [serviceId, dates] of Object.entries(SERVICE_DATES)) {
+  for (const [serviceId, dates] of Object.entries(staticData.serviceDates)) {
     if (dates.includes(dateStr)) {
       active.push(serviceId);
     }
@@ -71,20 +73,23 @@ const LOOP_ROUTE_HEADSIGNS: Record<string, string> = {
  * - Filters out UNBC-bound arrivals for routes with outbound trips (15, 16)
  * - Shows departure times with combined "UNBC/{destination}" headsigns
  */
-export function getScheduledTrips(simulatedNow: Date | null = null): Trip[] {
+export function getScheduledTrips(
+  simulatedNow: Date | null = null,
+  staticData: StaticGtfsData = BAKED_STATIC_GTFS,
+): Trip[] {
   const now = simulatedNow || new Date();
   const dateStr = dateToStr(now);
-  const activeServiceIds = getActiveServiceIds(dateStr);
+  const activeServiceIds = getActiveServiceIds(dateStr, staticData);
   if (activeServiceIds.length === 0) return [];
 
   // Collect active entries
-  const activeEntries = STOP_SCHEDULE.filter(entry =>
+  const activeEntries = staticData.stopSchedule.filter(entry =>
     activeServiceIds.includes(String(entry.serviceId))
   );
 
   // Deduplicate: loop routes visit the same stop twice per trip.
   // Keep only the earliest occurrence (the departure, not the return).
-  const tripMap = new Map<string, typeof STOP_SCHEDULE[0]>();
+  const tripMap = new Map<string, typeof staticData.stopSchedule[0]>();
   for (const entry of activeEntries) {
     const existing = tripMap.get(entry.tripId);
     if (!existing || entry.departureTime < existing.departureTime) {
@@ -110,7 +115,7 @@ export function getScheduledTrips(simulatedNow: Date | null = null): Trip[] {
     const departureDate = gtfsTimeToDate(entry.departureTime, now);
     if (departureDate.getTime() < now.getTime() - 30000) continue;
 
-    const route = ROUTES[entry.routeId];
+    const route = staticData.routes[entry.routeId];
     if (!route) continue;
 
     // Build headsign: loop routes get override, others get "UNBC/{destination}"
@@ -145,7 +150,11 @@ interface RealtimeUpdate {
   departureTime: number | null;
 }
 
-async function fetchRealtimeUpdates(proxyUrl?: string, useCorsProxy: boolean = true): Promise<Map<string, RealtimeUpdate>> {
+async function fetchRealtimeUpdates(
+  stopId: string,
+  proxyUrl?: string,
+  useCorsProxy: boolean = true,
+): Promise<Map<string, RealtimeUpdate>> {
   try {
     let url: string;
     if (proxyUrl) {
@@ -178,7 +187,7 @@ async function fetchRealtimeUpdates(proxyUrl?: string, useCorsProxy: boolean = t
       if (!tripId) continue;
 
       for (const stu of entity.tripUpdate.stopTimeUpdate || []) {
-        if (String(stu.stopId) === STOP_INFO.stopId) {
+        if (String(stu.stopId) === stopId) {
           const arrivalTime = stu.arrival?.time;
           const departureTime = stu.departure?.time;
           updates.set(tripId, {
@@ -230,15 +239,22 @@ export function createLiveTripProvider(
 ) {
   let intervalId: ReturnType<typeof setInterval> | null = null;
   let rtUpdates = new Map<string, RealtimeUpdate>();
+  let staticData = BAKED_STATIC_GTFS;
+  let nextStaticRefreshAt = 0;
   const canFetchRealtime = !!(proxyUrl || (useCorsProxy && getCorsProxyUrl()));
 
   async function refresh() {
     const simNow = getSimulatedNow ? getSimulatedNow() : null;
+    if (!simNow && Date.now() >= nextStaticRefreshAt) {
+      const snapshot = await getBestStaticGtfsSnapshot(useCorsProxy);
+      staticData = snapshot.data;
+      nextStaticRefreshAt = Date.now() + (snapshot.source === 'network' ? STATIC_REFRESH_INTERVAL : STATIC_RETRY_INTERVAL);
+    }
     // Only fetch realtime if not simulating and a proxy is available
     if (!simNow && canFetchRealtime) {
-      rtUpdates = await fetchRealtimeUpdates(proxyUrl, useCorsProxy);
+      rtUpdates = await fetchRealtimeUpdates(staticData.stopInfo.stopId, proxyUrl, useCorsProxy);
     }
-    const scheduled = getScheduledTrips(simNow);
+    const scheduled = getScheduledTrips(simNow, simNow ? BAKED_STATIC_GTFS : staticData);
     const merged = simNow ? scheduled : (canFetchRealtime ? applyRealtimeUpdates(scheduled, rtUpdates) : scheduled);
     onUpdate(merged);
   }

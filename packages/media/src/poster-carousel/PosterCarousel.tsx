@@ -240,6 +240,7 @@ export default function PosterCarousel({ config, theme }: WidgetComponentProps) 
     <div className="relative h-full rounded-2xl overflow-hidden shadow-2xl group">
       {/* Background image with Ken Burns effect */}
       <div
+        data-layout-diagnostic-ignore="true"
         className="absolute inset-0 transition-opacity duration-500"
         style={{ opacity: isTransitioning ? 0 : 1 }}
       >

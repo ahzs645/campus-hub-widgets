@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { FormSelect, FormSwitch, FormInput, OptionsPanel, OptionsSection, OptionsPreview } from '@firstform/campus-hub-widget-sdk';
+import { FormSelect, FormSwitch, FormInput, OptionsPanel, OptionsSection } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
 type ClockAlignment = 'left' | 'center' | 'right';
@@ -65,35 +65,6 @@ export default function ClockOptions({ data, onChange }: WidgetOptionsProps) {
 
   const isAnalog = state.style === 'analog';
   const isMosaic = state.style === 'mosaic';
-
-  // Preview time
-  const now = new Date();
-  const timeOptions: Intl.DateTimeFormatOptions = {
-    hour: '2-digit',
-    minute: '2-digit',
-    ...(state.showSeconds ? { second: '2-digit' } : {}),
-    hour12: !state.format24h,
-  };
-  const previewAlignmentClass =
-    state.alignment === 'left'
-      ? 'text-left'
-      : state.alignment === 'center'
-        ? 'text-center'
-        : 'text-right';
-  const previewVerticalAlignmentClass =
-    state.verticalAlignment === 'top'
-      ? 'justify-start'
-      : state.verticalAlignment === 'center'
-        ? 'justify-center'
-        : 'justify-end';
-
-  // Analog preview
-  const hours = now.getHours() % 12;
-  const minutes = now.getMinutes();
-  const seconds = now.getSeconds();
-  const hourAngle = (hours + minutes / 60) * 30;
-  const minuteAngle = (minutes + seconds / 60) * 6;
-  const secondAngle = seconds * 6;
 
   return (
     <OptionsPanel>
@@ -176,92 +147,6 @@ export default function ClockOptions({ data, onChange }: WidgetOptionsProps) {
         />
       </OptionsSection>
 
-      {/* Preview */}
-      <OptionsPreview>
-          {isMosaic ? (
-            <div className="flex flex-col items-center">
-              <svg viewBox="0 0 200 200" className="w-24 h-24">
-                <circle cx="100" cy="100" r={90} fill="var(--color-accent)" opacity="0.08" />
-                {/* Simplified dot grid */}
-                {Array.from({ length: 9 }).map((_, i) =>
-                  Array.from({ length: 9 }).map((_, j) => {
-                    const gx = 28 + i * 18;
-                    const gy = 28 + j * 18;
-                    const dist = Math.sqrt((gx - 100) ** 2 + (gy - 100) ** 2);
-                    return dist < 85 ? <circle key={`${i}-${j}`} cx={gx} cy={gy} r={2.5} fill="var(--color-accent)" opacity="0.15" /> : null;
-                  })
-                )}
-                {/* Hour hand pixels */}
-                {Array.from({ length: 3 }).map((_, i) => {
-                  const d = (i + 1) * 12;
-                  const rad = (hourAngle - 90) * Math.PI / 180;
-                  return <rect key={`h${i}`} x={100 + Math.cos(rad) * d - 6} y={100 + Math.sin(rad) * d - 6} width={12} height={12} fill="var(--color-accent)" />;
-                })}
-                {/* Minute hand pixels */}
-                {Array.from({ length: 5 }).map((_, i) => {
-                  const d = (i + 1) * 12;
-                  const rad = (minuteAngle - 90) * Math.PI / 180;
-                  return <rect key={`m${i}`} x={100 + Math.cos(rad) * d - 6} y={100 + Math.sin(rad) * d - 6} width={12} height={12} fill="var(--color-accent)" opacity="0.8" />;
-                })}
-                <rect x={95.5} y={95.5} width={9} height={9} fill="var(--color-accent)" />
-              </svg>
-              {state.showDate && (
-                <div className="text-xs text-[var(--ui-text-muted)] mt-1">
-                  {now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
-                </div>
-              )}
-            </div>
-          ) : isAnalog ? (
-            <div className="flex flex-col items-center">
-              <svg viewBox="0 0 200 200" className="w-24 h-24">
-                <circle cx="100" cy="100" r="95" fill="none" stroke="var(--color-accent)" strokeWidth="2" opacity="0.3" />
-                {Array.from({ length: 12 }).map((_, i) => {
-                  const a = (i * 30 - 90) * (Math.PI / 180);
-                  const isQ = i % 3 === 0;
-                  return (
-                    <line
-                      key={i}
-                      x1={100 + Math.cos(a) * (isQ ? 75 : 80)}
-                      y1={100 + Math.sin(a) * (isQ ? 75 : 80)}
-                      x2={100 + Math.cos(a) * 88}
-                      y2={100 + Math.sin(a) * 88}
-                      stroke="var(--color-accent)"
-                      strokeWidth={isQ ? 3 : 1.5}
-                      strokeLinecap="round"
-                      opacity={isQ ? 1 : 0.6}
-                    />
-                  );
-                })}
-                <line x1="100" y1="100" x2={100 + Math.cos((hourAngle - 90) * Math.PI / 180) * 50} y2={100 + Math.sin((hourAngle - 90) * Math.PI / 180) * 50} stroke="var(--color-accent)" strokeWidth="4" strokeLinecap="round" />
-                <line x1="100" y1="100" x2={100 + Math.cos((minuteAngle - 90) * Math.PI / 180) * 70} y2={100 + Math.sin((minuteAngle - 90) * Math.PI / 180) * 70} stroke="var(--color-accent)" strokeWidth="2.5" strokeLinecap="round" />
-                {state.showSeconds && (
-                  <line x1="100" y1="100" x2={100 + Math.cos((secondAngle - 90) * Math.PI / 180) * 78} y2={100 + Math.sin((secondAngle - 90) * Math.PI / 180) * 78} stroke="var(--color-primary)" strokeWidth="1.2" strokeLinecap="round" />
-                )}
-                <circle cx="100" cy="100" r="4" fill="var(--color-accent)" />
-              </svg>
-              {state.showDate && (
-                <div className="text-xs text-[var(--ui-text-muted)] mt-1">
-                  {now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
-                </div>
-              )}
-            </div>
-          ) : (
-            <>
-              <div className="text-4xl font-bold text-[var(--color-accent)] font-mono">
-                {now.toLocaleTimeString([], timeOptions)}
-              </div>
-              {state.showDate && (
-                <div className="text-sm text-[var(--ui-text-muted)] mt-1">
-                  {now.toLocaleDateString([], {
-                    weekday: 'long',
-                    month: 'long',
-                    day: 'numeric',
-                  })}
-                </div>
-              )}
-            </>
-          )}
-      </OptionsPreview>
     </OptionsPanel>
   );
 }
