@@ -14,6 +14,9 @@ interface PosterCarouselData {
   refreshInterval: number;
   useCorsProxy: boolean;
   imageQuality: UNBCImageQuality;
+  showText: boolean;
+  showProgressBar: boolean;
+  showSequenceIndicator: boolean;
 }
 
 export default function PosterCarouselOptions({ data, onChange }: WidgetOptionsProps) {
@@ -25,6 +28,9 @@ export default function PosterCarouselOptions({ data, onChange }: WidgetOptionsP
     refreshInterval: (data?.refreshInterval as number) ?? 30,
     useCorsProxy: (data?.useCorsProxy as boolean) ?? true,
     imageQuality: (data?.imageQuality as UNBCImageQuality) ?? 'original',
+    showText: (data?.showText as boolean) ?? true,
+    showProgressBar: (data?.showProgressBar as boolean) ?? true,
+    showSequenceIndicator: (data?.showSequenceIndicator as boolean) ?? true,
   });
 
   useEffect(() => {
@@ -37,6 +43,9 @@ export default function PosterCarouselOptions({ data, onChange }: WidgetOptionsP
         refreshInterval: (data.refreshInterval as number) ?? 30,
         useCorsProxy: (data.useCorsProxy as boolean) ?? true,
         imageQuality: (data.imageQuality as UNBCImageQuality) ?? 'original',
+        showText: (data.showText as boolean) ?? true,
+        showProgressBar: (data.showProgressBar as boolean) ?? true,
+        showSequenceIndicator: (data.showSequenceIndicator as boolean) ?? true,
       });
     }
   }, [data]);
@@ -69,6 +78,27 @@ export default function PosterCarouselOptions({ data, onChange }: WidgetOptionsP
         <div className="text-sm text-[var(--ui-text-muted)]">
           Each poster will display for {state.rotationSeconds} seconds before transitioning to the next.
         </div>
+
+        <FormSwitch
+          label="Show Text"
+          name="showText"
+          checked={state.showText}
+          onChange={handleChange}
+        />
+
+        <FormSwitch
+          label="Show Top Loading Bar"
+          name="showProgressBar"
+          checked={state.showProgressBar}
+          onChange={handleChange}
+        />
+
+        <FormSwitch
+          label="Show Sequence Indicator"
+          name="showSequenceIndicator"
+          checked={state.showSequenceIndicator}
+          onChange={handleChange}
+        />
       </div>
 
       {/* Data Source */}
@@ -181,18 +211,31 @@ export default function PosterCarouselOptions({ data, onChange }: WidgetOptionsP
             alt="Sample poster"
             className="absolute inset-0 w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-          <div className="absolute bottom-4 left-4">
-            <div className="text-2xl font-bold text-white">
-              {isUNBC ? 'Latest UNBC Story' : 'Sample Event'}
+          {state.showText && (
+            <>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+              <div className="absolute bottom-4 left-4">
+                <div className="text-2xl font-bold text-white">
+                  {isUNBC ? 'Latest UNBC Story' : 'Sample Event'}
+                </div>
+                <div className="text-sm text-white/80">
+                  {isUNBC ? 'Feb 17, 2026' : 'March 15-17 | Main Quad'}
+                </div>
+              </div>
+            </>
+          )}
+          {state.showProgressBar && (
+            <div className="absolute top-2 left-2 right-2 h-1 bg-black/30 rounded">
+              <div className="h-full w-1/3 bg-[var(--color-accent)] rounded" />
             </div>
-            <div className="text-sm text-white/80">
-              {isUNBC ? 'Feb 17, 2026' : 'March 15-17 | Main Quad'}
+          )}
+          {state.showSequenceIndicator && (
+            <div className="absolute bottom-3 right-3 flex gap-1">
+              <span className="h-2 w-2 rounded-full bg-[var(--color-accent)]" />
+              <span className="h-2 w-2 rounded-full bg-white/50" />
+              <span className="h-2 w-2 rounded-full bg-white/50" />
             </div>
-          </div>
-          <div className="absolute top-2 left-2 right-2 h-1 bg-black/30 rounded">
-            <div className="h-full w-1/3 bg-[var(--color-accent)] rounded" />
-          </div>
+          )}
           {isUNBC && (
             <div className="absolute top-4 left-4 px-2 py-0.5 rounded-full text-[10px] font-semibold text-white/90 bg-black/40 backdrop-blur-sm">
               UNBC News

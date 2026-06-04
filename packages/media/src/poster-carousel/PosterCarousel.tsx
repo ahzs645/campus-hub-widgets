@@ -24,6 +24,9 @@ interface PosterCarouselConfig {
   refreshInterval?: number;
   useCorsProxy?: boolean;
   imageQuality?: UNBCImageQuality;
+  showText?: boolean;
+  showProgressBar?: boolean;
+  showSequenceIndicator?: boolean;
 }
 
 const DEFAULT_POSTERS: Poster[] = [
@@ -121,6 +124,9 @@ export default function PosterCarousel({ config, theme }: WidgetComponentProps) 
   const refreshInterval = carouselConfig?.refreshInterval ?? 30; // minutes
   const useCorsProxy = carouselConfig?.useCorsProxy ?? true;
   const imageQuality = carouselConfig?.imageQuality ?? 'original';
+  const showText = carouselConfig?.showText ?? true;
+  const showProgressBar = carouselConfig?.showProgressBar ?? true;
+  const showSequenceIndicator = carouselConfig?.showSequenceIndicator ?? true;
 
   const [posters, setPosters] = useState<Poster[]>(carouselConfig?.posters ?? DEFAULT_POSTERS);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -146,8 +152,9 @@ export default function PosterCarousel({ config, theme }: WidgetComponentProps) 
       try {
         const response = await fetch(apiUrl);
         const data = await response.json();
-        if (Array.isArray(data) && data.length > 0) {
-          setPosters(data);
+        const normalizedPosters = normalizePosters(data);
+        if (normalizedPosters.length > 0) {
+          setPosters(normalizedPosters);
           setError(null);
         }
       } catch (err) {
@@ -258,29 +265,35 @@ export default function PosterCarousel({ config, theme }: WidgetComponentProps) 
         />
       </div>
 
-      {/* Gradient overlays for depth */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
-      <div className="absolute inset-0 bg-gradient-to-r from-black/30 to-transparent" />
+      {/* Gradient overlays for text readability */}
+      {showText && (
+        <>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/30 to-transparent" />
+        </>
+      )}
 
       {/* Content */}
-      <div className="absolute bottom-0 left-0 right-0 p-8 xl:p-12">
-        <h2
-          className="text-4xl xl:text-6xl font-display font-bold text-white mb-3 leading-tight"
-          style={{
-            textShadow: '0 4px 30px rgba(0,0,0,0.5)',
-          }}
-        >
-          {current.title}
-        </h2>
-        {current.subtitle && (
-          <p className="text-xl xl:text-2xl text-white/90 font-medium">
-            {current.subtitle}
-          </p>
-        )}
-      </div>
+      {showText && (
+        <div className="absolute bottom-0 left-0 right-0 p-8 xl:p-12">
+          <h2
+            className="text-4xl xl:text-6xl font-display font-bold text-white mb-3 leading-tight"
+            style={{
+              textShadow: '0 4px 30px rgba(0,0,0,0.5)',
+            }}
+          >
+            {current.title}
+          </h2>
+          {current.subtitle && (
+            <p className="text-xl xl:text-2xl text-white/90 font-medium">
+              {current.subtitle}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Progress dots */}
-      {posters.length > 1 && (
+      {showSequenceIndicator && posters.length > 1 && (
         <div className="absolute bottom-6 right-6 flex gap-2">
           {posters.map((_, idx) => (
             <button
@@ -301,16 +314,18 @@ export default function PosterCarousel({ config, theme }: WidgetComponentProps) 
       )}
 
       {/* Progress bar */}
-      <div className="absolute top-0 left-0 right-0 h-1 bg-black/30">
-        <div
-          className="h-full transition-all duration-100 ease-linear"
-          style={{
-            width: `${progress}%`,
-            backgroundColor: theme.accent,
-            boxShadow: `0 0 10px ${theme.accent}`,
-          }}
-        />
-      </div>
+      {showProgressBar && (
+        <div className="absolute top-0 left-0 right-0 h-1 bg-black/30">
+          <div
+            className="h-full transition-all duration-100 ease-linear"
+            style={{
+              width: `${progress}%`,
+              backgroundColor: theme.accent,
+              boxShadow: `0 0 10px ${theme.accent}`,
+            }}
+          />
+        </div>
+      )}
 
       {/* Decorative corner accent */}
       <div
@@ -333,6 +348,31 @@ export default function PosterCarousel({ config, theme }: WidgetComponentProps) 
   );
 }
 
+function normalizePosters(data: unknown): Poster[] {
+  if (!Array.isArray(data)) return [];
+
+  return data
+    .map((item, index): Poster | null => {
+      if (!item || typeof item !== 'object') return null;
+      const record = item as Record<string, unknown>;
+      const image = typeof record.image === 'string'
+        ? record.image
+        : typeof record.url === 'string'
+          ? record.url
+          : '';
+      if (!image) return null;
+
+      return {
+        id: typeof record.id === 'string' || typeof record.id === 'number' ? record.id : index,
+        title: typeof record.title === 'string' && record.title.trim() ? record.title : `Poster ${index + 1}`,
+        subtitle: typeof record.subtitle === 'string' ? record.subtitle : undefined,
+        image,
+        fallbackImage: typeof record.fallbackImage === 'string' ? record.fallbackImage : undefined,
+      };
+    })
+    .filter((poster): poster is Poster => poster !== null);
+}
+
 // Register the widget
 registerWidget({
   type: 'poster-carousel',
@@ -352,9 +392,33 @@ registerWidget({
       apiUrl: source.url,
       dataSource: 'api',
     }),
+  }, {
+    propName: 'posters',
+    types: ['image', 'unsplash'],
+    multiple: true,
+    applySource: (source, currentData) => {
+      const existingPosters = Array.isArray(currentData.posters)
+        ? currentData.posters as Poster[]
+        : [];
+      return {
+        dataSource: 'default',
+        posters: [
+          ...existingPosters,
+          {
+            id: source._id,
+            title: source.name,
+            subtitle: source.description,
+            image: source.url,
+          },
+        ],
+      };
+    },
   }],
   defaultProps: {
     rotationSeconds: 10,
     useCorsProxy: true,
+    showText: true,
+    showProgressBar: true,
+    showSequenceIndicator: true,
   },
 });
