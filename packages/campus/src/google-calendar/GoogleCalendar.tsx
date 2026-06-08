@@ -116,7 +116,7 @@ export default function GoogleCalendar({ config, theme }: WidgetComponentProps) 
         };
       });
 
-      setEvents(parsed.length > 0 ? parsed : DEMO_EVENTS);
+      setEvents(parsed);
       setCalTitle(customTitle || data?.summary || 'Calendar');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load calendar');
@@ -167,7 +167,11 @@ export default function GoogleCalendar({ config, theme }: WidgetComponentProps) 
 
         {/* Events */}
         <div className="flex-1 overflow-hidden px-5 py-3">
-          {Array.from(grouped.entries()).map(([dateKey, dayEvents]) => (
+          {events.length === 0 ? (
+            <div className="flex h-full items-center justify-center text-center text-sm font-medium text-white/60">
+              No events available
+            </div>
+          ) : Array.from(grouped.entries()).map(([dateKey, dayEvents]) => (
             <div key={dateKey} className="mb-4">
               <div
                 className="text-xs font-semibold uppercase tracking-wider mb-2"

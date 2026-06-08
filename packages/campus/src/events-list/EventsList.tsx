@@ -179,6 +179,12 @@ export default function EventsList({ config, theme }: WidgetComponentProps) {
       <ProgressBar theme={theme} durationSeconds={rotationSeconds} className="mt-3" />
     ) : null;
 
+  const renderEmptyState = () => (
+    <div className="flex flex-1 items-center justify-center text-center text-lg font-medium text-white/60">
+      No events available
+    </div>
+  );
+
   /* ---------- render ---------- */
 
   return (
@@ -213,15 +219,17 @@ export default function EventsList({ config, theme }: WidgetComponentProps) {
         }
       />
 
+      {totalEvents === 0 && renderEmptyState()}
+
       {/* Scroll mode – original scrollable list */}
-      {displayMode === 'scroll' && (
+      {totalEvents > 0 && displayMode === 'scroll' && (
         <ScrollableList>
           {displayEvents.map((event, index) => renderEventCard(event, index))}
         </ScrollableList>
       )}
 
       {/* Ticker mode – one event at a time, vertical slide */}
-      {displayMode === 'ticker' && (
+      {totalEvents > 0 && displayMode === 'ticker' && (
         <div className="flex-1 flex flex-col min-h-0">
           <div className="flex-1 relative overflow-hidden">
             {displayEvents.map((event, index) => (
@@ -249,7 +257,7 @@ export default function EventsList({ config, theme }: WidgetComponentProps) {
       )}
 
       {/* Paginate mode – chunks slide horizontally, sized to fit */}
-      {displayMode === 'paginate' && (
+      {totalEvents > 0 && displayMode === 'paginate' && (
         <div className="flex-1 flex flex-col min-h-0">
           <div className="flex-1 relative overflow-hidden">
             {Array.from({ length: totalPages }).map((_, pageIdx) => {

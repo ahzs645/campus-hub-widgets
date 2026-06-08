@@ -137,11 +137,11 @@ export default function CalendarWidget({ config, theme }: WidgetComponentProps) 
         .sort((a, b) => a.start.getTime() - b.start.getTime())
         .slice(0, maxEvents);
 
-      setEvents(mapped.length > 0 ? mapped : DEMO_EVENTS);
+      setEvents(mapped);
       setError(null);
     } catch (err) {
       console.warn('Failed to load calendar:', err);
-      setEvents((current) => (current.length > 0 ? current : DEMO_EVENTS));
+      setEvents((current) => current);
       setError(null);
     }
   }, [calendarUrl, galleryDemo, sourceFormat, refreshInterval, daysAhead, maxEvents, useCorsProxy]);
@@ -188,7 +188,11 @@ export default function CalendarWidget({ config, theme }: WidgetComponentProps) 
 
         {/* Events */}
         <div className="flex-1 overflow-hidden px-5 py-3">
-          {Array.from(grouped.entries()).map(([dateKey, dayEvents]) => (
+          {events.length === 0 ? (
+            <div className="flex h-full items-center justify-center text-center text-sm font-medium text-white/60">
+              No events available
+            </div>
+          ) : Array.from(grouped.entries()).map(([dateKey, dayEvents]) => (
             <div key={dateKey} className="mb-4">
               <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: theme.accent }}>
                 {formatDateHeader(dayEvents[0].start)}
