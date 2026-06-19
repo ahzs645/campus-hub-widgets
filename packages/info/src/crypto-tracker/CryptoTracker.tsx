@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { WidgetComponentProps, registerWidget, DarkContainer } from '@firstform/campus-hub-widget-sdk';
 import { useFitScale } from '@firstform/campus-hub-widget-sdk';
 import { DotMatrixText, textToChars } from '@firstform/campus-hub-widget-sdk';
@@ -22,6 +22,17 @@ interface CoinData {
 }
 
 const DEFAULT_COINS = ['bitcoin', 'ethereum', 'solana'];
+
+// Representative sample shown when the live API is unreachable, so the widget
+// renders a real layout instead of an indefinite "Loading…" spinner.
+const makeSparkline = (base: number, amp: number): number[] =>
+  Array.from({ length: 48 }, (_, i) => base + Math.sin(i / 4) * amp + (i % 7) * amp * 0.04);
+
+const SAMPLE_COIN_DATA: CoinData[] = [
+  { id: 'bitcoin', symbol: 'btc', name: 'Bitcoin', image: '', current_price: 67234, price_change_percentage_24h: 1.84, sparkline_in_7d: { price: makeSparkline(67000, 1200) } },
+  { id: 'ethereum', symbol: 'eth', name: 'Ethereum', image: '', current_price: 3512, price_change_percentage_24h: -0.92, sparkline_in_7d: { price: makeSparkline(3500, 90) } },
+  { id: 'solana', symbol: 'sol', name: 'Solana', image: '', current_price: 184.27, price_change_percentage_24h: 3.11, sparkline_in_7d: { price: makeSparkline(180, 8) } },
+];
 
 const CHART_WIDTH = 180;
 const CHART_HEIGHT = 60;
@@ -108,6 +119,8 @@ export default function CryptoTracker({ config, theme }: WidgetComponentProps) {
   const [coinData, setCoinData] = useState<CoinData[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [fadeIn, setFadeIn] = useState(true);
+  const [usingSample, setUsingSample] = useState(false);
+  const hasRealDataRef = useRef(false);
 
   const fetchData = useCallback(async () => {
     if (coins.length === 0) return;
@@ -116,11 +129,19 @@ export default function CryptoTracker({ config, theme }: WidgetComponentProps) {
       const res = await fetch(
         `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&price_change_percentage=24h&sparkline=true`,
       );
-      if (!res.ok) return;
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: CoinData[] = await res.json();
+      if (!Array.isArray(data) || data.length === 0) throw new Error('empty response');
+      hasRealDataRef.current = true;
       setCoinData(data);
+      setUsingSample(false);
     } catch {
-      // silently fail
+      // Live API unavailable — fall back to sample data (unless real data has
+      // already loaded) so the widget shows a layout instead of spinning.
+      if (!hasRealDataRef.current) {
+        setCoinData(SAMPLE_COIN_DATA);
+        setUsingSample(true);
+      }
     }
   }, [coins]);
 
@@ -261,6 +282,20 @@ export default function CryptoTracker({ config, theme }: WidgetComponentProps) {
           </div>
         )}
       </div>
+      {usingSample && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 6,
+            left: 8,
+            fontSize: 9,
+            color: subtleColor,
+            pointerEvents: 'none',
+          }}
+        >
+          Sample data
+        </div>
+      )}
     </DarkContainer>
   );
 }

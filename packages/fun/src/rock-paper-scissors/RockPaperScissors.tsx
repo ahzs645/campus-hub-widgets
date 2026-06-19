@@ -8,18 +8,35 @@ interface RPSConfig {
   playInterval?: number;
 }
 
+// Inline SVG silhouettes (data URIs) used as CSS masks. Inlining keeps the
+// game working offline / behind strict CSP — no dependency on a remote CDN,
+// which previously left the hand area blank when the images failed to load.
+const svgMask = (inner: string, viewBox: string): string =>
+  `url("data:image/svg+xml,${encodeURIComponent(
+    `<svg xmlns='http://www.w3.org/2000/svg' viewBox='${viewBox}'>${inner}</svg>`,
+  )}")`;
+
 const CHOICES = [
   {
     name: 'Rock',
-    image: 'https://res.cloudinary.com/htoohtoo/image/upload/v1771522193/Rock_ht4tte.png',
+    mask: svgMask(
+      "<path fill='#000' d='M34 24c10-6 26-6 35 3s9 27 1 38-30 12-41 3S20 33 34 24z'/>",
+      '0 0 100 100',
+    ),
   },
   {
     name: 'Paper',
-    image: 'https://res.cloudinary.com/htoohtoo/image/upload/v1771522205/Paper_vuuq09.png',
+    mask: svgMask(
+      "<path fill='#000' d='M28 10h34l18 18v62H28z'/>",
+      '0 0 100 100',
+    ),
   },
   {
     name: 'Scissors',
-    image: 'https://res.cloudinary.com/htoohtoo/image/upload/v1771522224/Scissor_hsexon.png',
+    mask: svgMask(
+      "<g fill='none' stroke='#000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><circle cx='6' cy='6' r='3'/><circle cx='6' cy='18' r='3'/><line x1='20' y1='4' x2='8.12' y2='15.88'/><line x1='14.47' y1='14.48' x2='20' y2='20'/><line x1='8.12' y1='8.12' x2='12' y2='12'/></g>",
+      '0 0 24 24',
+    ),
   },
 ] as const;
 
@@ -98,8 +115,8 @@ export default function RockPaperScissors({ config, theme }: WidgetComponentProp
             height: 90,
             animation: isCycling ? 'rpsShake 400ms ease-in-out infinite' : 'none',
             backgroundColor: theme.accent,
-            WebkitMaskImage: `url("${choice.image}")`,
-            maskImage: `url("${choice.image}")`,
+            WebkitMaskImage: choice.mask,
+            maskImage: choice.mask,
             WebkitMaskRepeat: 'no-repeat',
             maskRepeat: 'no-repeat',
             WebkitMaskPosition: 'center',

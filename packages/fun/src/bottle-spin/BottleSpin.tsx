@@ -10,7 +10,14 @@ interface BottleSpinConfig {
 
 type SpinPhase = 'idle' | 'windup' | 'spinning' | 'pulse';
 
-const BOTTLE_URL = 'https://res.cloudinary.com/htoohtoo/image/upload/v1771519987/Bottle_tkeadp.png';
+// Inline SVG bottle silhouette (data URI) used as a CSS mask. Inlining keeps
+// the widget working offline / behind strict CSP — a remote CDN image used to
+// leave the bottle blank when it failed to load.
+const BOTTLE_MASK = `url("data:image/svg+xml,${encodeURIComponent(
+  "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 140'>" +
+    "<path fill='#000' d='M24 6h12v20c8 3 12 9 12 18v82a8 8 0 0 1-8 8H20a8 8 0 0 1-8-8V44c0-9 4-15 12-18z'/>" +
+    '</svg>',
+)}")`;
 
 export default function BottleSpin({ config, theme }: WidgetComponentProps) {
   const cfg = config as BottleSpinConfig | undefined;
@@ -58,8 +65,8 @@ export default function BottleSpin({ config, theme }: WidgetComponentProps) {
     width: 60,
     height: 140,
     backgroundColor: theme.accent,
-    WebkitMaskImage: `url("${BOTTLE_URL}")`,
-    maskImage: `url("${BOTTLE_URL}")`,
+    WebkitMaskImage: BOTTLE_MASK,
+    maskImage: BOTTLE_MASK,
     WebkitMaskRepeat: 'no-repeat',
     maskRepeat: 'no-repeat',
     WebkitMaskPosition: 'center',
