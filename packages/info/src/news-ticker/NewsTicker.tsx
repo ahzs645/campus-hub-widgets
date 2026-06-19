@@ -636,6 +636,9 @@ registerWidget({
   icon: 'megaphone',
   minW: 4,
   minH: 1,
+  // Banner ticker designed for a single ~70px row; cap height so it can't be
+  // stretched tall (content scales by containerHeight/70 and would balloon).
+  maxH: 2,
   defaultW: 99, // Sentinel: addWidget clamps to gridCols for full-width
   defaultH: 1,
   component: NewsTicker,

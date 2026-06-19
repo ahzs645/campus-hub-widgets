@@ -55,9 +55,9 @@ export default function Kaomoji({ config: rawConfig, theme }: WidgetComponentPro
       innerHeight * 0.46,
     ),
     18,
-    64,
+    220,
   );
-  const moodFontSize = clamp(Math.min(faceFontSize * 0.24, innerHeight * 0.1), 9, 15);
+  const moodFontSize = clamp(Math.min(faceFontSize * 0.24, innerHeight * 0.1), 9, 48);
   const gap = clamp(resolvedHeight * 0.04, 6, 12);
 
   useEffect(() => {

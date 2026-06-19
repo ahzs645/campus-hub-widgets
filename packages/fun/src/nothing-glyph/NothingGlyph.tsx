@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef } from 'react';
 import { WidgetComponentProps, registerWidget, DarkContainer } from '@firstform/campus-hub-widget-sdk';
+import { useFitScale } from '@firstform/campus-hub-widget-sdk';
 import { MatrixLayout } from './matrix/MatrixLayout';
 import { createPendulumEngine } from './matrix/PendulumEngine';
 import { createStackEngine } from './matrix/StackEngine';
@@ -84,6 +85,10 @@ export default function NothingGlyph({ config }: WidgetComponentProps) {
   const gridH = MatrixLayout.totalRows;
   const canvasW = gridW * pixelSize;
   const canvasH = gridH * pixelSize;
+
+  // Scale the fixed-resolution canvas up/down to fill the available area while
+  // preserving its aspect ratio (the matrix is a fixed pixel grid otherwise).
+  const { containerRef: fitRef, scale } = useFitScale(canvasW, canvasH);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -172,7 +177,7 @@ export default function NothingGlyph({ config }: WidgetComponentProps) {
 
   return (
     <DarkContainer bg="#0a0a0a" radius={4} className="flex flex-col items-center justify-center">
-      <div className="flex-1 flex items-center justify-center min-h-0">
+      <div ref={fitRef} className="flex-1 w-full flex items-center justify-center min-h-0 overflow-hidden">
         <canvas
           ref={canvasRef}
           width={canvasW}
@@ -180,6 +185,7 @@ export default function NothingGlyph({ config }: WidgetComponentProps) {
           style={{
             width: canvasW,
             height: canvasH,
+            transform: `scale(${scale})`,
             imageRendering: 'pixelated',
           }}
         />

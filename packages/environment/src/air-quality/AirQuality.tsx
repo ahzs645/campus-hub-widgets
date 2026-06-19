@@ -244,7 +244,7 @@ export default function AirQuality({ config, theme }: WidgetComponentProps) {
 
         {/* AQI bar visualization */}
         <div className="mb-4">
-          <div className="h-2 rounded-full overflow-hidden flex">
+          <div className="h-3 rounded-full overflow-hidden flex">
             <div className="flex-1" style={{ backgroundColor: '#00e400' }} />
             <div className="flex-1" style={{ backgroundColor: '#ffff00' }} />
             <div className="flex-1" style={{ backgroundColor: '#ff7e00' }} />

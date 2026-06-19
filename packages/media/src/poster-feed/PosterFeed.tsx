@@ -86,6 +86,7 @@ function StackMode({
     <div
       data-layout-diagnostic-ignore="true"
       className="relative w-full h-full flex items-center justify-center p-4"
+      style={{ containerType: 'size' }}
     >
       {posters.map((poster, i) => {
         const rotation = STACK_ROTATIONS[i % STACK_ROTATIONS.length];
@@ -99,8 +100,11 @@ function StackMode({
             className="absolute rounded-lg overflow-hidden"
             onAnimationEnd={isActive ? handleAnimationEnd : undefined}
             style={{
-              height: '85%',
-              maxWidth: '70%',
+              // Largest 8.5:11 poster that fits within both 85% height and 70%
+              // width, so the card keeps its aspect at any container ratio
+              // (previously a fixed 85% height made it a thin sliver when tall).
+              aspectRatio: '8.5 / 11',
+              height: 'min(85cqh, calc(70cqw * 11 / 8.5))',
               rotate: `${rotation}deg`,
               zIndex: z,
               border: `3px solid ${isActive ? theme.accent : 'rgba(255,255,255,0.12)'}`,
@@ -126,11 +130,11 @@ function StackMode({
               <img
                 src={poster.image}
                 alt={poster.title}
-                className="h-full w-auto object-contain"
+                className="w-full h-full object-contain"
               />
             ) : (
               <div
-                className="h-full aspect-[8.5/11] flex items-center justify-center text-2xl font-bold text-white/30"
+                className="w-full h-full flex items-center justify-center text-2xl font-bold text-white/30"
                 style={{ backgroundColor: `${theme.primary}60` }}
               >
                 {poster.title.charAt(0)}
