@@ -516,6 +516,8 @@ registerWidget({
   icon: 'hourglass',
   minW: 2,
   minH: 2,
+  maxW: 7,
+  maxH: 5,
   defaultW: 4,
   defaultH: 2,
   component: Countdown,

@@ -382,6 +382,8 @@ registerWidget({
   icon: 'users',
   minW: 2,
   minH: 2,
+  maxW: 6,
+  maxH: 6,
   defaultW: 3,
   defaultH: 3,
   component: ClubSpotlight,

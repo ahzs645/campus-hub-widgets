@@ -364,6 +364,8 @@ registerWidget({
   icon: 'calendarRange',
   minW: 3,
   minH: 2,
+  maxW: 6,
+  maxH: 5,
   defaultW: 4,
   defaultH: 3,
   component: TeamSchedule,

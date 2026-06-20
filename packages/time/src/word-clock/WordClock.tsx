@@ -231,6 +231,8 @@ registerWidget({
   icon: 'type',
   minW: 2,
   minH: 2,
+  maxW: 5,
+  maxH: 5,
   defaultW: 3,
   defaultH: 3,
   component: WordClock,

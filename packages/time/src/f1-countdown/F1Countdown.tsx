@@ -284,6 +284,8 @@ registerWidget({
   icon: 'flag',
   minW: 2,
   minH: 2,
+  maxW: 6,
+  maxH: 4,
   defaultW: 3,
   defaultH: 2,
   component: F1Countdown,

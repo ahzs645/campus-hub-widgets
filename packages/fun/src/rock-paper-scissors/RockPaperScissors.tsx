@@ -151,6 +151,8 @@ registerWidget({
   icon: 'hand',
   minW: 2,
   minH: 2,
+  maxW: 4,
+  maxH: 4,
   defaultW: 2,
   defaultH: 2,
   component: RockPaperScissors,

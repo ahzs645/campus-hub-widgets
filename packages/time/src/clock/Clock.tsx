@@ -469,6 +469,8 @@ registerWidget({
   icon: 'clock',
   minW: 2,
   minH: 1,
+  maxW: 8,
+  maxH: 4,
   defaultW: 3,
   defaultH: 1,
   component: Clock,

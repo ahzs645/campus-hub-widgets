@@ -789,6 +789,8 @@ registerWidget({
   icon: 'weather',
   minW: 2,
   minH: 2,
+  maxW: 6,
+  maxH: 5,
   defaultW: 3,
   defaultH: 2,
   component: Weather,

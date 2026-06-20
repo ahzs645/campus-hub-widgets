@@ -365,6 +365,8 @@ registerWidget({
   icon: 'music',
   minW: 3,
   minH: 3,
+  maxW: 6,
+  maxH: 5,
   defaultW: 4,
   defaultH: 3,
   component: MacOSIPod,

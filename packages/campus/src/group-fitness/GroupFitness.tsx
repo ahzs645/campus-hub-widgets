@@ -387,6 +387,8 @@ registerWidget({
   icon: 'calendar',
   minW: 4,
   minH: 3,
+  maxW: 8,
+  maxH: 6,
   defaultW: 5,
   defaultH: 4,
   component: GroupFitness,

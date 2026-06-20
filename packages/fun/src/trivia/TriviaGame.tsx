@@ -395,6 +395,8 @@ registerWidget({
   icon: 'puzzle',
   minW: 3,
   minH: 3,
+  maxW: 6,
+  maxH: 6,
   defaultW: 4,
   defaultH: 4,
   component: TriviaGame,
