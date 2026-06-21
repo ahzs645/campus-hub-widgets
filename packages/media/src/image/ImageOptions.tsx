@@ -126,6 +126,8 @@ export default function ImageOptions({ data, onChange }: WidgetOptionsProps) {
           label="Image URL"
           name="url"
           type="url"
+          media
+          mediaAccept="image/*"
           value={isSvgDataUrl(state.url) ? '' : state.url}
           placeholder="https://example.com/image.jpg"
           onChange={handleChange}

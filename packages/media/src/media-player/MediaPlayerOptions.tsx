@@ -63,6 +63,8 @@ export default function MediaPlayerOptions({ data, onChange }: WidgetOptionsProp
           label="Media URL"
           name="url"
           type="url"
+          media
+          mediaAccept="video/*"
           value={state.url}
           placeholder="https://example.com/video.mp4"
           onChange={handleChange}
