@@ -155,7 +155,14 @@ export default function WordClock({ config, theme }: WidgetComponentProps) {
   const cellWidth = Math.max((availableWidth - colGap * (cols - 1)) / cols, 10);
   const cellHeight = Math.max((availableHeight - rowGap * (rows - 1)) / rows, 10);
   const fontSize = clamp(Math.min(cellWidth * 0.92, cellHeight * 0.94), 10, 42);
-  const inactiveColor = `${theme.accent}26`;
+  // Options (declared via optionsSchema on the registration below).
+  const cfg = (config ?? {}) as { inactiveOpacity?: number; glow?: boolean };
+  const inactivePct = typeof cfg.inactiveOpacity === 'number' ? cfg.inactiveOpacity : 15;
+  const inactiveAlphaHex = Math.round((clamp(inactivePct, 0, 100) / 100) * 255)
+    .toString(16)
+    .padStart(2, '0');
+  const inactiveColor = `${theme.accent}${inactiveAlphaHex}`;
+  const glowOn = cfg.glow !== false;
   const glowRadius = clamp(fontSize * 0.75, 6, 20);
 
   return (
@@ -208,7 +215,8 @@ export default function WordClock({ config, theme }: WidgetComponentProps) {
                         lineHeight: 1,
                         letterSpacing: '0.03em',
                         color: isActive ? theme.accent : inactiveColor,
-                        textShadow: isActive ? `0 0 ${glowRadius}px ${theme.accent}60` : 'none',
+                        textShadow:
+                          isActive && glowOn ? `0 0 ${glowRadius}px ${theme.accent}60` : 'none',
                       }}
                     >
                       {char}
@@ -236,4 +244,27 @@ registerWidget({
   defaultW: 3,
   defaultH: 3,
   component: WordClock,
+  defaultProps: { glow: true, inactiveOpacity: 15 },
+  // Demonstrates the declarative options schema: auto-rendered by the editor
+  // via SchemaOptionsForm (no bespoke OptionsComponent needed).
+  optionsSchema: [
+    {
+      name: 'glow',
+      label: 'Glow active words',
+      fieldType: 'boolean',
+      default: true,
+      section: 'Appearance',
+    },
+    {
+      name: 'inactiveOpacity',
+      label: 'Inactive letter opacity',
+      fieldType: 'number',
+      default: 15,
+      min: 0,
+      max: 100,
+      unit: '%',
+      section: 'Appearance',
+      helpText: 'How visible the unlit letters are (0–100%).',
+    },
+  ],
 });
