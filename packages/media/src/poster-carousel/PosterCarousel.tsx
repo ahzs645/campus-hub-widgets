@@ -58,6 +58,11 @@ const DEFAULT_POSTERS: Poster[] = [
 
 const UNBC_NEWS_URL = 'https://www.unbc.ca/our-stories/releases';
 
+/** True when a source URL points at the UNBC releases page scraped by the runtime. */
+function isUnbcNewsUrl(url: string): boolean {
+  return /unbc\.ca\/our-stories\/releases/i.test(url);
+}
+
 function resolveUNBCImageUrl(imageSrc: string) {
   return new URL(imageSrc, 'https://www.unbc.ca').toString();
 }
@@ -387,11 +392,20 @@ registerWidget({
   OptionsComponent: PosterCarouselOptions,
   acceptsSources: [{
     propName: 'apiUrl',
-    types: ['api'],
-    applySource: (source) => ({
-      apiUrl: source.url,
-      dataSource: 'api',
-    }),
+    types: ['api', 'feed'],
+    requires: { hasImages: true },
+    capabilityHint: 'Sources with images look best in the carousel; text-only feeds show over a fallback background.',
+    applySource: (source) => {
+      // The UNBC releases page is HTML that a dedicated runtime path scrapes,
+      // so route it to the scraper mode rather than the JSON-API mode.
+      if (isUnbcNewsUrl(source.url) || source.capabilities?.format === 'html') {
+        return { dataSource: 'unbc-news' };
+      }
+      return {
+        apiUrl: source.url,
+        dataSource: 'api',
+      };
+    },
   }, {
     propName: 'posters',
     types: ['image', 'unsplash'],
