@@ -6,6 +6,7 @@ import {
   FormSwitch,
   OptionsPanel,
   OptionsSection,
+  describeCapabilities,
   useWidgetOptionsSurface,
   type WidgetOptionsProps,
 } from '@firstform/campus-hub-widget-sdk';
@@ -40,7 +41,7 @@ function normalizeState(data: Record<string, unknown> | undefined): TeamSchedule
   };
 }
 
-export default function TeamScheduleOptions({ data, onChange }: WidgetOptionsProps) {
+export default function TeamScheduleOptions({ data, onChange, linkedSource }: WidgetOptionsProps) {
   const surface = useWidgetOptionsSurface();
   const [state, setState] = useState<TeamScheduleOptionsState>(normalizeState(data));
 
@@ -55,8 +56,26 @@ export default function TeamScheduleOptions({ data, onChange }: WidgetOptionsPro
     } as TeamScheduleOptionsState;
 
     setState(next);
-    onChange(next as unknown as Record<string, unknown>);
+    // Preserve fields this form doesn't own (e.g. `__sourceRef`).
+    onChange({ ...data, ...next });
   };
+
+  // Switch back to a manually-managed schedule, unlinking any library source.
+  const handleUseManual = () => {
+    const unlinked = { ...data };
+    delete (unlinked as Record<string, unknown>).__sourceRef;
+    const next = {
+      ...state,
+      source: (state.manualData.trim() ? 'manual' : 'demo') as TeamScheduleOptionsState['source'],
+    };
+    setState(next);
+    onChange({ ...unlinked, ...next });
+  };
+
+  const isLinked = Boolean(linkedSource) || Boolean(data.__sourceRef);
+  const linkedName = linkedSource?.name ?? 'Library source';
+  const linkedUrl = linkedSource?.url ?? (state.apiUrl || undefined);
+  const capabilityChips = linkedSource?.capabilities ? describeCapabilities(linkedSource.capabilities) : [];
 
   return (
     <OptionsPanel>
@@ -88,19 +107,54 @@ export default function TeamScheduleOptions({ data, onChange }: WidgetOptionsPro
 
       {surface !== 'gallery' && (
         <OptionsSection title="Data Source" divider>
-          <FormSelect
-            label="Source"
-            name="source"
-            value={state.source}
-            options={[
-              { value: 'demo', label: 'Phoenix Suns demo schedule' },
-              { value: 'manual', label: 'Manual CSV' },
-              { value: 'url', label: 'JSON URL' },
-            ]}
-            onChange={handleChange}
-          />
+          {isLinked ? (
+            <div className="rounded-lg border border-[color:var(--ui-accent-soft)] bg-[var(--ui-accent-soft)] p-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="text-xs font-medium uppercase tracking-wide text-[var(--color-accent)]">Linked source</div>
+                  <div className="mt-0.5 text-sm font-medium truncate text-[var(--ui-text)]">
+                    {linkedName}
+                  </div>
+                  {linkedUrl && (
+                    <div className="text-xs truncate text-[var(--ui-text-muted)]">{linkedUrl}</div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleUseManual}
+                  className="flex-shrink-0 rounded px-2 py-1 text-xs font-medium text-[var(--ui-text-muted)] hover:bg-[var(--ui-item-hover)] hover:text-[var(--ui-text)] transition-colors"
+                >
+                  Use manual schedule
+                </button>
+              </div>
+              {capabilityChips.length > 0 && (
+                <div className="mt-2 flex flex-wrap items-center gap-1">
+                  {capabilityChips.map((chip) => (
+                    <span
+                      key={chip}
+                      className="rounded-full border border-[color:var(--ui-item-border)] bg-[var(--ui-item-bg)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--ui-text-muted)]"
+                    >
+                      {chip}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <FormSelect
+              label="Source"
+              name="source"
+              value={state.source}
+              options={[
+                { value: 'demo', label: 'Phoenix Suns demo schedule' },
+                { value: 'manual', label: 'Manual CSV' },
+                { value: 'url', label: 'JSON URL' },
+              ]}
+              onChange={handleChange}
+            />
+          )}
 
-          {state.source === 'manual' && (
+          {!isLinked && state.source === 'manual' && (
             <>
               <div className="space-y-1">
                 <label className="block text-sm font-medium text-[var(--ui-text-muted)]">Games (CSV format)</label>
@@ -119,7 +173,7 @@ export default function TeamScheduleOptions({ data, onChange }: WidgetOptionsPro
             </>
           )}
 
-          {state.source === 'url' && (
+          {!isLinked && state.source === 'url' && (
             <>
               <FormInput
                 label="JSON URL"

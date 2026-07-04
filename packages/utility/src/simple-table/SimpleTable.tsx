@@ -308,6 +308,15 @@ registerWidget({
   defaultH: 3,
   component: SimpleTable,
   OptionsComponent: SimpleTableOptions,
+  acceptsSources: [{
+    propName: 'csvUrl',
+    types: ['api'],
+    capabilityHint: 'Expects CSV or plain-text tabular data; the first row becomes the column headers.',
+    applySource: (source) => ({
+      csvUrl: source.url,
+      source: 'url',
+    }),
+  }],
   defaultProps: {
     source: 'manual',
     csvUrl: '',

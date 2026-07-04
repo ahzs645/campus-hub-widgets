@@ -370,6 +370,15 @@ registerWidget({
   defaultH: 3,
   component: TeamSchedule,
   OptionsComponent: TeamScheduleOptions,
+  acceptsSources: [{
+    propName: 'apiUrl',
+    types: ['api', 'feed'],
+    capabilityHint: 'Works best with sources returning JSON schedule data: an array of games with date and opponent.',
+    applySource: (source) => ({
+      apiUrl: source.url,
+      source: 'url',
+    }),
+  }],
   defaultProps: {
     title: 'Team Schedule',
     teamName: 'Phoenix Suns',

@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { FormInput, FormSelect, FormSwitch, OptionsPanel, OptionsSection, OptionsPreview } from '@firstform/campus-hub-widget-sdk';
+import { FormInput, FormSelect, FormSwitch, OptionsPanel, OptionsSection, OptionsPreview, describeCapabilities } from '@firstform/campus-hub-widget-sdk';
 import { buildProxyUrl } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
@@ -23,7 +23,7 @@ interface EventsListData {
   useCorsProxy: boolean;
 }
 
-export default function EventsListOptions({ data, onChange }: WidgetOptionsProps) {
+export default function EventsListOptions({ data, onChange, linkedSource }: WidgetOptionsProps) {
   const [state, setState] = useState<EventsListData>({
     title: (data?.title as string) ?? 'Upcoming Events',
     maxItems: (data?.maxItems as number) ?? 10,
@@ -107,7 +107,7 @@ export default function EventsListOptions({ data, onChange }: WidgetOptionsProps
             const allNames = categories.map(c => c.name);
             const newState = { ...state, selectedCategories: allNames };
             setState(newState);
-            onChange(newState);
+            onChange({ ...data, ...newState });
           }
         })
         .catch(err => {
@@ -130,7 +130,8 @@ export default function EventsListOptions({ data, onChange }: WidgetOptionsProps
   const handleChange = (name: string, value: string | number | boolean) => {
     const newState = { ...state, [name]: value };
     setState(newState);
-    onChange(newState);
+    // Preserve fields this form doesn't own (e.g. `__sourceRef`).
+    onChange({ ...data, ...newState });
   };
 
   const handleCategoryToggle = (categoryName: string, enabled: boolean) => {
@@ -139,8 +140,20 @@ export default function EventsListOptions({ data, onChange }: WidgetOptionsProps
       : state.selectedCategories.filter(c => c !== categoryName);
     const newState = { ...state, selectedCategories: updated };
     setState(newState);
-    onChange(newState);
+    onChange({ ...data, ...newState });
   };
+
+  // Keep the current URL but unlink the library source.
+  const handleUseManual = () => {
+    const next = { ...data };
+    delete (next as Record<string, unknown>).__sourceRef;
+    onChange({ ...next, ...state });
+  };
+
+  const isLinked = Boolean(linkedSource) || Boolean(data.__sourceRef);
+  const linkedName = linkedSource?.name ?? 'Library source';
+  const linkedUrl = linkedSource?.url ?? (typeof data.apiUrl === 'string' && data.apiUrl ? data.apiUrl : undefined);
+  const capabilityChips = linkedSource?.capabilities ? describeCapabilities(linkedSource.capabilities) : [];
 
   return (
     <OptionsPanel>
@@ -201,26 +214,63 @@ export default function EventsListOptions({ data, onChange }: WidgetOptionsProps
       {/* API Configuration */}
       <OptionsSection title="Data Source" divider>
 
-        <FormSelect
-          label="Source Type"
-          name="sourceType"
-          value={state.sourceType}
-          options={[
-            { value: 'json', label: 'JSON API' },
-            { value: 'ical', label: 'iCal (Google/Outlook)' },
-            { value: 'rss', label: 'RSS Feed' },
-          ]}
-          onChange={handleChange}
-        />
+        {isLinked ? (
+          <div className="rounded-lg border border-[color:var(--ui-accent-soft)] bg-[var(--ui-accent-soft)] p-3">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <div className="text-xs font-medium uppercase tracking-wide text-[var(--color-accent)]">Linked source</div>
+                <div className="mt-0.5 text-sm font-medium truncate text-[var(--ui-text)]">
+                  {linkedName}
+                </div>
+                {linkedUrl && (
+                  <div className="text-xs truncate text-[var(--ui-text-muted)]">{linkedUrl}</div>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={handleUseManual}
+                className="flex-shrink-0 rounded px-2 py-1 text-xs font-medium text-[var(--ui-text-muted)] hover:bg-[var(--ui-item-hover)] hover:text-[var(--ui-text)] transition-colors"
+              >
+                Use manual URL
+              </button>
+            </div>
+            {capabilityChips.length > 0 && (
+              <div className="mt-2 flex flex-wrap items-center gap-1">
+                {capabilityChips.map((chip) => (
+                  <span
+                    key={chip}
+                    className="rounded-full border border-[color:var(--ui-item-border)] bg-[var(--ui-item-bg)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--ui-text-muted)]"
+                  >
+                    {chip}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <>
+            <FormSelect
+              label="Source Type"
+              name="sourceType"
+              value={state.sourceType}
+              options={[
+                { value: 'json', label: 'JSON API' },
+                { value: 'ical', label: 'iCal (Google/Outlook)' },
+                { value: 'rss', label: 'RSS Feed' },
+              ]}
+              onChange={handleChange}
+            />
 
-        <FormInput
-          label="API URL (optional)"
-          name="apiUrl"
-          type="url"
-          value={state.apiUrl}
-          placeholder="https://api.example.com/events"
-          onChange={handleChange}
-        />
+            <FormInput
+              label="API URL (optional)"
+              name="apiUrl"
+              type="url"
+              value={state.apiUrl}
+              placeholder="https://api.example.com/events"
+              onChange={handleChange}
+            />
+          </>
+        )}
 
         <FormSwitch
           label="Use CORS Proxy"
@@ -283,24 +333,26 @@ export default function EventsListOptions({ data, onChange }: WidgetOptionsProps
           </div>
         )}
 
-        <div className="text-sm text-[var(--ui-text-muted)]">
-          Leave empty to use default sample events.
-          {state.sourceType === 'json' && (
-            <code className="block mt-2 p-2 bg-[var(--ui-item-bg)] rounded text-xs">
-              {`[{ "title": "...", "date": "Mar 10", "time": "11:00 AM", "location": "..." }]`}
-            </code>
-          )}
-          {state.sourceType === 'ical' && (
-            <div className="mt-2 text-xs">
-              Use a public iCal URL (Google/Outlook calendars can export this).
-            </div>
-          )}
-          {state.sourceType === 'rss' && (
-            <div className="mt-2 text-xs">
-              RSS items are mapped into events using the item title and publish date.
-            </div>
-          )}
-        </div>
+        {!isLinked && (
+          <div className="text-sm text-[var(--ui-text-muted)]">
+            Leave empty to use default sample events.
+            {state.sourceType === 'json' && (
+              <code className="block mt-2 p-2 bg-[var(--ui-item-bg)] rounded text-xs">
+                {`[{ "title": "...", "date": "Mar 10", "time": "11:00 AM", "location": "..." }]`}
+              </code>
+            )}
+            {state.sourceType === 'ical' && (
+              <div className="mt-2 text-xs">
+                Use a public iCal URL (Google/Outlook calendars can export this).
+              </div>
+            )}
+            {state.sourceType === 'rss' && (
+              <div className="mt-2 text-xs">
+                RSS items are mapped into events using the item title and publish date.
+              </div>
+            )}
+          </div>
+        )}
       </OptionsSection>
 
       {/* Preview */}

@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { FormInput, FormSelect, FormSwitch, OptionsPanel, OptionsSection, OptionsPreview } from '@firstform/campus-hub-widget-sdk';
+import { FormInput, FormSelect, FormSwitch, OptionsPanel, OptionsSection, OptionsPreview, describeCapabilities } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
 interface NewsTickerData {
@@ -37,7 +37,7 @@ const clampSimCityMaxItems = (value: unknown) => {
   return Math.min(200, Math.max(1, Math.round(value)));
 };
 
-export default function NewsTickerOptions({ data, onChange }: WidgetOptionsProps) {
+export default function NewsTickerOptions({ data, onChange, linkedSource }: WidgetOptionsProps) {
   const [state, setState] = useState<NewsTickerData>({
     label: (data?.label as string) ?? 'Breaking',
     speed: (data?.speed as number) ?? 30,
@@ -97,11 +97,23 @@ export default function NewsTickerOptions({ data, onChange }: WidgetOptionsProps
       newState.apiUrl = DEFAULT_SIMCITY_API_URL;
     }
     setState(newState);
-    onChange(newState);
+    // Preserve fields this form doesn't own (e.g. `__sourceRef`).
+    onChange({ ...data, ...newState });
+  };
+
+  // Keep the current URL but unlink the library source.
+  const handleUseManual = () => {
+    const next = { ...data };
+    delete (next as Record<string, unknown>).__sourceRef;
+    onChange({ ...next, ...state });
   };
 
   const isEvents = state.dataSource === 'events';
   const isSimCityTemplate = state.sourceType === 'simcity-template';
+  const isLinked = Boolean(linkedSource) || Boolean(data.__sourceRef);
+  const linkedName = linkedSource?.name ?? 'Library source';
+  const linkedUrl = linkedSource?.url ?? (typeof data.apiUrl === 'string' && data.apiUrl ? data.apiUrl : undefined);
+  const capabilityChips = linkedSource?.capabilities ? describeCapabilities(linkedSource.capabilities) : [];
 
   return (
     <OptionsPanel>
@@ -226,28 +238,65 @@ export default function NewsTickerOptions({ data, onChange }: WidgetOptionsProps
           </>
         ) : (
           <>
-            <FormSelect
-              label="Source Type"
-              name="sourceType"
-              value={state.sourceType}
-              options={[
-                { value: 'json', label: 'JSON API' },
-                { value: 'rss', label: 'RSS Feed' },
-                { value: 'simcity-template', label: 'SimCity Template JSON' },
-              ]}
-              onChange={handleChange}
-            />
+            {isLinked ? (
+              <div className="rounded-lg border border-[color:var(--ui-accent-soft)] bg-[var(--ui-accent-soft)] p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="text-xs font-medium uppercase tracking-wide text-[var(--color-accent)]">Linked source</div>
+                    <div className="mt-0.5 text-sm font-medium truncate text-[var(--ui-text)]">
+                      {linkedName}
+                    </div>
+                    {linkedUrl && (
+                      <div className="text-xs truncate text-[var(--ui-text-muted)]">{linkedUrl}</div>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleUseManual}
+                    className="flex-shrink-0 rounded px-2 py-1 text-xs font-medium text-[var(--ui-text-muted)] hover:bg-[var(--ui-item-hover)] hover:text-[var(--ui-text)] transition-colors"
+                  >
+                    Use manual URL
+                  </button>
+                </div>
+                {capabilityChips.length > 0 && (
+                  <div className="mt-2 flex flex-wrap items-center gap-1">
+                    {capabilityChips.map((chip) => (
+                      <span
+                        key={chip}
+                        className="rounded-full border border-[color:var(--ui-item-border)] bg-[var(--ui-item-bg)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--ui-text-muted)]"
+                      >
+                        {chip}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <FormSelect
+                  label="Source Type"
+                  name="sourceType"
+                  value={state.sourceType}
+                  options={[
+                    { value: 'json', label: 'JSON API' },
+                    { value: 'rss', label: 'RSS Feed' },
+                    { value: 'simcity-template', label: 'SimCity Template JSON' },
+                  ]}
+                  onChange={handleChange}
+                />
 
-            <FormInput
-              label={isSimCityTemplate ? 'Template JSON URL' : 'API URL (optional)'}
-              name="apiUrl"
-              type="text"
-              value={state.apiUrl}
-              placeholder={
-                isSimCityTemplate ? DEFAULT_SIMCITY_API_URL : 'https://api.example.com/announcements'
-              }
-              onChange={handleChange}
-            />
+                <FormInput
+                  label={isSimCityTemplate ? 'Template JSON URL' : 'API URL (optional)'}
+                  name="apiUrl"
+                  type="text"
+                  value={state.apiUrl}
+                  placeholder={
+                    isSimCityTemplate ? DEFAULT_SIMCITY_API_URL : 'https://api.example.com/announcements'
+                  }
+                  onChange={handleChange}
+                />
+              </>
+            )}
 
             <FormInput
               label="Cache TTL (seconds)"
@@ -333,34 +382,36 @@ export default function NewsTickerOptions({ data, onChange }: WidgetOptionsProps
               </>
             )}
 
-            <div className="text-sm text-[var(--ui-text-muted)] text-center">
-              Leave empty to use default sample announcements.
-              {state.sourceType === 'json' && (
-                <code className="block mt-2 p-2 bg-[var(--ui-item-bg)] rounded text-xs text-left max-w-md mx-auto">
-                  {`[{ "label": "WEATHER", "text": "Rain expected..." }]`}
-                </code>
-              )}
-              {state.sourceType === 'rss' && (
-                <div className="mt-2 text-xs">
-                  RSS items are mapped into ticker items using the item title.
-                </div>
-              )}
-              {state.sourceType === 'simcity-template' && (
-                <div className="mt-2 text-xs max-w-md mx-auto text-left">
-                  <div>
-                    Uses <code>categories</code> from SimCity template JSON and replaces handlebars
-                    variables: <code>{'{{sim}}'}</code>, <code>{'{{sims}}'}</code>,{' '}
-                    <code>{'{{cityName}}'}</code>, <code>{'{{mayorName}}'}</code>,{' '}
-                    <code>{'{{randomSimName}}'}</code>, <code>{'{{randomWorkplaceName}}'}</code>.
+            {!isLinked && (
+              <div className="text-sm text-[var(--ui-text-muted)] text-center">
+                Leave empty to use default sample announcements.
+                {state.sourceType === 'json' && (
+                  <code className="block mt-2 p-2 bg-[var(--ui-item-bg)] rounded text-xs text-left max-w-md mx-auto">
+                    {`[{ "label": "WEATHER", "text": "Rain expected..." }]`}
+                  </code>
+                )}
+                {state.sourceType === 'rss' && (
+                  <div className="mt-2 text-xs">
+                    RSS items are mapped into ticker items using the item title.
                   </div>
-                  <div className="mt-1">
-                    Legacy tokens are also supported: <code>~CityName~</code>,{' '}
-                    <code>~MayorName~</code>, <code>~RandomSimName~</code>,{' '}
-                    <code>~RandomWorkplaceName~</code>.
+                )}
+                {state.sourceType === 'simcity-template' && (
+                  <div className="mt-2 text-xs max-w-md mx-auto text-left">
+                    <div>
+                      Uses <code>categories</code> from SimCity template JSON and replaces handlebars
+                      variables: <code>{'{{sim}}'}</code>, <code>{'{{sims}}'}</code>,{' '}
+                      <code>{'{{cityName}}'}</code>, <code>{'{{mayorName}}'}</code>,{' '}
+                      <code>{'{{randomSimName}}'}</code>, <code>{'{{randomWorkplaceName}}'}</code>.
+                    </div>
+                    <div className="mt-1">
+                      Legacy tokens are also supported: <code>~CityName~</code>,{' '}
+                      <code>~MayorName~</code>, <code>~RandomSimName~</code>,{' '}
+                      <code>~RandomWorkplaceName~</code>.
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </>
         )}
       </OptionsSection>

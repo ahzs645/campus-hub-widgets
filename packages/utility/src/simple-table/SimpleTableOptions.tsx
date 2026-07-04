@@ -6,6 +6,7 @@ import {
   FormSwitch,
   OptionsPanel,
   OptionsSection,
+  describeCapabilities,
   useWidgetOptionsSurface,
 } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
@@ -23,7 +24,7 @@ interface TableData {
   scrollSpeed: number;
 }
 
-export default function SimpleTableOptions({ data, onChange }: WidgetOptionsProps) {
+export default function SimpleTableOptions({ data, onChange, linkedSource }: WidgetOptionsProps) {
   const surface = useWidgetOptionsSurface();
   const [state, setState] = useState<TableData>({
     source: (data?.source as 'url' | 'manual') ?? 'manual',
@@ -58,8 +59,23 @@ export default function SimpleTableOptions({ data, onChange }: WidgetOptionsProp
   const handleChange = (name: string, value: string | number | boolean) => {
     const newState = { ...state, [name]: value };
     setState(newState);
-    onChange(newState);
+    // Preserve fields this form doesn't own (e.g. `__sourceRef`).
+    onChange({ ...data, ...newState });
   };
+
+  // Switch back to manually-entered table data, unlinking any library source.
+  const handleUseManual = () => {
+    const unlinked = { ...data };
+    delete (unlinked as Record<string, unknown>).__sourceRef;
+    const newState = { ...state, source: 'manual' as TableData['source'] };
+    setState(newState);
+    onChange({ ...unlinked, ...newState });
+  };
+
+  const isLinked = Boolean(linkedSource) || Boolean(data.__sourceRef);
+  const linkedName = linkedSource?.name ?? 'Library source';
+  const linkedUrl = linkedSource?.url ?? (state.csvUrl || undefined);
+  const capabilityChips = linkedSource?.capabilities ? describeCapabilities(linkedSource.capabilities) : [];
 
   return (
     <OptionsPanel>
@@ -67,18 +83,53 @@ export default function SimpleTableOptions({ data, onChange }: WidgetOptionsProp
       {surface !== 'gallery' && (
         <OptionsSection title="Data Source">
 
-          <FormSelect
-            label="Source"
-            name="source"
-            value={state.source}
-            options={[
-              { value: 'manual', label: 'Manual Entry' },
-              { value: 'url', label: 'CSV URL' },
-            ]}
-            onChange={handleChange}
-          />
+          {isLinked ? (
+            <div className="rounded-lg border border-[color:var(--ui-accent-soft)] bg-[var(--ui-accent-soft)] p-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="text-xs font-medium uppercase tracking-wide text-[var(--color-accent)]">Linked source</div>
+                  <div className="mt-0.5 text-sm font-medium truncate text-[var(--ui-text)]">
+                    {linkedName}
+                  </div>
+                  {linkedUrl && (
+                    <div className="text-xs truncate text-[var(--ui-text-muted)]">{linkedUrl}</div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleUseManual}
+                  className="flex-shrink-0 rounded px-2 py-1 text-xs font-medium text-[var(--ui-text-muted)] hover:bg-[var(--ui-item-hover)] hover:text-[var(--ui-text)] transition-colors"
+                >
+                  Use manual data
+                </button>
+              </div>
+              {capabilityChips.length > 0 && (
+                <div className="mt-2 flex flex-wrap items-center gap-1">
+                  {capabilityChips.map((chip) => (
+                    <span
+                      key={chip}
+                      className="rounded-full border border-[color:var(--ui-item-border)] bg-[var(--ui-item-bg)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--ui-text-muted)]"
+                    >
+                      {chip}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <FormSelect
+              label="Source"
+              name="source"
+              value={state.source}
+              options={[
+                { value: 'manual', label: 'Manual Entry' },
+                { value: 'url', label: 'CSV URL' },
+              ]}
+              onChange={handleChange}
+            />
+          )}
 
-          {state.source === 'url' ? (
+          {!isLinked && (state.source === 'url' ? (
             <>
               <FormInput
                 label="CSV URL"
@@ -109,7 +160,7 @@ export default function SimpleTableOptions({ data, onChange }: WidgetOptionsProp
                 Enter data in CSV format. First row becomes column headers. Use commas to separate columns.
               </div>
             </>
-          )}
+          ))}
 
           <FormInput
             label="Table Title (optional)"
