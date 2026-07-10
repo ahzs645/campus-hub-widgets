@@ -936,7 +936,11 @@ export default function CafeteriaMenu({
       </div>
 
       {/* Content */}
-      <div ref={contentRef} className="flex-1 overflow-y-auto scrollbar-hide px-4 py-3 space-y-4 min-h-0">
+      <div
+        ref={contentRef}
+        data-layout-diagnostic-ignore="true"
+        className="flex-1 overflow-y-auto scrollbar-hide px-4 py-3 space-y-4 min-h-0"
+      >
         {statusMessage ? (
           <div className="rounded-md border border-amber-300/30 bg-amber-400/10 px-3 py-3 text-sm font-medium text-amber-100">
             {statusMessage}

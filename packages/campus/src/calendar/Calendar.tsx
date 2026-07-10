@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, registerWidget, useLoopingAutoScroll } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, buildProxyUrl, fetchTextWithCache } from '@firstform/campus-hub-widget-sdk';
 import { parseICal } from '@firstform/campus-hub-widget-sdk';
@@ -166,6 +166,11 @@ export default function CalendarWidget({ config, theme }: WidgetComponentProps) 
     if (!grouped.has(key)) grouped.set(key, []);
     grouped.get(key)!.push(event);
   }
+  const eventsRef = useLoopingAutoScroll<HTMLDivElement>([
+    events,
+    showLocation,
+    customTitle,
+  ]);
 
   return (
     <ThemedContainer
@@ -187,7 +192,12 @@ export default function CalendarWidget({ config, theme }: WidgetComponentProps) 
         {error && events.length === 0 && <div className="px-5 py-3 text-sm text-red-400 shrink-0">{error}</div>}
 
         {/* Events */}
-        <div className="flex-1 overflow-hidden px-5 py-3">
+        <div
+          ref={eventsRef}
+          data-layout-diagnostic-ignore="true"
+          className="flex-1 overflow-y-auto overscroll-none px-5 py-3 scrollbar-hide"
+          style={{ maskImage: 'linear-gradient(to bottom, black calc(100% - 18px), transparent)' }}
+        >
           {events.length === 0 ? (
             <div className="flex h-full items-center justify-center text-center text-sm font-medium text-white/60">
               No events available

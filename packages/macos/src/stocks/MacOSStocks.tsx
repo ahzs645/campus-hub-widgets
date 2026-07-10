@@ -146,7 +146,7 @@ export default function MacOSStocks({ config }: WidgetComponentProps) {
 
   return (
     <div
-      className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[20px]"
+      className="flex h-full w-full min-h-0 flex-col overflow-hidden rounded-[20px]"
       style={{
         fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
         background: 'linear-gradient(180deg, #1B3A5C 0%, #0F2844 40%, #0A1E36 100%)',

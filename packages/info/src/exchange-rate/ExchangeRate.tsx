@@ -122,23 +122,24 @@ export default function ExchangeRate({ config, theme }: WidgetComponentProps) {
   const targetBadgeBg = mixColors(theme.background, '#000000', 0.15);
   const frameWidth = Math.max(containerWidth || DESIGN_W, 180);
   const frameHeight = Math.max(containerHeight || DESIGN_H, 60);
+  const shortMode = frameHeight < 160;
   const tinyMode = frameWidth < 250 || frameHeight < 78;
   const bannerMode = frameWidth / frameHeight > 2.3;
   const outerRadius = clamp(Math.min(frameWidth, frameHeight) * 0.22, 14, 22);
   const shellRadius = clamp(Math.min(frameWidth, frameHeight) * 0.2, 12, 20);
   const padX = clamp(frameWidth * 0.055, 10, 18);
-  const padY = clamp(frameHeight * 0.11, 8, 14);
+  const padY = shortMode ? 6 : clamp(frameHeight * 0.11, 8, 14);
   const sectionGap = clamp(frameWidth * 0.025, 8, 14);
   const headerGap = clamp(frameHeight * 0.08, 4, 8);
   const headerDot = clamp(frameHeight * 0.07, 4, 6);
   const headerSize = clamp(frameHeight * 0.115, 8, 11);
   const pillLabelSize = clamp(frameHeight * 0.11, 8, 10);
   const badgeSize = clamp(frameHeight * 0.125, 9, 12);
-  const amountSize = clamp(Math.min(frameWidth * 0.12, frameHeight * 0.44), 24, bannerMode ? 56 : 64);
-  const convertedSize = clamp(Math.min(frameWidth * 0.11, frameHeight * 0.38), 22, bannerMode ? 50 : 58);
+  const amountSize = clamp(Math.min(frameWidth * 0.12, frameHeight * 0.44), 24, shortMode ? 34 : bannerMode ? 56 : 64);
+  const convertedSize = clamp(Math.min(frameWidth * 0.11, frameHeight * 0.38), 22, shortMode ? 34 : bannerMode ? 50 : 58);
   const resultWidth = clamp(frameWidth * (bannerMode ? 0.38 : 0.44), 112, 220);
-  const bodyGap = clamp(frameHeight * 0.05, 3, 6);
-  const showIndicators = currencies.length > 1 && !tinyMode;
+  const bodyGap = shortMode ? 2 : clamp(frameHeight * 0.05, 3, 6);
+  const showIndicators = currencies.length > 1 && !tinyMode && !shortMode;
 
   return (
     <div
@@ -172,7 +173,7 @@ export default function ExchangeRate({ config, theme }: WidgetComponentProps) {
             className="flex items-center"
             style={{
               gap: headerGap,
-              marginBottom: clamp(frameHeight * 0.11, 6, 10),
+              marginBottom: shortMode ? 4 : clamp(frameHeight * 0.11, 6, 10),
             }}
           >
             <div
@@ -274,7 +275,7 @@ export default function ExchangeRate({ config, theme }: WidgetComponentProps) {
                   style={{
                     backgroundColor: resultCardBg,
                     borderRadius: clamp(frameHeight * 0.26, 14, 18),
-                    padding: `${clamp(frameHeight * 0.11, 7, 12)}px ${clamp(frameWidth * 0.038, 10, 16)}px`,
+                    padding: `${shortMode ? 5 : clamp(frameHeight * 0.11, 7, 12)}px ${clamp(frameWidth * 0.038, 10, 16)}px`,
                     width: resultWidth,
                     flexShrink: 0,
                     display: 'flex',

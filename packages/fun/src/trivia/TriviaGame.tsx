@@ -197,7 +197,7 @@ export default function TriviaGame({ config, theme }: WidgetComponentProps) {
     return () => clearInterval(timer);
   }, [rotationInterval, advance]);
 
-  const { containerRef, scale } = useFitScale(340, 300);
+  const { containerRef, scale } = useFitScale(340, 310);
   const accentColor = theme.accent;
   const headlineColor = mixColors(theme.background, '#ffffff', 0.97);
   const bodyColor = mixColors(theme.background, '#ffffff', 0.84);
@@ -229,7 +229,7 @@ export default function TriviaGame({ config, theme }: WidgetComponentProps) {
       <div
         style={{
           width: 340,
-          height: 300,
+          height: 310,
           transform: `scale(${scale})`,
           transformOrigin: 'center center',
           opacity: transitioning ? 0 : 1,

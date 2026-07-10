@@ -8,6 +8,7 @@ import {
   registerWidget,
   type WidgetComponentProps,
   useFitScale,
+  useLoopingAutoScroll,
 } from '@firstform/campus-hub-widget-sdk';
 import TeamScheduleOptions from './TeamScheduleOptions';
 
@@ -240,6 +241,11 @@ export default function TeamSchedule({ config, theme }: WidgetComponentProps) {
   }, [apiUrl, loadGames, refreshInterval, source]);
 
   const upcoming = useMemo(() => sortGames(games).slice(0, maxGames), [games, maxGames]);
+  const gamesRef = useLoopingAutoScroll<HTMLDivElement>([
+    upcoming,
+    showStatus,
+    showVenue,
+  ]);
   const nextGame = upcoming[0] ?? DEMO_GAMES[0];
   const headlineColor = mixColors(theme.background, '#ffffff', 0.95);
   const mutedColor = mixColors(theme.background, '#ffffff', 0.65);
@@ -313,7 +319,11 @@ export default function TeamSchedule({ config, theme }: WidgetComponentProps) {
             )}
           </div>
 
-          <div className="mt-3 flex-1 space-y-2">
+          <div
+            ref={gamesRef}
+            data-layout-diagnostic-ignore="true"
+            className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto scrollbar-hide"
+          >
             {upcoming.slice(1).map((game) => (
               <div
                 key={`${game.date}-${game.opponent}`}

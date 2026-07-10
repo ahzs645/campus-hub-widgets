@@ -364,6 +364,7 @@ export default function JobBoard({
           {displayMode === 'scroll' && (
             <div className="flex-1 relative overflow-hidden">
               <div
+                data-layout-diagnostic-ignore="true"
                 className="flex flex-col animate-ticker-vertical will-change-transform"
                 style={{ animationDuration: `${speed}s` }}
               >

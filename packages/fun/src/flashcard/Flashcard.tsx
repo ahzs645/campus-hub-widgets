@@ -264,6 +264,7 @@ export default function Flashcard({ config, theme }: WidgetComponentProps) {
       >
         {/* Gold accent circle */}
         <div
+          data-layout-diagnostic-ignore="true"
           className="absolute -top-2 -left-2 w-10 h-10 rounded-full opacity-20"
           style={{ backgroundColor: theme.accent }}
         />

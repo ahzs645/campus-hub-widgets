@@ -516,12 +516,12 @@ export default function UvIndex({ config, theme }: WidgetComponentProps) {
         className={`flex flex-col p-6 ${!isLandscape ? 'items-center' : ''}`}
       >
         {/* Header */}
-        <div className={`mb-3 ${!isLandscape ? 'text-center' : ''}`}>
+        <div className={`mb-3 w-full min-w-0 ${!isLandscape ? 'text-center' : ''}`}>
           <div className="text-sm font-medium opacity-70" style={{ color: theme.accent }}>
             UV Index
           </div>
           {data.location && (
-            <div className="mt-1 max-w-[260px] truncate text-sm text-white/45">
+            <div className="mt-1 w-full min-w-0 max-w-full truncate text-sm text-white/45">
               {data.location}
             </div>
           )}
@@ -582,10 +582,10 @@ export default function UvIndex({ config, theme }: WidgetComponentProps) {
 
         {/* Error */}
         {error && (
-          <div className="mt-2 text-sm text-red-400 truncate">{error}</div>
+          <div className="mt-2 w-full min-w-0 truncate text-sm text-red-400">{error}</div>
         )}
         {warning && !error && (
-          <div className="mt-2 text-sm text-amber-300 truncate">{warning}</div>
+          <div className="mt-2 w-full min-w-0 truncate text-sm text-amber-300">{warning}</div>
         )}
 
         {/* Last updated */}

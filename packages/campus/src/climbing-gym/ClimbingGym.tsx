@@ -197,7 +197,7 @@ export default function ClimbingGym({ config, theme }: WidgetComponentProps) {
   const statusText = forceOpen ? 'Open now' : openStatus.closesOrOpensAt;
 
   const { containerRef, scale, designWidth: DESIGN_W, designHeight: DESIGN_H, isLandscape } = useAdaptiveFitScale({
-    landscape: { w: 320, h: 234 },
+    landscape: { w: 320, h: 240 },
     portrait: { w: 232, h: 340 },
   });
 

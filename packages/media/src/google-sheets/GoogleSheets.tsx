@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState, useMemo } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, registerWidget, useFitScale } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon } from '@firstform/campus-hub-widget-sdk';
 import GoogleSheetsOptions from './GoogleSheetsOptions';
 
@@ -35,15 +35,26 @@ function GoogleSheetsDemo({
   title: string;
   zoom: number;
 }) {
-  const scale = Math.max(0.82, Math.min(1.18, zoom / 100));
+  const contentScale = Math.max(0.82, Math.min(1.18, zoom / 100));
+  const { containerRef, scale } = useFitScale(720, 520);
 
   return (
     <div
-      className="h-full w-full p-4"
+      ref={containerRef}
+      className="flex h-full w-full items-center justify-center overflow-hidden"
       style={{
         background: `linear-gradient(180deg, ${theme.primary}36 0%, ${theme.background} 100%)`,
       }}
     >
+      <div
+        className="shrink-0 p-4"
+        style={{
+          width: 720,
+          height: 520,
+          transform: `scale(${scale})`,
+          transformOrigin: 'center',
+        }}
+      >
       <div className="flex h-full flex-col overflow-hidden rounded-[24px] border border-emerald-900/15 bg-white shadow-2xl">
         {showTitle && title ? (
           <div
@@ -65,9 +76,9 @@ function GoogleSheetsDemo({
         <div className="flex-1 overflow-hidden bg-[#f8fafc] p-3 text-slate-800">
           <div
             style={{
-              transform: `scale(${scale})`,
+              transform: `scale(${contentScale})`,
               transformOrigin: 'top left',
-              width: `${100 / scale}%`,
+              width: `${100 / contentScale}%`,
             }}
           >
             <div
@@ -152,6 +163,7 @@ function GoogleSheetsDemo({
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

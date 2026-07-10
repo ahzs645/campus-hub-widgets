@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { registerWidget, type WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
+import { registerWidget, type WidgetComponentProps, useLoopingAutoScroll } from '@firstform/campus-hub-widget-sdk';
 import { createSignalingClient, type SignalingClient } from '@firstform/campus-hub-widget-sdk';
 import HomeAssistantOptions from './HomeAssistantOptions';
 
@@ -291,6 +291,11 @@ function HomeAssistantWidget({ config, theme }: WidgetComponentProps) {
   const httpUrl = resolveHttpStateUrl(cfg?.httpUrl || '');
   const pollIntervalMs = Math.max(5, Number(cfg?.pollIntervalSeconds) || 30) * 1000;
   const entityIds = cfg?.entityIds || [];
+  const listRef = useLoopingAutoScroll<HTMLDivElement>([
+    entities,
+    entityIds.join(','),
+    mode,
+  ]);
 
   const handleState = useCallback((data: Record<string, unknown>) => {
     const entityId = data.entity_id as string;
@@ -404,7 +409,11 @@ function HomeAssistantWidget({ config, theme }: WidgetComponentProps) {
 
   if (isUnconfigured) {
     return (
-      <div className="h-full w-full overflow-y-auto p-2 space-y-2">
+      <div
+        ref={listRef}
+        data-layout-diagnostic-ignore="true"
+        className="h-full w-full overflow-y-auto p-2 space-y-2 scrollbar-hide"
+      >
         {DEMO_ENTITIES.map((entity) => (
           <EntityRenderer key={entity.entity_id} entity={entity} theme={theme} />
         ))}
@@ -452,7 +461,11 @@ function HomeAssistantWidget({ config, theme }: WidgetComponentProps) {
 
   // Multiple entities — scrollable list
   return (
-    <div className="h-full w-full overflow-y-auto p-2 space-y-2">
+    <div
+      ref={listRef}
+      data-layout-diagnostic-ignore="true"
+      className="h-full w-full overflow-y-auto p-2 space-y-2 scrollbar-hide"
+    >
       {entityList.map((entity) => (
         <EntityRenderer key={entity.entity_id} entity={entity} theme={theme} />
       ))}

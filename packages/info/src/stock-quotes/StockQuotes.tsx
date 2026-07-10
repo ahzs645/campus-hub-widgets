@@ -7,6 +7,7 @@ import {
   registerWidget,
   type WidgetComponentProps,
   useFitScale,
+  useLoopingAutoScroll,
 } from '@firstform/campus-hub-widget-sdk';
 import StockQuotesOptions from './StockQuotesOptions';
 
@@ -167,7 +168,7 @@ export default function StockQuotes({ config, theme }: WidgetComponentProps) {
   const showChange = stockConfig?.showChange ?? true;
   const showNames = stockConfig?.showNames ?? true;
 
-  const { containerRef, scale } = useFitScale(420, 260);
+  const { containerRef, scale } = useFitScale(420, 320);
   const [quotes, setQuotes] = useState<Quote[]>(DEMO_QUOTES);
   const [chart, setChart] = useState<ChartPoint[]>(DEMO_CHART);
   const [error, setError] = useState<string | null>(null);
@@ -226,6 +227,11 @@ export default function StockQuotes({ config, theme }: WidgetComponentProps) {
     () => quotes.find((quote) => quote.symbol === chartSymbol) ?? quotes[0] ?? DEMO_QUOTES[0],
     [chartSymbol, quotes],
   );
+  const quotesRef = useLoopingAutoScroll<HTMLDivElement>([
+    quotes,
+    showChange,
+    showNames,
+  ]);
 
   const positive = leadQuote.changePercent >= 0;
   const headlineColor = mixColors(theme.background, '#ffffff', 0.96);
@@ -242,7 +248,7 @@ export default function StockQuotes({ config, theme }: WidgetComponentProps) {
       <div
         style={{
           width: 420,
-          height: 260,
+          height: 320,
           transform: `scale(${scale})`,
           transformOrigin: 'top left',
           padding: 18,
@@ -280,9 +286,9 @@ export default function StockQuotes({ config, theme }: WidgetComponentProps) {
             </div>
           </div>
 
-          <div className="flex flex-1 gap-3">
+          <div className="flex min-h-0 flex-1 gap-3 overflow-hidden">
             <div
-              className="flex min-w-0 flex-1 flex-col rounded-[20px]"
+              className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-[20px]"
               style={{
                 background: surfaceColor,
                 border: `1px solid ${theme.accent}18`,
@@ -319,7 +325,7 @@ export default function StockQuotes({ config, theme }: WidgetComponentProps) {
                 {formatPrice(leadQuote.price)}
               </div>
 
-              <div className="mt-3 flex-1">
+              <div className="mt-3 min-h-0 flex-1 overflow-hidden">
                 {showChart ? (
                   <Sparkline points={chart} stroke={trendColor} fill={trendFill} />
                 ) : (
@@ -333,7 +339,11 @@ export default function StockQuotes({ config, theme }: WidgetComponentProps) {
               </div>
             </div>
 
-            <div className="flex w-[146px] flex-col gap-2">
+            <div
+              ref={quotesRef}
+              data-layout-diagnostic-ignore="true"
+              className="flex min-h-0 w-[146px] flex-col gap-2 overflow-y-auto scrollbar-hide"
+            >
               {quotes.slice(0, 4).map((quote) => {
                 const rowPositive = quote.changePercent >= 0;
                 return (
@@ -374,9 +384,9 @@ export default function StockQuotes({ config, theme }: WidgetComponentProps) {
             </div>
           </div>
 
-          <div className="mt-3 flex items-center justify-between" style={{ fontSize: 11, color: subtleColor }}>
-            <span>{loading ? 'Refreshing quotes...' : error ? `Fallback data • ${error}` : 'Live price snapshot'}</span>
-            <span>Updates every {refreshInterval}m</span>
+          <div className="mt-3 flex shrink-0 items-center justify-between gap-2" style={{ fontSize: 11, color: subtleColor }}>
+            <span className="min-w-0 truncate">{loading ? 'Refreshing quotes...' : error ? `Fallback data • ${error}` : 'Live price snapshot'}</span>
+            <span className="shrink-0">Updates every {refreshInterval}m</span>
           </div>
         </div>
       </div>

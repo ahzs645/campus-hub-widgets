@@ -14,6 +14,7 @@ import './rich-text/RichText';
 import './google-sheets/GoogleSheets';
 import './canva/Canva';
 import './powerpoint/PowerPoint';
+import './stream-player/StreamPlayer';
 
 // Register lazy loaders for display mode
 registerWidgetLoader('poster-carousel', () => import('./poster-carousel/PosterCarousel'));
@@ -29,3 +30,4 @@ registerWidgetLoader('rich-text', () => import('./rich-text/RichText'));
 registerWidgetLoader('google-sheets', () => import('./google-sheets/GoogleSheets'));
 registerWidgetLoader('canva', () => import('./canva/Canva'));
 registerWidgetLoader('powerpoint', () => import('./powerpoint/PowerPoint'));
+registerWidgetLoader('stream-player', () => import('./stream-player/StreamPlayer'));

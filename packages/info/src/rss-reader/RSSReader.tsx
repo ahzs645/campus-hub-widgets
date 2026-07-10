@@ -282,6 +282,7 @@ export default function RSSReader({ config, theme }: WidgetComponentProps) {
         {/* Items */}
         <div ref={viewportRef} className="flex-1 overflow-hidden relative">
           <div
+            data-layout-diagnostic-ignore="true"
             className={shouldLoop ? 'will-change-transform' : ''}
             style={shouldLoop ? {
               animation: `rssTickerLoop ${duration}s linear infinite`,

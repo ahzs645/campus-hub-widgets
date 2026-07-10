@@ -122,6 +122,7 @@ export default function MacOSTranslation({ config }: WidgetComponentProps) {
       }}
     >
       <div
+        data-layout-diagnostic-ignore="true"
         className="pointer-events-none absolute"
         style={{
           top: '50%',

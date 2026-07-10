@@ -638,8 +638,8 @@ registerWidget({
   minH: 1,
   // Banner ticker designed for a single ~70px row; cap height so it can't be
   // stretched tall (content scales by containerHeight/70 and would balloon).
-  maxH: 2,
-  defaultW: 99, // Sentinel: addWidget clamps to gridCols for full-width
+  maxH: 1,
+  defaultW: 12,
   defaultH: 1,
   component: NewsTicker,
   OptionsComponent: NewsTickerOptions,

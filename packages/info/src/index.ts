@@ -8,6 +8,8 @@ import './iss-tracker/ISSTracker';
 import './rss-reader/RSSReader';
 import './home-assistant/HomeAssistant';
 import './horoscope/Horoscope';
+import './stock-quotes/StockQuotes';
+import './team-schedule/TeamSchedule';
 
 // Register lazy loaders for display mode
 registerWidgetLoader('news-ticker', () => import('./news-ticker/NewsTicker'));
@@ -17,3 +19,5 @@ registerWidgetLoader('iss-tracker', () => import('./iss-tracker/ISSTracker'));
 registerWidgetLoader('rss-reader', () => import('./rss-reader/RSSReader'));
 registerWidgetLoader('home-assistant', () => import('./home-assistant/HomeAssistant'));
 registerWidgetLoader('horoscope', () => import('./horoscope/Horoscope'));
+registerWidgetLoader('stock-quotes', () => import('./stock-quotes/StockQuotes'));
+registerWidgetLoader('team-schedule', () => import('./team-schedule/TeamSchedule'));

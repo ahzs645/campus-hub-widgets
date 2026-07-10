@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, registerWidget, useLoopingAutoScroll } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, fetchJsonWithCache } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
 import GoogleCalendarOptions from './GoogleCalendarOptions';
@@ -143,6 +143,11 @@ export default function GoogleCalendar({ config, theme }: WidgetComponentProps) 
     if (!grouped.has(key)) grouped.set(key, []);
     grouped.get(key)!.push(event);
   }
+  const eventsRef = useLoopingAutoScroll<HTMLDivElement>([
+    events,
+    showLocation,
+    calTitle,
+  ]);
 
   return (
     <ThemedContainer
@@ -166,7 +171,12 @@ export default function GoogleCalendar({ config, theme }: WidgetComponentProps) 
         )}
 
         {/* Events */}
-        <div className="flex-1 overflow-hidden px-5 py-3">
+        <div
+          ref={eventsRef}
+          data-layout-diagnostic-ignore="true"
+          className="flex-1 overflow-y-auto overscroll-none px-5 py-3 scrollbar-hide"
+          style={{ maskImage: 'linear-gradient(to bottom, black calc(100% - 18px), transparent)' }}
+        >
           {events.length === 0 ? (
             <div className="flex h-full items-center justify-center text-center text-sm font-medium text-white/60">
               No events available

@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, registerWidget, useFitScale } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon } from '@firstform/campus-hub-widget-sdk';
 import PowerPointOptions from './PowerPointOptions';
 import { buildPowerPointEmbedUrl } from './powerpoint-utils';
@@ -22,13 +22,25 @@ function PowerPointDemo({
   showTitle: boolean;
   title: string;
 }) {
+  const { containerRef, scale } = useFitScale(800, 600);
+
   return (
     <div
-      className="h-full w-full p-4"
+      ref={containerRef}
+      className="flex h-full w-full items-center justify-center overflow-hidden"
       style={{
         background: `linear-gradient(180deg, ${theme.primary}2b 0%, ${theme.background} 100%)`,
       }}
     >
+      <div
+        className="shrink-0 p-4"
+        style={{
+          width: 800,
+          height: 600,
+          transform: `scale(${scale})`,
+          transformOrigin: 'center',
+        }}
+      >
       <div className="flex h-full flex-col overflow-hidden rounded-[24px] border border-orange-950/10 bg-white shadow-2xl">
         {showTitle && title ? (
           <div
@@ -47,7 +59,10 @@ function PowerPointDemo({
           </div>
         </div>
 
-        <div className="grid flex-1 gap-4 bg-[#fff7f5] p-4 lg:grid-cols-[1.15fr_0.85fr]">
+        <div
+          className="grid flex-1 gap-4 bg-[#fff7f5] p-4"
+          style={{ gridTemplateColumns: '1.15fr 0.85fr' }}
+        >
           <div className="flex flex-col justify-between rounded-[22px] bg-gradient-to-br from-[#d24726] via-[#b93b1e] to-[#862814] p-5 text-white">
             <div>
               <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/60">
@@ -108,6 +123,7 @@ function PowerPointDemo({
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

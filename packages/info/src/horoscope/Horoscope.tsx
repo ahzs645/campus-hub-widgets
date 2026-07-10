@@ -326,7 +326,7 @@ export default function Horoscope({ config, theme }: WidgetComponentProps) {
   const frameHeight = Math.max(containerHeight || DESIGN_H, 90);
   const aspectRatio = frameWidth / frameHeight;
   const tinyMode = frameWidth < 240 || frameHeight < 135;
-  const compactMode = !tinyMode && (frameWidth < 370 || frameHeight < 210);
+  const compactMode = !tinyMode && (frameWidth < 520 || frameHeight < 300);
   const stackedBody = aspectRatio < 1.3 || frameWidth < 300;
   const expandedMode = frameWidth > 520 || frameHeight > 320;
 
@@ -510,7 +510,8 @@ export default function Horoscope({ config, theme }: WidgetComponentProps) {
                 </div>
               </div>
 
-              <div className="mt-auto flex flex-wrap gap-2" style={{ paddingTop: sectionGap }}>
+              {(showTraits || showLucky) && frameHeight >= 170 && (
+                <div className="mt-auto flex flex-wrap gap-2" style={{ paddingTop: sectionGap }}>
                 {showTraits && (
                   <span style={pillStyle(surfaceColor, surfaceBorder, mutedColor, chipFontSize)}>
                     {meta.element}
@@ -526,7 +527,8 @@ export default function Horoscope({ config, theme }: WidgetComponentProps) {
                     {profile.luckyWindow}
                   </span>
                 )}
-              </div>
+                </div>
+              )}
             </div>
           ) : compactMode ? (
             <>
@@ -852,7 +854,7 @@ registerWidget({
   description: 'A sign-specific daily horoscope with lucky details.',
   icon: 'sparkles',
   minW: 2,
-  minH: 1,
+  minH: 2,
   defaultW: 3,
   defaultH: 2,
   component: Horoscope,

@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, registerWidget, useFitScale } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon } from '@firstform/campus-hub-widget-sdk';
 import CanvaOptions from './CanvaOptions';
 
@@ -11,8 +11,19 @@ interface CanvaConfig {
 }
 
 function CanvaDemo() {
+  const { containerRef, scale } = useFitScale(600, 360);
+
   return (
-    <div className="h-full w-full p-5">
+    <div ref={containerRef} className="flex h-full w-full items-center justify-center overflow-hidden">
+      <div
+        className="shrink-0 p-5"
+        style={{
+          width: 600,
+          height: 360,
+          transform: `scale(${scale})`,
+          transformOrigin: 'center',
+        }}
+      >
       <div
         className="grid h-full overflow-hidden rounded-[30px] border border-white/10 bg-[#201352] text-white shadow-2xl"
         style={{ gridTemplateColumns: '72px 1fr' }}
@@ -74,6 +85,7 @@ function CanvaDemo() {
             </span>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

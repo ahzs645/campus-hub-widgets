@@ -202,6 +202,7 @@ export default function WordOfTheDay({ config, theme }: WidgetComponentProps) {
   const exampleRadius = clamp(exampleFontSize * 0.7, 8, 14);
   const originFontSize = clamp(Math.min(DESIGN_W * 0.022, ACTUAL_H * 0.03), 10, 14);
   const contentTopOffset = clamp(ACTUAL_H * 0.01, 0, 10);
+  const showOrigin = ACTUAL_H >= 260;
 
   return (
     <DarkContainer ref={containerRef} bg={theme.background}>
@@ -314,7 +315,7 @@ export default function WordOfTheDay({ config, theme }: WidgetComponentProps) {
           </div>
 
           {/* Origin */}
-          <div>
+          {showOrigin && <div>
             <span
               className="transition-opacity duration-700 delay-500"
               style={{
@@ -327,7 +328,7 @@ export default function WordOfTheDay({ config, theme }: WidgetComponentProps) {
             >
               Origin: {word.origin}
             </span>
-          </div>
+          </div>}
         </div>
       </div>
     </DarkContainer>
