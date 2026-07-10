@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { FormInput, FormSelect, FormSwitch, describeCapabilities } from '@firstform/campus-hub-widget-sdk';
+import { FormInput, FormSelect, FormSwitch } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
 type DataSource = 'default' | 'api' | 'unbc-news';
@@ -19,7 +19,7 @@ interface PosterCarouselData {
   showSequenceIndicator: boolean;
 }
 
-export default function PosterCarouselOptions({ data, onChange, linkedSource }: WidgetOptionsProps) {
+export default function PosterCarouselOptions({ data, onChange }: WidgetOptionsProps) {
   const [state, setState] = useState<PosterCarouselData>({
     rotationSeconds: (data?.rotationSeconds as number) ?? 10,
     dataSource: (data?.dataSource as DataSource) ?? 'default',
@@ -57,23 +57,8 @@ export default function PosterCarouselOptions({ data, onChange, linkedSource }: 
     onChange({ ...data, ...newState });
   };
 
-  // Switch back to manually-managed posters, unlinking any library source.
-  const handleUseManual = () => {
-    const next = { ...data };
-    delete (next as Record<string, unknown>).__sourceRef;
-    const newState = { ...state, dataSource: 'default' as DataSource };
-    setState(newState);
-    onChange({ ...next, ...newState });
-  };
-
   const isUNBC = state.dataSource === 'unbc-news';
   const isAPI = state.dataSource === 'api';
-  // A "live" data source is anything other than manually-managed posters. This
-  // also covers legacy widgets that set `dataSource` without a `__sourceRef`.
-  const isLinked = Boolean(linkedSource) || Boolean(data.__sourceRef) || isUNBC || isAPI;
-  const linkedName = linkedSource?.name ?? (isUNBC ? 'UNBC News Releases' : isAPI ? 'JSON API' : 'Library source');
-  const linkedUrl = linkedSource?.url ?? (isAPI && typeof data.apiUrl === 'string' ? data.apiUrl : undefined);
-  const capabilityChips = linkedSource?.capabilities ? describeCapabilities(linkedSource.capabilities) : [];
 
   return (
     <div className="space-y-6">
@@ -115,56 +100,6 @@ export default function PosterCarouselOptions({ data, onChange, linkedSource }: 
           checked={state.showSequenceIndicator}
           onChange={handleChange}
         />
-      </div>
-
-      {/* Data Source */}
-      <div className="space-y-4 border-t border-[color:var(--ui-item-border)] pt-6">
-        <h3 className="font-semibold text-[var(--ui-text)]">Data Source</h3>
-
-        {isLinked ? (
-          <div className="rounded-lg border border-[color:var(--ui-accent-soft)] bg-[var(--ui-accent-soft)] p-3">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <div className="text-xs font-medium uppercase tracking-wide text-[var(--color-accent)]">Linked source</div>
-                <div className="mt-0.5 text-sm font-medium truncate text-[var(--ui-text)]">
-                  {linkedName}
-                </div>
-                {linkedUrl && (
-                  <div className="text-xs truncate text-[var(--ui-text-muted)]">{linkedUrl}</div>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={handleUseManual}
-                className="flex-shrink-0 rounded px-2 py-1 text-xs font-medium text-[var(--ui-text-muted)] hover:bg-[var(--ui-item-hover)] hover:text-[var(--ui-text)] transition-colors"
-              >
-                Use manual posters
-              </button>
-            </div>
-            {capabilityChips.length > 0 && (
-              <div className="mt-2 flex flex-wrap items-center gap-1">
-                {capabilityChips.map((chip) => (
-                  <span
-                    key={chip}
-                    className="rounded-full border border-[color:var(--ui-item-border)] bg-[var(--ui-item-bg)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--ui-text-muted)]"
-                  >
-                    {chip}
-                  </span>
-                ))}
-              </div>
-            )}
-            {isUNBC && !linkedSource?.capabilities && (
-              <div className="mt-2 text-xs text-[var(--ui-text-muted)]">
-                Latest news stories from the UNBC media releases page, with images and dates.
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="text-sm text-[var(--ui-text-muted)]">
-            Showing manually-added posters. To pull from a live feed or API, link a source in the{' '}
-            <span className="font-medium text-[var(--ui-text)]">Content Source</span> panel above.
-          </div>
-        )}
       </div>
 
       {/* API Configuration - only for JSON API mode */}

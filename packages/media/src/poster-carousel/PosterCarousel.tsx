@@ -78,43 +78,109 @@ function getOriginalUNBCImageUrl(imageSrc: string) {
   return url.toString();
 }
 
+function decodeHtmlEntities(value: string): string {
+  if (typeof DOMParser !== 'undefined') {
+    const doc = new DOMParser().parseFromString(value, 'text/html');
+    return doc.body.textContent ?? '';
+  }
+
+  return value
+    .replace(/<[^>]*>/g, '')
+    .replace(/&#x([0-9a-f]+);/gi, (_match, code: string) => String.fromCodePoint(Number.parseInt(code, 16)))
+    .replace(/&#(\d+);/g, (_match, code: string) => String.fromCodePoint(Number.parseInt(code, 10)))
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&apos;/gi, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>');
+}
+
+function buildUNBCPoster(
+  storyPath: string,
+  imageSrc: string,
+  title: string,
+  subtitle: string | undefined,
+  imageQuality: UNBCImageQuality,
+): Poster {
+  const thumbnailUrl = resolveUNBCImageUrl(imageSrc);
+  const imageUrl = imageQuality === 'original'
+    ? getOriginalUNBCImageUrl(imageSrc)
+    : thumbnailUrl;
+
+  return {
+    id: storyPath,
+    title,
+    subtitle,
+    image: imageUrl,
+    fallbackImage: imageUrl !== thumbnailUrl ? thumbnailUrl : undefined,
+  };
+}
+
 /** Parse the UNBC news releases page HTML into poster items */
-const parseUNBCNewsPage = (
+export const parseUNBCNewsPage = (
   html: string,
   maxStories: number,
   imageQuality: UNBCImageQuality
 ): Poster[] => {
+  if (typeof DOMParser !== 'undefined') {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const titleLinks = doc.querySelectorAll<HTMLAnchorElement>(
+      'h1 a[href*="/our-stories/story/"], h2 a[href*="/our-stories/story/"], h3 a[href*="/our-stories/story/"], h4 a[href*="/our-stories/story/"]',
+    );
+    const posters: Poster[] = [];
+    const seenStoryPaths = new Set<string>();
+
+    for (const titleLink of titleLinks) {
+      if (posters.length >= maxStories) break;
+
+      const storyPath = titleLink.getAttribute('href')?.trim() ?? '';
+      const title = titleLink.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+      if (!storyPath || !title || seenStoryPaths.has(storyPath)) continue;
+
+      // The current Drupal markup puts the image and `.article-item--col2`
+      // text in sibling columns. Walk up until both are in the same scope.
+      let scope: Element | null = titleLink.closest('.article-item, article, .views-row, li')
+        ?? titleLink.parentElement;
+      let image = scope?.querySelector<HTMLImageElement>('img') ?? null;
+      for (let depth = 0; !image && scope?.parentElement && scope !== doc.body && depth < 4; depth += 1) {
+        scope = scope.parentElement;
+        image = scope.querySelector<HTMLImageElement>('img');
+      }
+
+      const imageSrc = image?.getAttribute('src')
+        ?? image?.getAttribute('data-src')
+        ?? image?.getAttribute('data-lazy-src')
+        ?? '';
+      if (!imageSrc) continue;
+
+      const subtitle = scope?.querySelector('time')?.textContent?.replace(/\s+/g, ' ').trim() || undefined;
+      posters.push(buildUNBCPoster(storyPath, imageSrc, title, subtitle, imageQuality));
+      seenStoryPaths.add(storyPath);
+    }
+
+    if (posters.length > 0) return posters;
+  }
+
   const posters: Poster[] = [];
 
-  // Match story blocks: an <a> with image followed by <h3> with title link
-  // Pattern: <a href="/our-stories/story/..."><img src="..." /></a> ... <h3><a href="...">Title</a></h3>
-  const storyPattern = /<a\s+href="(\/our-stories\/story\/[^"]+)"[^>]*>\s*<img\s+[^>]*src="([^"]+)"[^>]*\/?\s*>\s*<\/a>[\s\S]*?<h3>\s*<a\s+href="\/our-stories\/story\/[^"]*"[^>]*>\s*([\s\S]*?)\s*<\/a>\s*<\/h3>/gi;
+  // Non-DOM fallback for pre-rendering and tests in non-browser runtimes.
+  const storyPattern = /<a\s+href="(\/our-stories\/story\/[^"]+)"[^>]*>\s*<img\s+[^>]*src="([^"]+)"[^>]*\/?\s*>\s*<\/a>[\s\S]*?<h[1-4][^>]*>\s*<a\s+href="\/our-stories\/story\/[^"]*"[^>]*>\s*([\s\S]*?)\s*<\/a>\s*<\/h[1-4]>/gi;
 
   let match: RegExpExecArray | null;
   while ((match = storyPattern.exec(html)) !== null && posters.length < maxStories) {
     const storyPath = match[1];
     const imageSrc = match[2];
-    const title = match[3].replace(/<[^>]*>/g, '').trim();
+    const title = decodeHtmlEntities(match[3]).replace(/\s+/g, ' ').trim();
 
     if (!title || !imageSrc) continue;
 
-    const thumbnailUrl = resolveUNBCImageUrl(imageSrc);
-    const imageUrl = imageQuality === 'original'
-      ? getOriginalUNBCImageUrl(imageSrc)
-      : thumbnailUrl;
-
-    // Try to extract date text after the </h3> tag
-    const afterH3 = html.substring(match.index + match[0].length, match.index + match[0].length + 200);
-    const dateMatch = afterH3.match(/([A-Z][a-z]{2}\s+\d{1,2},\s+\d{4})/);
+    // Try to extract date text immediately after the heading.
+    const afterHeading = html.substring(match.index + match[0].length, match.index + match[0].length + 200);
+    const dateMatch = afterHeading.match(/([A-Z][a-z]{2}\s+\d{1,2},\s+\d{4})/);
     const subtitle = dateMatch ? dateMatch[1] : undefined;
 
-    posters.push({
-      id: storyPath,
-      title,
-      subtitle,
-      image: imageUrl,
-      fallbackImage: imageUrl !== thumbnailUrl ? thumbnailUrl : undefined,
-    });
+    posters.push(buildUNBCPoster(storyPath, imageSrc, title, subtitle, imageQuality));
   }
 
   return posters;
@@ -395,6 +461,8 @@ registerWidget({
     types: ['api', 'feed'],
     requires: { hasImages: true },
     capabilityHint: 'Sources with images look best in the carousel; text-only feeds show over a fallback background.',
+    unlinkLabel: 'Use manual posters',
+    removeSource: () => ({ dataSource: 'default' }),
     applySource: (source) => {
       // The UNBC releases page is HTML that a dedicated runtime path scrapes,
       // so route it to the scraper mode rather than the JSON-API mode.
