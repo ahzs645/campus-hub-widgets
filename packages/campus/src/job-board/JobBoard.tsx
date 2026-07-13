@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import QRCodeLib from 'qrcode';
 import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, fetchJsonWithCache, fetchTextWithCache, buildProxyUrl } from '@firstform/campus-hub-widget-sdk';
-import { parseRss } from '@firstform/campus-hub-widget-sdk';
+import { parseRss, useTransitionSettled } from '@firstform/campus-hub-widget-sdk';
 import {
   ThemedCard,
   ProgressBar,
@@ -210,6 +210,9 @@ export default function JobBoard({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(3);
   const containerRef = useRef<HTMLDivElement>(null);
+  // Slides animate in from outside the widget (duration-500), so keep the
+  // incoming slide out of layout diagnostics until it settles in place.
+  const transitionSettled = useTransitionSettled(currentIndex);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -384,7 +387,7 @@ export default function JobBoard({
                 {displayJobs.map((job, index) => (
                   <div
                     key={job.id ?? index}
-                    data-layout-diagnostic-ignore={index === currentIndex ? undefined : 'true'}
+                    data-layout-diagnostic-ignore={index === currentIndex && transitionSettled ? undefined : 'true'}
                     className="absolute inset-0 flex flex-col transition-all duration-500 ease-in-out"
                     style={{
                       opacity: index === currentIndex ? 1 : 0,
@@ -416,7 +419,7 @@ export default function JobBoard({
                   return (
                     <div
                       key={pageIdx}
-                      data-layout-diagnostic-ignore={isActive ? undefined : 'true'}
+                      data-layout-diagnostic-ignore={isActive && transitionSettled ? undefined : 'true'}
                       className="absolute inset-0 transition-all duration-500 ease-in-out"
                       style={{
                         opacity: isActive ? 1 : 0,
