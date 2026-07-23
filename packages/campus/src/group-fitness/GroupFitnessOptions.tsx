@@ -11,7 +11,7 @@ import {
   type GroupFitnessSection,
   type GroupFitnessViewMode,
   type ParsedGroupFitnessSchedule,
-} from './groupFitnessParser';
+} from '@firstform/campus-hub-widget-sdk';
 
 interface GroupFitnessOptionsData {
   title: string;
@@ -123,7 +123,7 @@ export default function GroupFitnessOptions({ data, onChange }: WidgetOptionsPro
   const handleChange = (name: string, value: string | number | boolean) => {
     const nextState = { ...state, [name]: value };
     setState(nextState);
-    onChange(nextState);
+    onChange({ ...data, ...nextState });
   };
 
   const availableClasses = Array.from(

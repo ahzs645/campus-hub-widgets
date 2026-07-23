@@ -1,10 +1,17 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
-import { buildCacheKey, buildProxyUrl, fetchJsonWithCache, fetchTextWithCache } from '@firstform/campus-hub-widget-sdk';
+import {
+  buildCacheKey,
+  buildProxyUrl,
+  fetchJsonWithCache,
+  fetchTextWithCache,
+  normalizeSourcePayload,
+  resolveSourceAdapter,
+} from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale, ThemedContainer, IconText } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon } from '@firstform/campus-hub-widget-sdk';
-import type { IconName } from '@firstform/campus-hub-widget-sdk';
+import type { IconName, NormalizedWeatherObservation } from '@firstform/campus-hub-widget-sdk';
 import WeatherOptions from './WeatherOptions';
 
 type WeatherIconKey =
@@ -57,7 +64,8 @@ interface WeatherConfig {
   showDetails?: boolean; // legacy, ignored if displayMode is set
   displayMode?: DisplayMode;
   displayItems?: DisplayItems;
-  dataSource?: 'openweathermap' | 'unbc-rooftop' | 'msc-geomet';
+  dataSource?: 'openweathermap' | 'source' | 'unbc-rooftop' | 'msc-geomet';
+  sourceAdapter?: string;
   refreshInterval?: number; // minutes
   useCorsProxy?: boolean;
   appearance?: WeatherAppearance;
@@ -250,12 +258,11 @@ const mapWeatherIcon = (condition: string): WeatherIconKey => {
   return 'default';
 };
 
-const UNBC_URL = 'https://cyclone.unbc.ca/wx/data-table-std-1m.html';
 const GEOMET_PRINCE_GEORGE_URL = 'https://api.weather.gc.ca/collections/citypageweather-realtime/items/bc-79?f=json&lang=en';
 
 
-/** Derive a simple condition string from UNBC rooftop sensor readings */
-const deriveConditionFromUNBC = (
+/** Derive a display condition from normalized sensor observations. */
+const deriveConditionFromObservation = (
   temp: number,
   rh: number,
   windSpeed: number,
@@ -272,65 +279,48 @@ const deriveConditionFromUNBC = (
   return 'cloudy';
 };
 
-/** Parse the UNBC rooftop weather station HTML (unclosed td tags: <tr><td>val<td>val...) */
-const parseUNBCWeatherData = (html: string, units: 'celsius' | 'fahrenheit'): WeatherData | null => {
-  // Each data row looks like: <tr><td>2026-02-17 16:09:00<td>855726<td>-15.6<td>...
-  // Find all lines containing a date pattern
-  const lines = html.split('\n');
-  let lastDataLine: string | null = null;
-  for (let i = lines.length - 1; i >= 0; i--) {
-    if (/\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/.test(lines[i])) {
-      lastDataLine = lines[i];
-      break;
-    }
-  }
-  if (!lastDataLine) return null;
-
-  // Split by <td> to get cell values (first split element is before the first <td>)
-  const parts = lastDataLine.split(/<td>/i);
-  // Remove the first empty/tr part, keep the cell values
-  const cells = parts.slice(1).map(s => s.replace(/<\/td>|<\/tr>/gi, '').trim());
-
-  // Columns: 0=DateTime, 1=Record, 2=TAir, 3=TDew, 4=RH, 5=Pstn, 6=Pmsl,
-  //          7=Wspd_avg, 8=Wspd_vec, 9=Wdir, 10=Wstd, 11=Wgust, 12=Precip,
-  //          13=Kdown_tot, ...
-  if (cells.length < 13) return null;
-
-  const tAir = parseFloat(cells[2] ?? '');
-  const tDew = parseFloat(cells[3] ?? '');
-  const rh = parseFloat(cells[4] ?? '');
-  const pmsl = parseFloat(cells[6] ?? '');
-  const wspdAvg = parseFloat(cells[7] ?? '');
-  const wdir = parseFloat(cells[9] ?? '');
-  const wgust = parseFloat(cells[11] ?? '');
-  const precip = parseFloat(cells[12] ?? '');
-  const kdownTot = cells.length > 13 ? parseFloat(cells[13] ?? '') : 0;
-
-  if (isNaN(tAir)) return null;
-
-  const tempC = tAir;
-  const temp = units === 'fahrenheit' ? Math.round(tempC * 9 / 5 + 32) : Math.round(tempC * 10) / 10;
-  const windDisplay = units === 'fahrenheit'
-    ? Math.round(wspdAvg * 2.23694)
-    : Math.round(wspdAvg * 10) / 10;
-  const gustDisplay = units === 'fahrenheit'
-    ? Math.round(wgust * 2.23694)
-    : Math.round(wgust * 10) / 10;
-
-  const condition = deriveConditionFromUNBC(tempC, rh, wspdAvg, precip, isNaN(kdownTot) ? 0 : kdownTot);
+const weatherFromObservation = (
+  observation: NormalizedWeatherObservation,
+  units: 'celsius' | 'fahrenheit',
+  location: string,
+): WeatherData => {
+  const windSpeed = observation.windSpeedMps ?? 0;
+  const precipitation = observation.precipitationMm ?? 0;
+  const humidity = observation.humidityPercent ?? 0;
+  const condition = deriveConditionFromObservation(
+    observation.temperatureC,
+    humidity,
+    windSpeed,
+    precipitation,
+    observation.solarRadiationWm2 ?? 0,
+  );
+  const convertTemp = (value: number | undefined) => value === undefined
+    ? undefined
+    : units === 'fahrenheit'
+      ? Math.round(value * 9 / 5 + 32)
+      : Math.round(value * 10) / 10;
+  const convertWind = (value: number | undefined) => value === undefined
+    ? undefined
+    : units === 'fahrenheit'
+      ? Math.round(value * 2.23694)
+      : Math.round(value * 10) / 10;
 
   return {
-    temp,
+    temp: convertTemp(observation.temperatureC) ?? 0,
     condition: condition.replace(/-/g, ' '),
     icon: condition,
-    humidity: Math.round(rh),
-    wind: windDisplay,
-    location: 'UNBC Rooftop',
-    pressure: Math.round(pmsl * 10) / 10,
-    dewPoint: units === 'fahrenheit' ? Math.round(tDew * 9 / 5 + 32) : Math.round(tDew * 10) / 10,
-    windDir: Math.round(wdir),
-    windGust: gustDisplay,
-    precip,
+    humidity: Math.round(humidity),
+    wind: convertWind(observation.windSpeedMps) ?? 0,
+    location,
+    pressure: observation.pressureHpa === undefined
+      ? undefined
+      : Math.round(observation.pressureHpa * 10) / 10,
+    dewPoint: convertTemp(observation.dewPointC),
+    windDir: observation.windDirectionDegrees === undefined
+      ? undefined
+      : Math.round(observation.windDirectionDegrees),
+    windGust: convertWind(observation.windGustMps),
+    precip: observation.precipitationMm,
   };
 };
 
@@ -414,32 +404,44 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
   const appearance = weatherConfig?.appearance ?? 'default';
   const show = resolveDisplayItems(weatherConfig);
   const apiKey = weatherConfig?.apiKey?.trim();
-  const dataSource = weatherConfig?.dataSource ?? 'openweathermap';
+  const configuredDataSource = weatherConfig?.dataSource ?? 'openweathermap';
+  const dataSource = configuredDataSource === 'unbc-rooftop' ? 'source' : configuredDataSource;
+  const sourceAdapterId = weatherConfig?.sourceAdapter
+    ?? (configuredDataSource === 'unbc-rooftop' ? 'unbc-rooftop-weather' : undefined);
+  const sourceAdapter = resolveSourceAdapter({ adapterId: sourceAdapterId, url: apiUrl });
+  const sourceUrl = sourceAdapter?.matches({ url: apiUrl })
+    ? apiUrl
+    : sourceAdapter?.defaultUrl;
   const refreshInterval = weatherConfig?.refreshInterval ?? 10; // minutes
   const useCorsProxy = weatherConfig?.useCorsProxy ?? true;
 
   const [weather, setWeather] = useState<WeatherData>({
     ...MOCK_WEATHER,
-    location: dataSource === 'unbc-rooftop' ? 'UNBC Rooftop' : location,
+    location,
   });
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const refreshMs = refreshInterval * 60 * 1000;
 
-  // UNBC Rooftop data source
-  const fetchUNBC = useCallback(async () => {
+  const fetchAdaptedSource = useCallback(async () => {
+    if (!sourceAdapter || !sourceUrl) return;
     try {
       setError(null);
-      const fetchUrl = useCorsProxy ? buildProxyUrl(UNBC_URL) : UNBC_URL;
+      const fetchUrl = useCorsProxy ? buildProxyUrl(sourceUrl) : sourceUrl;
       const { text } = await fetchTextWithCache(fetchUrl, {
-        cacheKey: buildCacheKey('weather-unbc', UNBC_URL),
+        cacheKey: buildCacheKey(`source-adapter:${sourceAdapter.id}`, sourceUrl),
         ttlMs: refreshMs,
       });
-      const parsed = parseUNBCWeatherData(text, units);
-      if (parsed) {
-        setWeather(parsed);
-        setLastUpdated(new Date());
+      const normalized = normalizeSourcePayload({
+        adapterId: sourceAdapter.id,
+        url: sourceUrl,
+        rawText: text,
+      });
+      const observation = normalized?.data as NormalizedWeatherObservation | null | undefined;
+      if (observation?.kind === 'weather-observation') {
+        setWeather(weatherFromObservation(observation, units, location));
+        setLastUpdated(new Date(observation.observedAt));
       } else {
         setError('Failed to parse weather data');
       }
@@ -447,7 +449,7 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);
     }
-  }, [units, refreshMs, useCorsProxy]);
+  }, [location, refreshMs, sourceAdapter, sourceUrl, units, useCorsProxy]);
 
   const fetchGeoMet = useCallback(async () => {
     try {
@@ -512,8 +514,8 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
     let isMounted = true;
     const fetchWeather = async () => {
       if (!isMounted) return;
-      if (dataSource === 'unbc-rooftop') {
-        await fetchUNBC();
+      if (dataSource === 'source') {
+        await fetchAdaptedSource();
       } else if (dataSource === 'msc-geomet') {
         await fetchGeoMet();
       } else {
@@ -527,7 +529,7 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
       isMounted = false;
       clearInterval(interval);
     };
-  }, [dataSource, fetchGeoMet, fetchUNBC, fetchOWM, refreshMs]);
+  }, [dataSource, fetchAdaptedSource, fetchGeoMet, fetchOWM, refreshMs]);
 
   const displayTemp = weather.temp;
   const tempUnit = units === 'celsius' ? '°C' : '°F';
@@ -811,18 +813,23 @@ registerWidget({
   acceptsSources: [{
     propName: 'apiUrl',
     types: ['api'],
-    matchSource: (source) =>
-      source.url.includes('api.weather.gc.ca/collections/citypageweather-realtime') ||
-      source.url.includes('cyclone.unbc.ca/wx/data-table-std-1m'),
-    applySource: (source, currentData) => ({
-      apiUrl: source.url,
-      dataSource: source.url.includes('cyclone.unbc.ca/wx/data-table-std-1m')
-        ? 'unbc-rooftop'
-        : 'msc-geomet',
-      location: source.name,
-      useCorsProxy: source.url.includes('api.weather.gc.ca')
-        ? false
-        : (currentData.useCorsProxy as boolean | undefined) ?? true,
-    }),
+    matchSource: (source) => {
+      const adapter = resolveSourceAdapter({ url: source.url, presetId: source.presetId });
+      return adapter?.id === 'unbc-rooftop-weather'
+        || source.url.includes('api.weather.gc.ca/collections/citypageweather-realtime');
+    },
+    applySource: (source, currentData) => {
+      const candidate = resolveSourceAdapter({ url: source.url, presetId: source.presetId });
+      const adapter = candidate?.id === 'unbc-rooftop-weather' ? candidate : undefined;
+      return {
+        apiUrl: source.url,
+        dataSource: adapter ? 'source' : 'msc-geomet',
+        sourceAdapter: adapter?.id,
+        location: source.name,
+        useCorsProxy: source.url.includes('api.weather.gc.ca')
+          ? false
+          : (currentData.useCorsProxy as boolean | undefined) ?? true,
+      };
+    },
   }],
 });

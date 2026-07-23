@@ -80,6 +80,11 @@ export default function WeatherOptions({ data, onChange }: WidgetOptionsProps) {
     return { ...DEFAULT_ITEMS };
   };
 
+  const readDataSource = (value: unknown): WeatherData['dataSource'] =>
+    value === 'source' && data.sourceAdapter === 'unbc-rooftop-weather'
+      ? 'unbc-rooftop'
+      : (value as WeatherData['dataSource']) ?? 'openweathermap';
+
   const [state, setState] = useState<WeatherData>({
     location: (data?.location as string) ?? 'Campus',
     units: (data?.units as 'celsius' | 'fahrenheit') ?? 'fahrenheit',
@@ -88,7 +93,7 @@ export default function WeatherOptions({ data, onChange }: WidgetOptionsProps) {
     displayItems: parseItems(data?.displayItems),
     apiKey: (data?.apiKey as string) ?? '',
     apiUrl: (data?.apiUrl as string) ?? GEOMET_DEFAULT_URL,
-    dataSource: (data?.dataSource as 'openweathermap' | 'unbc-rooftop' | 'msc-geomet') ?? 'openweathermap',
+    dataSource: readDataSource(data?.dataSource),
     refreshInterval: (data?.refreshInterval as number) ?? 10,
     useCorsProxy: (data?.useCorsProxy as boolean) ?? true,
     appearance: (data?.appearance as WeatherAppearance) ?? 'default',
@@ -104,7 +109,7 @@ export default function WeatherOptions({ data, onChange }: WidgetOptionsProps) {
         displayItems: parseItems(data.displayItems),
         apiKey: (data.apiKey as string) ?? '',
         apiUrl: (data.apiUrl as string) ?? GEOMET_DEFAULT_URL,
-        dataSource: (data.dataSource as 'openweathermap' | 'unbc-rooftop' | 'msc-geomet') ?? 'openweathermap',
+        dataSource: readDataSource(data.dataSource),
         refreshInterval: (data.refreshInterval as number) ?? 10,
         useCorsProxy: (data.useCorsProxy as boolean) ?? true,
         appearance: (data.appearance as WeatherAppearance) ?? 'default',
@@ -115,7 +120,8 @@ export default function WeatherOptions({ data, onChange }: WidgetOptionsProps) {
   const handleChange = (name: string, value: string | number | boolean) => {
     const newState = { ...state, [name]: value };
     setState(newState);
-    onChange(newState);
+    // Preserve source linkage and adapter metadata owned by the source picker.
+    onChange({ ...data, ...newState });
   };
 
   const isUNBC = state.dataSource === 'unbc-rooftop';
@@ -224,11 +230,11 @@ export default function WeatherOptions({ data, onChange }: WidgetOptionsProps) {
               const items = MODE_PRESETS[mode];
               const newState = { ...state, displayMode: mode, displayItems: items };
               setState(newState);
-              onChange(newState);
+              onChange({ ...data, ...newState });
             } else {
               const newState = { ...state, displayMode: mode };
               setState(newState);
-              onChange(newState);
+              onChange({ ...data, ...newState });
             }
           }}
         />

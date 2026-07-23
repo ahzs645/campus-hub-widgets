@@ -1,9 +1,18 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
-import { buildCacheKey, buildProxyUrl, fetchTextWithCache } from '@firstform/campus-hub-widget-sdk';
-import { useAdaptiveFitScale } from '@firstform/campus-hub-widget-sdk';
-import { AppIcon, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
+import {
+  AppIcon,
+  ThemedContainer,
+  buildCacheKey,
+  buildProxyUrl,
+  fetchTextWithCache,
+  normalizeSourcePayload,
+  registerWidget,
+  resolveSourceAdapter,
+  useAdaptiveFitScale,
+  type NormalizedOccupancy,
+  type WidgetComponentProps,
+} from '@firstform/campus-hub-widget-sdk';
 import ClimbingGymOptions from './ClimbingGymOptions';
 
 interface OccupancyData {
@@ -16,6 +25,7 @@ interface OccupancyData {
 interface ClimbingGymConfig {
   gymName?: string;
   portalUrl?: string;
+  sourceAdapter?: string;
   refreshInterval?: number; // minutes
   showCapacityBar?: boolean;
   showHours?: boolean;
@@ -73,36 +83,12 @@ const getOpenStatus = (): { isOpen: boolean; todayLabel: string; closesOrOpensAt
   return { isOpen: false, todayLabel: schedule.label, closesOrOpensAt: `Opens tomorrow at ${openFormatted}` };
 };
 
-const DEFAULT_PORTAL_URL =
-  'https://portal.rockgympro.com/portal/public/e4f8e07377b8d1ba053944154f4c2c50/occupancy?&iframeid=occupancyCounter&fId=';
 const DEMO_OCCUPANCY: OccupancyData = {
   count: 9,
   capacity: 30,
   subLabel: 'Current Climber Count',
   lastUpdate: '',
 };
-
-/** Parse the Rock Gym Pro occupancy HTML page to extract the data object */
-const parseOccupancyData = (html: string): OccupancyData | null => {
-  // The page embeds a JS object like:
-  //   var data = { 'OEC' : { 'capacity' : 30, 'count' : 19, 'subLabel' : '...', 'lastUpdate' : '...' }, };
-  // Extract individual values with targeted regexes to avoid JSON.parse issues
-  // (trailing commas, single quotes, colons inside string values).
-  const countMatch = html.match(/['"]count['"]\s*:\s*(\d+)/);
-  const capacityMatch = html.match(/['"]capacity['"]\s*:\s*(\d+)/);
-  const subLabelMatch = html.match(/['"]subLabel['"]\s*:\s*['"]([^'"]*)['"]/);
-  const lastUpdateMatch = html.match(/['"]lastUpdate['"]\s*:\s*['"]([^'"]*)['"]/);
-
-  if (!countMatch && !capacityMatch) return null;
-
-  return {
-    count: countMatch ? parseInt(countMatch[1], 10) : 0,
-    capacity: capacityMatch ? parseInt(capacityMatch[1], 10) : 0,
-    subLabel: subLabelMatch?.[1] ?? 'Current Climber Count',
-    lastUpdate: lastUpdateMatch?.[1]?.replace(/&nbsp;?/g, ' ') ?? '',
-  };
-};
-
 
 /** Get occupancy level for color-coding */
 const getOccupancyLevel = (count: number, capacity: number): 'low' | 'moderate' | 'high' => {
@@ -150,9 +136,19 @@ export default function ClimbingGym({ config, theme }: WidgetComponentProps) {
         cacheKey: buildCacheKey('climbing-gym', portalUrl),
         ttlMs: refreshMs,
       });
-      const parsed = parseOccupancyData(text);
-      if (parsed) {
-        setData(parsed);
+      const normalized = normalizeSourcePayload({
+        adapterId: cfg?.sourceAdapter,
+        url: portalUrl,
+        rawText: text,
+      });
+      const occupancy = normalized?.data as NormalizedOccupancy | null | undefined;
+      if (occupancy?.kind === 'occupancy') {
+        setData({
+          count: occupancy.count,
+          capacity: occupancy.capacity,
+          subLabel: occupancy.label,
+          lastUpdate: occupancy.observedAt ?? '',
+        });
         setLastFetched(new Date());
         setError(null);
       } else {
@@ -164,7 +160,7 @@ export default function ClimbingGym({ config, theme }: WidgetComponentProps) {
       setData((current) => current ?? DEMO_OCCUPANCY);
       setError(null);
     }
-  }, [portalUrl, galleryDemo, refreshMs, useCorsProxy]);
+  }, [cfg?.sourceAdapter, portalUrl, galleryDemo, refreshMs, useCorsProxy]);
 
   useEffect(() => {
     let isMounted = true;
@@ -315,7 +311,16 @@ registerWidget({
   defaultH: 2,
   component: ClimbingGym,
   OptionsComponent: ClimbingGymOptions,
-  acceptsSources: [{ propName: 'portalUrl', types: ['api'] }],
+  acceptsSources: [{
+    propName: 'portalUrl',
+    types: ['api'],
+    matchSource: (source) =>
+      resolveSourceAdapter({ url: source.url, presetId: source.presetId })?.id === 'rock-gym-pro-occupancy',
+    applySource: (source) => ({
+      portalUrl: source.url,
+      sourceAdapter: 'rock-gym-pro-occupancy',
+    }),
+  }],
   defaultProps: {
     gymName: 'OVERhang',
     portalUrl: '',

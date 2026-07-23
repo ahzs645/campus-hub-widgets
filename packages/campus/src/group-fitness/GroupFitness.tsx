@@ -1,22 +1,28 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppIcon } from '@firstform/campus-hub-widget-sdk';
-import { useAdaptiveFitScale } from '@firstform/campus-hub-widget-sdk';
-import { buildCacheKey, buildProxyUrl, fetchTextWithCache, getCorsProxyUrl } from '@firstform/campus-hub-widget-sdk';
-import { registerWidget, type WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
-import GroupFitnessOptions from './GroupFitnessOptions';
 import {
+  AppIcon,
   DEFAULT_GROUP_FITNESS_URL,
+  buildCacheKey,
+  buildProxyUrl,
+  fetchTextWithCache,
   getTodayWeekday,
-  parseGroupFitnessSchedule,
+  getCorsProxyUrl,
+  normalizeSourcePayload,
+  registerWidget,
+  resolveSourceAdapter,
+  useAdaptiveFitScale,
   type GroupFitnessSection,
   type GroupFitnessViewMode,
   type ParsedGroupFitnessSchedule,
-} from './groupFitnessParser';
+  type WidgetComponentProps,
+} from '@firstform/campus-hub-widget-sdk';
+import GroupFitnessOptions from './GroupFitnessOptions';
 
 interface GroupFitnessConfig {
   title?: string;
   scheduleUrl?: string;
+  sourceAdapter?: string;
   viewMode?: GroupFitnessViewMode;
   selectedDay?: string;
   selectedClass?: string;
@@ -203,7 +209,12 @@ export default function GroupFitness({
         ttlMs: refreshMs,
       });
 
-      const parsed = parseGroupFitnessSchedule(text);
+      const normalized = normalizeSourcePayload({
+        adapterId: cfg?.sourceAdapter,
+        url: scheduleUrl,
+        rawText: text,
+      });
+      const parsed = normalized?.data as ParsedGroupFitnessSchedule | null | undefined;
       if (!parsed) {
         throw new Error('Could not parse the group fitness schedule.');
       }
@@ -215,7 +226,7 @@ export default function GroupFitness({
     } finally {
       setLoading(false);
     }
-  }, [refreshMs, scheduleUrl, useCorsProxy]);
+  }, [cfg?.sourceAdapter, refreshMs, scheduleUrl, useCorsProxy]);
 
   useEffect(() => {
     void fetchSchedule();
@@ -393,7 +404,16 @@ registerWidget({
   defaultH: 4,
   component: GroupFitness,
   OptionsComponent: GroupFitnessOptions,
-  acceptsSources: [{ propName: 'scheduleUrl', types: ['api'] }],
+  acceptsSources: [{
+    propName: 'scheduleUrl',
+    types: ['api'],
+    matchSource: (source) =>
+      resolveSourceAdapter({ url: source.url, presetId: source.presetId })?.id === 'unbc-group-fitness',
+    applySource: (source) => ({
+      scheduleUrl: source.url,
+      sourceAdapter: 'unbc-group-fitness',
+    }),
+  }],
   defaultProps: {
     title: 'Group Fitness',
     scheduleUrl: '',

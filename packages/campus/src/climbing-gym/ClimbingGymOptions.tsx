@@ -42,7 +42,7 @@ export default function ClimbingGymOptions({ data, onChange }: WidgetOptionsProp
   const handleChange = (name: string, value: string | number | boolean) => {
     const newState = { ...state, [name]: value };
     setState(newState);
-    onChange(newState);
+    onChange({ ...data, ...newState });
   };
 
   return (

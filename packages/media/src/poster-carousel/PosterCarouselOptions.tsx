@@ -3,8 +3,8 @@ import { useState, useEffect } from 'react';
 import { FormInput, FormSelect, FormSwitch } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
-type DataSource = 'default' | 'api' | 'unbc-news';
-type UNBCImageQuality = 'original' | 'thumbnail';
+type DataSource = 'default' | 'api' | 'source';
+type SourceImageQuality = 'original' | 'thumbnail';
 
 interface PosterCarouselData {
   rotationSeconds: number;
@@ -13,7 +13,7 @@ interface PosterCarouselData {
   maxStories: number;
   refreshInterval: number;
   useCorsProxy: boolean;
-  imageQuality: UNBCImageQuality;
+  imageQuality: SourceImageQuality;
   showText: boolean;
   showProgressBar: boolean;
   showSequenceIndicator: boolean;
@@ -22,12 +22,12 @@ interface PosterCarouselData {
 export default function PosterCarouselOptions({ data, onChange }: WidgetOptionsProps) {
   const [state, setState] = useState<PosterCarouselData>({
     rotationSeconds: (data?.rotationSeconds as number) ?? 10,
-    dataSource: (data?.dataSource as DataSource) ?? 'default',
+    dataSource: data?.dataSource === 'unbc-news' ? 'source' : (data?.dataSource as DataSource) ?? 'default',
     apiUrl: (data?.apiUrl as string) ?? '',
     maxStories: (data?.maxStories as number) ?? 5,
     refreshInterval: (data?.refreshInterval as number) ?? 30,
     useCorsProxy: (data?.useCorsProxy as boolean) ?? true,
-    imageQuality: (data?.imageQuality as UNBCImageQuality) ?? 'original',
+    imageQuality: (data?.imageQuality as SourceImageQuality) ?? 'original',
     showText: (data?.showText as boolean) ?? true,
     showProgressBar: (data?.showProgressBar as boolean) ?? true,
     showSequenceIndicator: (data?.showSequenceIndicator as boolean) ?? true,
@@ -37,12 +37,12 @@ export default function PosterCarouselOptions({ data, onChange }: WidgetOptionsP
     if (data) {
       setState({
         rotationSeconds: (data.rotationSeconds as number) ?? 10,
-        dataSource: (data.dataSource as DataSource) ?? 'default',
+        dataSource: data.dataSource === 'unbc-news' ? 'source' : (data.dataSource as DataSource) ?? 'default',
         apiUrl: (data.apiUrl as string) ?? '',
         maxStories: (data.maxStories as number) ?? 5,
         refreshInterval: (data.refreshInterval as number) ?? 30,
         useCorsProxy: (data.useCorsProxy as boolean) ?? true,
-        imageQuality: (data.imageQuality as UNBCImageQuality) ?? 'original',
+        imageQuality: (data.imageQuality as SourceImageQuality) ?? 'original',
         showText: (data.showText as boolean) ?? true,
         showProgressBar: (data.showProgressBar as boolean) ?? true,
         showSequenceIndicator: (data.showSequenceIndicator as boolean) ?? true,
@@ -57,8 +57,11 @@ export default function PosterCarouselOptions({ data, onChange }: WidgetOptionsP
     onChange({ ...data, ...newState });
   };
 
-  const isUNBC = state.dataSource === 'unbc-news';
+  const isSource = state.dataSource === 'source';
   const isAPI = state.dataSource === 'api';
+  const sourceLabel = typeof data.sourceLabel === 'string' && data.sourceLabel.trim()
+    ? data.sourceLabel
+    : 'Linked source';
 
   return (
     <div className="space-y-6">
@@ -125,14 +128,14 @@ export default function PosterCarouselOptions({ data, onChange }: WidgetOptionsP
         </div>
       )}
 
-      {/* UNBC News Settings */}
-      {isUNBC && (
+      {/* Settings for normalized sources supplied by the source adapter layer. */}
+      {isSource && (
         <>
           <div className="space-y-4 border-t border-[color:var(--ui-item-border)] pt-6">
-            <h3 className="font-semibold text-[var(--ui-text)]">News Settings</h3>
+            <h3 className="font-semibold text-[var(--ui-text)]">Source Settings</h3>
 
             <FormInput
-              label="Number of Stories"
+              label="Number of Items"
               name="maxStories"
               type="number"
               value={state.maxStories}
@@ -153,7 +156,7 @@ export default function PosterCarouselOptions({ data, onChange }: WidgetOptionsP
             />
 
             <div className="text-sm text-[var(--ui-text-muted)]">
-              Original upload uses the public source image from UNBC instead of the small thumbnail from the releases list.
+              Original uses the source asset when its adapter can provide one; thumbnail favors the listing image.
             </div>
 
             <FormSwitch
@@ -194,10 +197,10 @@ export default function PosterCarouselOptions({ data, onChange }: WidgetOptionsP
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
               <div className="absolute bottom-4 left-4">
                 <div className="text-2xl font-bold text-white">
-                  {isUNBC ? 'Latest UNBC Story' : 'Sample Event'}
+                  {isSource ? `Latest ${sourceLabel} item` : 'Sample Event'}
                 </div>
                 <div className="text-sm text-white/80">
-                  {isUNBC ? 'Feb 17, 2026' : 'March 15-17 | Main Quad'}
+                  {isSource ? 'Source date' : 'March 15-17 | Main Quad'}
                 </div>
               </div>
             </>
@@ -214,9 +217,9 @@ export default function PosterCarouselOptions({ data, onChange }: WidgetOptionsP
               <span className="h-2 w-2 rounded-full bg-white/50" />
             </div>
           )}
-          {isUNBC && (
+          {isSource && (
             <div className="absolute top-4 left-4 px-2 py-0.5 rounded-full text-[10px] font-semibold text-white/90 bg-black/40 backdrop-blur-sm">
-              UNBC News
+              {sourceLabel}
             </div>
           )}
         </div>
