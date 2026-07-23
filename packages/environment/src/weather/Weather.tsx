@@ -116,45 +116,6 @@ interface OpenWeatherResponse {
   };
 }
 
-interface GeoMetLocalizedValue<T> {
-  en?: T;
-  fr?: T;
-}
-
-interface GeoMetMeasurement<T> {
-  value?: GeoMetLocalizedValue<T>;
-}
-
-interface GeoMetCurrentConditions {
-  condition?: GeoMetLocalizedValue<string>;
-  temperature?: GeoMetMeasurement<number>;
-  relativeHumidity?: GeoMetMeasurement<number>;
-  pressure?: GeoMetMeasurement<number>;
-  dewpoint?: GeoMetMeasurement<number>;
-  wind?: {
-    speed?: GeoMetMeasurement<number | string>;
-    bearing?: GeoMetMeasurement<number>;
-    gust?: GeoMetMeasurement<number | string>;
-  };
-  timestamp?: GeoMetLocalizedValue<string>;
-}
-
-interface GeoMetFeature {
-  id?: string;
-  properties?: {
-    lastUpdated?: string;
-    name?: GeoMetLocalizedValue<string>;
-    currentConditions?: GeoMetCurrentConditions;
-  };
-}
-
-interface GeoMetFeatureCollection {
-  type?: 'FeatureCollection';
-  features?: GeoMetFeature[];
-}
-
-type GeoMetResponse = GeoMetFeature | GeoMetFeatureCollection;
-
 const WEATHER_ICONS: Record<WeatherIconKey, IconName> = {
   sunny: 'sun',
   cloudy: 'cloud',
@@ -287,13 +248,15 @@ const weatherFromObservation = (
   const windSpeed = observation.windSpeedMps ?? 0;
   const precipitation = observation.precipitationMm ?? 0;
   const humidity = observation.humidityPercent ?? 0;
-  const condition = deriveConditionFromObservation(
-    observation.temperatureC,
-    humidity,
-    windSpeed,
-    precipitation,
-    observation.solarRadiationWm2 ?? 0,
-  );
+  const icon = observation.condition
+    ? mapWeatherIcon(observation.condition)
+    : deriveConditionFromObservation(
+        observation.temperatureC,
+        humidity,
+        windSpeed,
+        precipitation,
+        observation.solarRadiationWm2 ?? 0,
+      );
   const convertTemp = (value: number | undefined) => value === undefined
     ? undefined
     : units === 'fahrenheit'
@@ -307,11 +270,11 @@ const weatherFromObservation = (
 
   return {
     temp: convertTemp(observation.temperatureC) ?? 0,
-    condition: condition.replace(/-/g, ' '),
-    icon: condition,
+    condition: observation.condition ?? icon.replace(/-/g, ' '),
+    icon,
     humidity: Math.round(humidity),
     wind: convertWind(observation.windSpeedMps) ?? 0,
-    location,
+    location: observation.location ?? location,
     pressure: observation.pressureHpa === undefined
       ? undefined
       : Math.round(observation.pressureHpa * 10) / 10,
@@ -321,78 +284,6 @@ const weatherFromObservation = (
       : Math.round(observation.windDirectionDegrees),
     windGust: convertWind(observation.windGustMps),
     precip: observation.precipitationMm,
-  };
-};
-
-const getGeoMetLocalizedValue = <T,>(value?: GeoMetLocalizedValue<T>): T | undefined =>
-  value?.en ?? value?.fr;
-
-const parseGeoMetNumber = (value: number | string | undefined): number | null => {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string') {
-    const normalized = value.trim().toLowerCase();
-    if (!normalized || normalized === 'calm') return 0;
-    const parsed = Number.parseFloat(normalized);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return null;
-};
-
-const convertTemperature = (valueC: number, units: 'celsius' | 'fahrenheit'): number =>
-  units === 'fahrenheit'
-    ? Math.round((valueC * 9) / 5 + 32)
-    : Math.round(valueC * 10) / 10;
-
-const convertWindSpeed = (valueKph: number, units: 'celsius' | 'fahrenheit'): number =>
-  units === 'fahrenheit'
-    ? Math.round(valueKph * 0.621371)
-    : Math.round((valueKph / 3.6) * 10) / 10;
-
-const pickGeoMetFeature = (data: GeoMetResponse): GeoMetFeature | null => {
-  if ('features' in data && Array.isArray(data.features)) {
-    return data.features[0] ?? null;
-  }
-  return data as GeoMetFeature;
-};
-
-const parseGeoMetWeatherData = (
-  data: GeoMetResponse,
-  units: 'celsius' | 'fahrenheit',
-): { weather: WeatherData; observedAt?: Date } | null => {
-  const feature = pickGeoMetFeature(data);
-  const current = feature?.properties?.currentConditions;
-  if (!feature || !current) return null;
-
-  const locationName = getGeoMetLocalizedValue(feature.properties?.name) ?? 'WeatherCAN';
-  const condition = getGeoMetLocalizedValue(current.condition) ?? 'Clear';
-  const tempC = parseGeoMetNumber(getGeoMetLocalizedValue(current.temperature?.value));
-  const humidity = parseGeoMetNumber(getGeoMetLocalizedValue(current.relativeHumidity?.value));
-  const windKph = parseGeoMetNumber(getGeoMetLocalizedValue(current.wind?.speed?.value));
-
-  if (tempC == null || humidity == null || windKph == null) return null;
-
-  const windGustKph = parseGeoMetNumber(getGeoMetLocalizedValue(current.wind?.gust?.value));
-  const pressureKpa = parseGeoMetNumber(getGeoMetLocalizedValue(current.pressure?.value));
-  const dewPointC = parseGeoMetNumber(getGeoMetLocalizedValue(current.dewpoint?.value));
-  const windBearing = parseGeoMetNumber(getGeoMetLocalizedValue(current.wind?.bearing?.value));
-  const observedAtRaw =
-    getGeoMetLocalizedValue(current.timestamp) ??
-    feature.properties?.lastUpdated;
-
-  return {
-    weather: {
-      temp: convertTemperature(tempC, units),
-      condition,
-      icon: mapWeatherIcon(condition),
-      humidity: Math.round(humidity),
-      wind: convertWindSpeed(windKph, units),
-      location: locationName,
-      pressure: pressureKpa != null ? Math.round(pressureKpa * 10) : undefined,
-      dewPoint: dewPointC != null ? convertTemperature(dewPointC, units) : undefined,
-      windDir: windBearing != null ? Math.round(windBearing) : undefined,
-      windGust: windGustKph != null ? convertWindSpeed(windGustKph, units) : undefined,
-    },
-    observedAt: observedAtRaw ? new Date(observedAtRaw) : undefined,
   };
 };
 
@@ -455,14 +346,19 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
     try {
       setError(null);
       const fetchUrl = useCorsProxy ? buildProxyUrl(apiUrl) : apiUrl;
-      const { data } = await fetchJsonWithCache<GeoMetResponse>(fetchUrl, {
+      const { data } = await fetchJsonWithCache<unknown>(fetchUrl, {
         cacheKey: buildCacheKey('weather-geomet', apiUrl),
         ttlMs: refreshMs,
       });
-      const parsed = parseGeoMetWeatherData(data, units);
-      if (parsed) {
-        setWeather(parsed.weather);
-        setLastUpdated(parsed.observedAt ?? new Date());
+      const normalized = normalizeSourcePayload({
+        adapterId: 'msc-geomet-weather',
+        url: apiUrl,
+        payload: data,
+      });
+      const observation = normalized?.data as NormalizedWeatherObservation | null | undefined;
+      if (observation) {
+        setWeather(weatherFromObservation(observation, units, location));
+        setLastUpdated(observation.observedAt ? new Date(observation.observedAt) : new Date());
       } else {
         setError('Failed to parse GeoMet weather data');
       }
@@ -470,7 +366,7 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);
     }
-  }, [apiUrl, refreshMs, units, useCorsProxy]);
+  }, [apiUrl, location, refreshMs, units, useCorsProxy]);
 
   // OpenWeatherMap data source
   const fetchOWM = useCallback(async () => {
@@ -816,15 +712,14 @@ registerWidget({
     matchSource: (source) => {
       const adapter = resolveSourceAdapter({ url: source.url, presetId: source.presetId });
       return adapter?.id === 'unbc-rooftop-weather'
-        || source.url.includes('api.weather.gc.ca/collections/citypageweather-realtime');
+        || adapter?.id === 'msc-geomet-weather';
     },
     applySource: (source, currentData) => {
       const candidate = resolveSourceAdapter({ url: source.url, presetId: source.presetId });
-      const adapter = candidate?.id === 'unbc-rooftop-weather' ? candidate : undefined;
       return {
         apiUrl: source.url,
-        dataSource: adapter ? 'source' : 'msc-geomet',
-        sourceAdapter: adapter?.id,
+        dataSource: candidate ? 'source' : 'msc-geomet',
+        sourceAdapter: candidate?.id,
         location: source.name,
         useCorsProxy: source.url.includes('api.weather.gc.ca')
           ? false

@@ -41,7 +41,7 @@ export default function CafeteriaMenuOptions({ data, onChange }: WidgetOptionsPr
   };
 
   const handleChange = (name: string, value: string | number | boolean) => {
-    onChange({ ...state, [name]: value });
+    onChange({ ...data, ...state, [name]: value });
   };
 
   return (
@@ -55,7 +55,7 @@ export default function CafeteriaMenuOptions({ data, onChange }: WidgetOptionsPr
           name="menuUrl"
           type="text"
           value={state.menuUrl}
-          placeholder="https://unbc.icaneat.ca/menu/"
+          placeholder="https://menu.danahospitality.ca/unbc/menu.asp?loc=48784&grid=1"
           onChange={handleChange}
         />
 

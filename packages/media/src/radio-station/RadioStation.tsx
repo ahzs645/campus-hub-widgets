@@ -4,13 +4,12 @@ import {
   AppIcon,
   WidgetComponentProps,
   buildProxyUrl,
+  normalizeSourcePayload,
   registerWidget,
+  resolveSourceAdapter,
+  type RadioNowPlaying,
 } from '@firstform/campus-hub-widget-sdk';
 import RadioStationOptions from './RadioStationOptions';
-import {
-  extractRadioNowPlaying,
-  type RadioNowPlaying,
-} from './radio-utils';
 
 type RadioPlayerMode = 'none' | 'audio' | 'embed';
 type MetadataState = 'idle' | 'loading' | 'live' | 'stale' | 'error';
@@ -20,6 +19,7 @@ interface RadioStationConfig {
   stationTagline?: string;
   provider?: string;
   metadataUrl?: string;
+  sourceAdapter?: string;
   audioUrl?: string;
   embedUrl?: string;
   websiteUrl?: string;
@@ -120,6 +120,7 @@ export default function RadioStation({ config, theme }: WidgetComponentProps) {
   const stationTagline = radioConfig?.stationTagline?.trim() ?? '';
   const provider = radioConfig?.provider?.trim() ?? '';
   const metadataUrl = radioConfig?.metadataUrl?.trim() ?? '';
+  const sourceAdapterId = radioConfig?.sourceAdapter ?? 'radio-now-playing';
   const audioUrl = radioConfig?.audioUrl?.trim() ?? '';
   const embedUrl = radioConfig?.embedUrl?.trim() ?? '';
   const websiteUrl = radioConfig?.websiteUrl?.trim() ?? '';
@@ -215,7 +216,12 @@ export default function RadioStation({ config, theme }: WidgetComponentProps) {
         const payload = await response.json();
         if (cancelled) return;
 
-        const nextTrack = extractRadioNowPlaying(payload, metadataUrl);
+        const normalized = normalizeSourcePayload({
+          adapterId: sourceAdapterId,
+          url: metadataUrl,
+          payload,
+        });
+        const nextTrack = normalized?.data as RadioNowPlaying | null | undefined;
         if (nextTrack) {
           lastTrackRef.current = nextTrack;
           setNowPlaying(nextTrack);
@@ -244,7 +250,7 @@ export default function RadioStation({ config, theme }: WidgetComponentProps) {
         window.clearInterval(timer);
       }
     };
-  }, [demoMode, metadataUrl, pollIntervalSeconds, useCorsProxy]);
+  }, [demoMode, metadataUrl, pollIntervalSeconds, sourceAdapterId, useCorsProxy]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -522,12 +528,12 @@ registerWidget({
       propName: 'metadataUrl',
       types: ['api'],
       matchSource: (source) =>
-        source.url.includes('/live-meta/stream/') ||
-        source.url.includes('currentTrackMeta'),
+        resolveSourceAdapter({ url: source.url, presetId: source.presetId })?.id === 'radio-now-playing',
       applySource: (source, currentData) => {
         const isCFUR = source.url.includes('/stream/9357/currentTrackMeta');
         return {
           metadataUrl: source.url,
+          sourceAdapter: 'radio-now-playing',
           stationName: isCFUR ? 'CFUR 88.7 FM' : source.name,
           stationTagline: isCFUR
             ? 'Community-Campus Radio'

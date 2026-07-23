@@ -1,7 +1,16 @@
 'use client';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { buildProxyUrl, getCorsProxyUrl } from '@firstform/campus-hub-widget-sdk';
-import { registerWidget, WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
+import {
+  buildProxyUrl,
+  createLibCalAvailabilityFormData,
+  getCorsProxyUrl,
+  normalizeSourcePayload,
+  registerWidget,
+  resolveSourceAdapter,
+  WidgetComponentProps,
+  type LibCalGridResponse,
+  type LibCalSlot,
+} from '@firstform/campus-hub-widget-sdk';
 import LibraryAvailabilityOptions from './LibraryAvailabilityOptions';
 import { ROOM_MAP, roomSortValue, type RoomInfo } from './libraryAvailabilityRooms';
 
@@ -23,20 +32,7 @@ interface LibraryAvailabilityConfig {
   openHour?: number;
   closeHour?: number;
   useCorsProxy?: boolean;
-}
-
-interface LibCalSlot {
-  start?: string;
-  end?: string;
-  itemId?: number | string;
-  className?: string;
-}
-
-interface LibCalGridResponse {
-  slots?: LibCalSlot[];
-  bookings?: unknown[];
-  windowEnd?: boolean;
-  isPreCreatedBooking?: boolean;
+  sourceAdapter?: string;
 }
 
 interface TimeWindow {
@@ -233,7 +229,7 @@ const generateDemoResponse = (): LibCalGridResponse => {
     }
   }
 
-  return { slots };
+  return { slots, bookings: [] };
 };
 
 function getNextOpenWindow(
@@ -292,6 +288,7 @@ export default function LibraryAvailability({
   const closeHourRaw = clamp(Math.round(widgetConfig?.closeHour ?? 23), 1, 24);
   const closeHour = closeHourRaw <= openHour ? openHour + 1 : closeHourRaw;
   const useCorsProxy = widgetConfig?.useCorsProxy ?? true;
+  const sourceAdapterId = widgetConfig?.sourceAdapter ?? 'libcal-room-availability';
   const [response, setResponse] = useState<LibCalGridResponse | null>(() => generateDemoResponse());
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -359,12 +356,13 @@ export default function LibraryAvailability({
       const end = formatDateKey(addDays(firstDay, dayMeta.length));
       const targetUrl = useCorsProxy ? buildProxyUrl(endpoint) : endpoint;
 
-      const formData = new FormData();
-      formData.set('lid', lid);
-      formData.set('gid', gid);
-      formData.set('start', start);
-      formData.set('end', end);
-      formData.set('pageSize', String(pageSize));
+      const formData = createLibCalAvailabilityFormData({
+        lid,
+        gid,
+        start,
+        end,
+        pageSize,
+      });
 
       if (hasLoadedRef.current) {
         setRefreshing(true);
@@ -384,10 +382,17 @@ export default function LibraryAvailability({
           throw new Error(`LibCal request failed (${res.status})`);
         }
 
-        const json = (await res.json()) as LibCalGridResponse;
+        const payload = await res.json() as unknown;
         if (signal?.aborted) return;
 
-        setResponse(json);
+        const normalized = normalizeSourcePayload({
+          adapterId: sourceAdapterId,
+          url: endpoint,
+          payload,
+        });
+        const nextResponse = normalized?.data as LibCalGridResponse | undefined;
+        if (!nextResponse) throw new Error('LibCal response could not be normalized');
+        setResponse(nextResponse);
         setLastUpdated(new Date());
       } catch (err) {
         if (signal?.aborted) return;
@@ -400,7 +405,7 @@ export default function LibraryAvailability({
         }
       }
     },
-    [dayMeta, endpoint, gid, lid, pageSize, useCorsProxy],
+    [dayMeta, endpoint, gid, lid, pageSize, sourceAdapterId, useCorsProxy],
   );
 
   useEffect(() => {
@@ -1246,7 +1251,16 @@ registerWidget({
   defaultH: 4,
   component: LibraryAvailability,
   OptionsComponent: LibraryAvailabilityOptions,
-  acceptsSources: [{ propName: 'endpoint', types: ['api'] }],
+  acceptsSources: [{
+    propName: 'endpoint',
+    types: ['api'],
+    matchSource: (source) =>
+      resolveSourceAdapter({ url: source.url, presetId: source.presetId })?.id === 'libcal-room-availability',
+    applySource: (source) => ({
+      endpoint: source.url,
+      sourceAdapter: 'libcal-room-availability',
+    }),
+  }],
   defaultProps: {
     title: 'Library Study Room Availability',
     mode: 'grid',

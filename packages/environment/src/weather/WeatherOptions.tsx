@@ -81,8 +81,12 @@ export default function WeatherOptions({ data, onChange }: WidgetOptionsProps) {
   };
 
   const readDataSource = (value: unknown): WeatherData['dataSource'] =>
-    value === 'source' && data.sourceAdapter === 'unbc-rooftop-weather'
-      ? 'unbc-rooftop'
+    value === 'source'
+      ? data.sourceAdapter === 'unbc-rooftop-weather'
+        ? 'unbc-rooftop'
+        : data.sourceAdapter === 'msc-geomet-weather'
+          ? 'msc-geomet'
+          : 'openweathermap'
       : (value as WeatherData['dataSource']) ?? 'openweathermap';
 
   const [state, setState] = useState<WeatherData>({
@@ -251,7 +255,7 @@ export default function WeatherOptions({ data, onChange }: WidgetOptionsProps) {
                   const newItems = { ...state.displayItems, [key]: checked };
                   const newState = { ...state, displayItems: newItems };
                   setState(newState);
-                  onChange(newState);
+                  onChange({ ...data, ...newState });
                 }}
               />
             ))}

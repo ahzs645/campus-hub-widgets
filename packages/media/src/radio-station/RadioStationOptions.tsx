@@ -91,7 +91,7 @@ export default function RadioStationOptions({ data, onChange }: WidgetOptionsPro
 
     const nextState = { ...state, [name]: normalizedValue };
     setState(nextState);
-    onChange(nextState);
+    onChange({ ...data, ...nextState });
   };
 
   return (

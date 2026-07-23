@@ -43,6 +43,7 @@ export default function ConfessionsOptions({ data, onChange }: WidgetOptionsProp
 
   const handleChange = (name: string, value: string | number | boolean) => {
     const next = {
+      ...data,
       ...state,
       [name]: value,
     };
@@ -84,9 +85,9 @@ export default function ConfessionsOptions({ data, onChange }: WidgetOptionsProp
           onChange={handleChange}
         />
         <div className="text-sm text-[var(--ui-text-muted)]">
-          The widget first fetches the page from WordPress REST and parses the
-          <code className="mx-1">data-confessions</code> payload. If that fails,
-          it falls back to the page HTML.
+          The linked source normalizes the WordPress
+          <code className="mx-1">data-confessions</code> payload. The page URL
+          is used only if the API is unavailable.
         </div>
       </div>
 

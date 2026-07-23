@@ -4,21 +4,16 @@ import {
   FormSelect,
   FormSwitch,
   buildProxyUrl,
+  createLibCalAvailabilityFormData,
   getCorsProxyUrl,
+  normalizeLibCalGridResponse,
+  type LibCalGridResponse,
 } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 import { ROOM_MAP, resolveRoomInfo, sortRooms, type RoomInfo } from './libraryAvailabilityRooms';
 
 type DisplayMode = 'grid' | 'calendar' | 'cards';
 type RoomScope = 'all' | 'single';
-
-interface LibCalSlot {
-  itemId?: number | string;
-}
-
-interface LibCalGridResponse {
-  slots?: LibCalSlot[];
-}
 
 interface LibraryAvailabilityData {
   title: string;
@@ -130,12 +125,13 @@ export default function LibraryAvailabilityOptions({ data, onChange }: WidgetOpt
       const end = formatDateKey(addDays(firstDay, daysToQuery));
       const targetUrl = state.useCorsProxy ? buildProxyUrl(endpoint) : endpoint;
 
-      const formData = new FormData();
-      formData.set('lid', String(state.lid || DEFAULTS.lid));
-      formData.set('gid', String(state.gid || DEFAULTS.gid));
-      formData.set('start', start);
-      formData.set('end', end);
-      formData.set('pageSize', String(clamp(Math.round(state.pageSize || DEFAULTS.pageSize), 1, 500)));
+      const formData = createLibCalAvailabilityFormData({
+        lid: state.lid || DEFAULTS.lid,
+        gid: state.gid || DEFAULTS.gid,
+        start,
+        end,
+        pageSize: clamp(Math.round(state.pageSize || DEFAULTS.pageSize), 1, 500),
+      });
 
       setRoomLoading(true);
       setRoomError('');
@@ -147,10 +143,10 @@ export default function LibraryAvailabilityOptions({ data, onChange }: WidgetOpt
       })
         .then((res) => {
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          return res.json() as Promise<LibCalGridResponse>;
+          return res.json() as Promise<unknown>;
         })
-        .then((json) => {
-          const rooms = extractRoomsFromResponse(json);
+        .then((payload) => {
+          const rooms = extractRoomsFromResponse(normalizeLibCalGridResponse(payload));
           setLiveRooms(rooms);
           if (rooms.length === 0) {
             setRoomError('No rooms were returned by the LibCal query.');
@@ -201,7 +197,7 @@ export default function LibraryAvailabilityOptions({ data, onChange }: WidgetOpt
   }, [availableRooms, state.selectedRoomId]);
 
   const handleChange = (name: string, value: string | number | boolean) => {
-    const next = { ...state, [name]: value };
+    const next = { ...data, ...state, [name]: value };
     onChange(next);
   };
 

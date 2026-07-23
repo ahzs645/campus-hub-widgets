@@ -43,7 +43,7 @@ export default function ClubSpotlightOptions({ data, onChange }: WidgetOptionsPr
   const handleChange = (name: string, value: string | number | boolean) => {
     const newState = { ...state, [name]: value };
     setState(newState);
-    onChange(newState);
+    onChange({ ...data, ...newState });
   };
 
   return (

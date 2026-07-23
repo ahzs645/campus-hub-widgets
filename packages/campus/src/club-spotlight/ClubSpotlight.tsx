@@ -1,21 +1,21 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import QRCodeLib from 'qrcode';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import {
+  WidgetComponentProps,
+  registerWidget,
+  normalizeSourcePayload,
+  resolveSourceAdapter,
+  type ClubItem,
+} from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, buildProxyUrl, fetchJsonWithCache, fetchTextWithCache } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
 import ClubSpotlightOptions from './ClubSpotlightOptions';
 
-interface ClubItem {
-  id: string;
-  name: string;
-  image: string;
-  link: string;
-}
-
 interface ClubSpotlightConfig {
   pageUrl?: string;
   apiUrl?: string;
+  sourceAdapter?: string;
   rotationSeconds?: number;
   useCorsProxy?: boolean;
   refreshMinutes?: number;
@@ -23,161 +23,17 @@ interface ClubSpotlightConfig {
   qrLabel?: string;
 }
 
-// WordPress REST API for organization custom post type with embedded featured images.
-// org_status 181=Established, 183=Probationary, 182=New — excludes dissolved/inactive.
-const DEFAULT_API_URL = 'https://overtheedge.unbc.ca/wp-json/wp/v2/organization?per_page=100&_embed=wp:featuredmedia&org_status=181,183,182';
-const DEFAULT_PAGE_URL = 'https://overtheedge.unbc.ca/clubs/';
-
 const DEFAULT_CLUBS: ClubItem[] = [
   { id: '1', name: 'Outdoors Club', image: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=300&h=300&fit=crop', link: '' },
   { id: '2', name: 'Debate Society', image: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=300&h=300&fit=crop', link: '' },
   { id: '3', name: 'Photography Club', image: 'https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=300&h=300&fit=crop', link: '' },
 ];
 
-const decodeHtmlEntities = (value: string): string => {
-  if (typeof window === 'undefined') return value;
-  const textarea = document.createElement('textarea');
-  textarea.innerHTML = value;
-  return textarea.value;
-};
-
-// WordPress REST API response shape for a custom post type with _embed
-interface WpClubPost {
-  id?: number;
-  title?: { rendered?: string };
-  link?: string;
-  _embedded?: {
-    'wp:featuredmedia'?: Array<{
-      source_url?: string;
-      media_details?: {
-        sizes?: {
-          medium?: { source_url?: string };
-          thumbnail?: { source_url?: string };
-          full?: { source_url?: string };
-        };
-      };
-    }>;
-  };
-  // Fallback: featured image might be in content
-  content?: { rendered?: string };
-}
-
-/** Parse clubs from WP REST API JSON response */
-function parseClubsFromApi(posts: WpClubPost[]): ClubItem[] {
-  return posts
-    .map((post) => {
-      const name = decodeHtmlEntities(post.title?.rendered ?? '').trim();
-      if (!name) return null;
-
-      // Try to get featured image from _embedded
-      const media = post._embedded?.['wp:featuredmedia']?.[0];
-      const sizes = media?.media_details?.sizes as Record<string, { source_url?: string }> | undefined;
-      const image =
-        sizes?.['ote-card-thumbnail']?.source_url ??
-        sizes?.medium?.source_url ??
-        sizes?.['ote-hero-image']?.source_url ??
-        sizes?.full?.source_url ??
-        media?.source_url ??
-        '';
-
-      // If no featured image, try to extract from content HTML
-      let finalImage = image;
-      if (!finalImage && post.content?.rendered) {
-        const imgMatch = post.content.rendered.match(/<img[^>]+src=["']([^"']+)["']/i);
-        if (imgMatch) finalImage = imgMatch[1];
-      }
-
-      return { id: String(post.id ?? name), name, image: finalImage, link: post.link ?? '' };
-    })
-    .filter((c): c is ClubItem => c !== null && c.name.length > 0);
-}
-
-/** Parse clubs from the overtheedge.unbc.ca/clubs/ HTML page. */
-function parseClubsFromHtml(html: string): ClubItem[] {
-  if (typeof window === 'undefined') return [];
-
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-
-  // The clubs page on Over The Edge uses WordPress with club cards.
-  // Try multiple selectors to find club entries.
-  const clubs: ClubItem[] = [];
-
-  // Strategy 1: WordPress block post template (used on overtheedge.unbc.ca/clubs/)
-  // Clubs are rendered as <li> elements inside .wp-block-post-template with
-  // <h3 class="wp-block-post-title"> for names and <img> for images.
-  const postItems = doc.querySelectorAll('.wp-block-post-template li, .wp-block-post-template > *');
-  postItems.forEach((el, i) => {
-    const img = el.querySelector('img');
-    const heading = el.querySelector('.wp-block-post-title, h1, h2, h3, h4, h5, h6');
-    const image = img?.getAttribute('src') || img?.getAttribute('data-src') || '';
-    const name = heading?.textContent?.trim() || img?.getAttribute('alt')?.trim() || '';
-    const link = el.querySelector('a')?.getAttribute('href') || '';
-    if (name) {
-      clubs.push({ id: `wp-${i}`, name, image, link });
-    }
-  });
-
-  if (clubs.length > 0) return clubs;
-
-  // Strategy 2: Look for article/card elements with images and titles
-  const articles = doc.querySelectorAll('article, .club, .club-card, .wp-block-group, .ote-club');
-  articles.forEach((el, i) => {
-    const img = el.querySelector('img');
-    const heading = el.querySelector('h1, h2, h3, h4, h5, h6, .club-name, .title');
-    if (heading) {
-      const image = img?.getAttribute('src') || img?.getAttribute('data-src') || '';
-      const name = heading.textContent?.trim() || '';
-      const link = el.querySelector('a')?.getAttribute('href') || '';
-      if (name) {
-        clubs.push({ id: `club-${i}`, name, image, link });
-      }
-    }
-  });
-
-  if (clubs.length > 0) return clubs;
-
-  // Strategy 3: Look for figure + figcaption or image + adjacent text patterns
-  const figures = doc.querySelectorAll('figure');
-  figures.forEach((fig, i) => {
-    const img = fig.querySelector('img');
-    const caption = fig.querySelector('figcaption');
-    if (img) {
-      const image = img.getAttribute('src') || img.getAttribute('data-src') || '';
-      const name = caption?.textContent?.trim() || img.getAttribute('alt')?.trim() || '';
-      if (name && image) {
-        clubs.push({ id: `fig-${i}`, name, image, link: '' });
-      }
-    }
-  });
-
-  if (clubs.length > 0) return clubs;
-
-  // Strategy 4: Find all images within the content area with alt text
-  const contentArea = doc.querySelector('.entry-content, .page-content, main, .content');
-  if (contentArea) {
-    const images = contentArea.querySelectorAll('img');
-    images.forEach((img, i) => {
-      const image = img.getAttribute('src') || img.getAttribute('data-src') || '';
-      const alt = img.getAttribute('alt')?.trim() || '';
-      // Skip tiny icons, logos, decorative images
-      const width = parseInt(img.getAttribute('width') || '999', 10);
-      if (alt && image && width > 50 && !image.includes('icon') && !image.includes('logo')) {
-        // Try to find a nearby heading
-        const parent = img.closest('div, a, li, td');
-        const heading = parent?.querySelector('h1, h2, h3, h4, h5, h6');
-        const name = heading?.textContent?.trim() || alt;
-        clubs.push({ id: `img-${i}`, name, image, link: '' });
-      }
-    });
-  }
-
-  return clubs;
-}
-
 export default function ClubSpotlight({ config, theme }: WidgetComponentProps) {
   const cfg = config as ClubSpotlightConfig | undefined;
   const apiUrl = cfg?.apiUrl?.trim() || '';
   const pageUrl = cfg?.pageUrl?.trim() || '';
+  const sourceAdapterId = cfg?.sourceAdapter ?? 'unbc-clubs';
   const rotationSeconds = Math.max(4, Math.min(120, cfg?.rotationSeconds ?? 10));
   const useCorsProxy = cfg?.useCorsProxy ?? false;
   const refreshMinutes = Math.max(5, Math.min(1440, cfg?.refreshMinutes ?? 30));
@@ -203,12 +59,17 @@ export default function ClubSpotlight({ config, theme }: WidgetComponentProps) {
     try {
       if (!apiUrl) throw new Error('Missing API URL');
       const apiFetchUrl = useCorsProxy ? buildProxyUrl(apiUrl) : apiUrl;
-      const { data: posts } = await fetchJsonWithCache<WpClubPost[]>(apiFetchUrl, {
+      const { data: posts } = await fetchJsonWithCache<unknown>(apiFetchUrl, {
         cacheKey: buildCacheKey('club-spotlight-api', apiUrl),
         ttlMs,
         allowStale: true,
       });
-      const parsed = parseClubsFromApi(Array.isArray(posts) ? posts : []);
+      const normalized = normalizeSourcePayload({
+        adapterId: sourceAdapterId,
+        url: apiUrl,
+        payload: posts,
+      });
+      const parsed = (normalized?.data ?? []) as ClubItem[];
       if (parsed.length > 0) {
         setClubs(parsed);
         setActiveIndex(0);
@@ -228,7 +89,12 @@ export default function ClubSpotlight({ config, theme }: WidgetComponentProps) {
         ttlMs,
         allowStale: true,
       });
-      const parsed = parseClubsFromHtml(text);
+      const normalized = normalizeSourcePayload({
+        adapterId: sourceAdapterId,
+        url: pageUrl,
+        rawText: text,
+      });
+      const parsed = (normalized?.data ?? []) as ClubItem[];
       if (parsed.length > 0) {
         setClubs(parsed);
         setActiveIndex(0);
@@ -240,7 +106,7 @@ export default function ClubSpotlight({ config, theme }: WidgetComponentProps) {
     }
 
     setError('Could not load clubs from API or page');
-  }, [useCorsProxy, apiUrl, pageUrl, refreshMinutes]);
+  }, [useCorsProxy, apiUrl, pageUrl, refreshMinutes, sourceAdapterId]);
 
   useEffect(() => {
     fetchClubs();
@@ -388,7 +254,16 @@ registerWidget({
   defaultH: 3,
   component: ClubSpotlight,
   OptionsComponent: ClubSpotlightOptions,
-  acceptsSources: [{ propName: 'apiUrl', types: ['api'] }],
+  acceptsSources: [{
+    propName: 'apiUrl',
+    types: ['api'],
+    matchSource: (source) =>
+      resolveSourceAdapter({ url: source.url, presetId: source.presetId })?.id === 'unbc-clubs',
+    applySource: (source) => ({
+      apiUrl: source.url,
+      sourceAdapter: 'unbc-clubs',
+    }),
+  }],
   defaultProps: {
     apiUrl: '',
     pageUrl: '',

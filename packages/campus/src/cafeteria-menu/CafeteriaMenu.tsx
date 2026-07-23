@@ -1,13 +1,18 @@
 'use client';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
 import {
-  buildCacheKey,
-  buildProxyUrl,
-  fetchJsonWithCache,
-  fetchTextWithCache,
-  getCorsProxyUrl,
+  WidgetComponentProps,
+  registerWidget,
+  CAFETERIA_DAY_NAMES,
+  hasCafeteriaMenuContent,
+  loadCafeteriaSource,
+  resolveSourceAdapter,
+  type CafeteriaMealSection,
+  type CafeteriaMenuItem,
+  type CafeteriaMenuStatus,
+  type ParsedCafeteriaMenu,
 } from '@firstform/campus-hub-widget-sdk';
+import { getCorsProxyUrl } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon } from '@firstform/campus-hub-widget-sdk';
 import CafeteriaMenuOptions from './CafeteriaMenuOptions';
 
@@ -15,28 +20,8 @@ import CafeteriaMenuOptions from './CafeteriaMenuOptions';
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
 
-interface MenuItem {
-  name: string;
-  description?: string;
-  dietary?: string[]; // e.g. "VG", "GF", "DF"
-}
-
-interface MealSection {
-  title: string;
-  items: MenuItem[];
-}
-
-interface ParsedMenu {
-  weekly: MealSection[];
-  breakfast: MealSection[];
-  lunch: MealSection[];
-  dinner: MealSection[];
-  showtime: MealSection[];
-}
-
 type MealPeriod = 'breakfast' | 'lunch' | 'dinner';
 type ServicePeriod = MealPeriod | 'closed';
-type MenuStatus = 'ready' | 'seasonClosed' | 'unavailable';
 
 interface ServiceWindows {
   breakfastStart: string;
@@ -49,6 +34,7 @@ interface ServiceWindows {
 
 interface CafeteriaConfig {
   menuUrl?: string;
+  sourceAdapter?: string;
   danaLocations?: string;    // comma-separated Dana Hospitality loc IDs e.g. "48784"
   refreshInterval?: number;  // minutes
   weekdayBreakfastStart?: string; // HH:MM
@@ -98,16 +84,6 @@ const DEFAULT_WEEKEND_WINDOWS: ServiceWindows = {
   dinnerStart: '16:00',
   dinnerEnd: '22:00',
 };
-
-const DAY_NAMES = [
-  'Sunday',
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-] as const;
 
 const readTimeValue = (value: string | undefined, fallback: string): string => {
   const trimmed = value?.trim();
@@ -164,374 +140,15 @@ const MEAL_LABELS: Record<ServicePeriod, string> = {
   closed: 'Closed',
 };
 
-const MENU_STATUS_MESSAGES: Record<Exclude<MenuStatus, 'ready'>, string> = {
+const MENU_STATUS_MESSAGES: Record<Exclude<CafeteriaMenuStatus, 'ready'>, string> = {
   seasonClosed: 'Cafeteria is closed for the season.',
   unavailable: 'Cafeteria menu is temporarily unavailable.',
 };
 
-/* ------------------------------------------------------------------ */
-/*  Dana Hospitality menu.asp parser                                   */
-/* ------------------------------------------------------------------ */
-
-/**
- * Parse HTML returned by menu.danahospitality.ca/unbc/menu.asp?loc=XXXXX
- *
- * Dana Hospitality pages typically contain menu items in table rows or
- * divs with item names in bold/strong tags, optional descriptions, and
- * dietary icons (img alt text like "VG", "GF", "DF").
- */
-const parseDanaGridCellItems = (cellHtml: string): string[] => {
-  const items: string[] = [];
-  let match;
-
-  const dtPattern = /<dt[^>]*class=["'][^"']*Grid_ItemTitle[^"']*["'][^>]*>([\s\S]*?)<\/dt>/gi;
-  while ((match = dtPattern.exec(cellHtml)) !== null) {
-    const text = stripHtml(match[1] ?? '').replace(/\s+/g, ' ').trim();
-    if (text) items.push(text);
-  }
-  if (items.length > 0) return items;
-
-  const liPattern = /<li[^>]*>([\s\S]*?)<\/li>/gi;
-  while ((match = liPattern.exec(cellHtml)) !== null) {
-    const text = stripHtml(match[1] ?? '').replace(/\s+/g, ' ').trim();
-    if (text) items.push(text);
-  }
-  if (items.length > 0) return items;
-
-  const pPattern = /<p[^>]*>([\s\S]*?)<\/p>/gi;
-  while ((match = pPattern.exec(cellHtml)) !== null) {
-    const text = stripHtml(match[1] ?? '').replace(/\s+/g, ' ').trim();
-    if (text) items.push(text);
-  }
-
-  return items;
-};
-
-const parseDanaDayHeaders = (headerRowHtml: string): string[] => {
-  const headers = [...headerRowHtml.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)]
-    .map((match) => stripHtml(match[1] ?? '').replace(/\s+/g, ' ').trim())
-    .filter(Boolean);
-
-  return headers.map((header) => {
-    const matchedDay = DAY_NAMES.find((day) => day.toLowerCase() === header.toLowerCase());
-    return matchedDay ?? header;
-  });
-};
-
-const parseDanaWeeklyGridSections = (html: string): MealSection[] => {
-  const tableMatch = html.match(
-    /<table[^>]*id=["']WeeklyMenuAtAGlance["'][^>]*>([\s\S]*?)<\/table>/i,
-  );
-  if (!tableMatch) return [];
-
-  const tableHtml = tableMatch[1] ?? '';
-  const parsedSections: MealSection[] = [];
-  const sectionPattern = /<tr[^>]*class=["']section["'][^>]*>[\s\S]*?<span[^>]*class=["'][^"']*MenuSection[^"']*["'][^>]*>([\s\S]*?)<\/span>[\s\S]*?<\/tr>\s*<tr[^>]*>([\s\S]*?)<\/tr>\s*<tr[^>]*>([\s\S]*?)<\/tr>/gi;
-
-  let match;
-  while ((match = sectionPattern.exec(tableHtml)) !== null) {
-    const title = stripHtml(match[1] ?? '').replace(/\s+/g, ' ').trim();
-    if (!title) continue;
-
-    const headerRowHtml = match[2] ?? '';
-    const rowHtml = match[3] ?? '';
-    const cells = [
-      ...rowHtml.matchAll(
-        /<td[^>]*class=["'][^"']*sectioncontent[^"']*["'][^>]*>([\s\S]*?)<\/td>/gi,
-      ),
-    ].map(m => m[1] ?? '');
-    if (cells.length === 0) continue;
-    const dayHeaders = parseDanaDayHeaders(headerRowHtml);
-
-    const items: MenuItem[] = [];
-    for (let i = 0; i < Math.min(cells.length, DAY_NAMES.length); i += 1) {
-      const dayItems = parseDanaGridCellItems(cells[i] ?? '');
-      if (dayItems.length === 0) continue;
-      const dayLabel = dayHeaders[i] ?? DAY_NAMES[i];
-      items.push({ name: `${dayLabel}: ${dayItems.join(' • ')}` });
-    }
-
-    if (items.length > 0) parsedSections.push({ title, items });
-  }
-
-  const focusedSections = parsedSections.filter(({ title }) =>
-    /born of fire|showtime|weekly\s*special|breakfast|lunch|dinner|supper/i.test(title),
-  );
-  return focusedSections.length > 0 ? focusedSections : parsedSections;
-};
-
-const parseDanaMenuHtml = (html: string): MealSection[] => {
-  const cleaned = html
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[\s\S]*?<\/style>/gi, '');
-
-  // Dana's weekly grid format powers UNBC's "Weekly Specials" tab.
-  const weeklyGridSections = parseDanaWeeklyGridSections(cleaned);
-  if (weeklyGridSections.length > 0) return weeklyGridSections;
-
-  const sections: MealSection[] = [];
-  const items: MenuItem[] = [];
-  const seen = new Set<string>();
-
-  // Extract dietary icons from img alt attributes near each item
-  const extractDietary = (fragment: string): string[] => {
-    const tags: string[] = [];
-    const imgPattern = /<img[^>]*alt="([^"]{1,10})"[^>]*>/gi;
-    let m;
-    while ((m = imgPattern.exec(fragment)) !== null) {
-      const alt = (m[1] ?? '').trim().toUpperCase();
-      if (alt && !tags.includes(alt)) tags.push(alt);
-    }
-    return tags;
-  };
-
-  // Strategy 1: Table rows — many Dana menus use <tr> with item name in first <td>
-  const trPattern = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
-  let match;
-  while ((match = trPattern.exec(cleaned)) !== null) {
-    const row = match[1] ?? '';
-    const cells = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m => m[1] ?? '');
-    if (cells.length === 0) continue;
-
-    const nameRaw = stripHtml(cells[0] ?? '').trim();
-    const descRaw = cells.length > 1 ? stripHtml(cells[1] ?? '').trim() : undefined;
-    const dietary = extractDietary(row);
-
-    if (nameRaw && nameRaw.length > 1 && nameRaw.length < 200 && !seen.has(nameRaw.toLowerCase())) {
-      seen.add(nameRaw.toLowerCase());
-      items.push({
-        name: nameRaw,
-        description: descRaw || undefined,
-        dietary: dietary.length > 0 ? dietary : undefined,
-      });
-    }
-  }
-
-  // Strategy 2: Bold/strong items (if no table rows found)
-  if (items.length === 0) {
-    const strongPattern = /<(?:strong|b|h[2-5])[^>]*>([\s\S]*?)<\/(?:strong|b|h[2-5])>/gi;
-    while ((match = strongPattern.exec(cleaned)) !== null) {
-      const text = stripHtml(match[1] ?? '').trim();
-      if (text && text.length > 2 && text.length < 150 && !seen.has(text.toLowerCase())) {
-        seen.add(text.toLowerCase());
-        items.push({ name: text });
-      }
-    }
-  }
-
-  // Strategy 3: List items
-  if (items.length === 0) {
-    const liPattern = /<li[^>]*>([\s\S]*?)<\/li>/gi;
-    while ((match = liPattern.exec(cleaned)) !== null) {
-      const text = stripHtml(match[1] ?? '').trim();
-      if (text && text.length > 1 && text.length < 200 && !seen.has(text.toLowerCase())) {
-        seen.add(text.toLowerCase());
-        items.push({ name: text });
-      }
-    }
-  }
-
-  // Strategy 4: Paragraphs
-  if (items.length === 0) {
-    const pPattern = /<p[^>]*>([\s\S]*?)<\/p>/gi;
-    while ((match = pPattern.exec(cleaned)) !== null) {
-      const text = stripHtml(match[1] ?? '').trim();
-      if (text && text.length > 2 && text.length < 200 && !seen.has(text.toLowerCase())) {
-        seen.add(text.toLowerCase());
-        items.push({ name: text });
-      }
-    }
-  }
-
-  if (items.length > 0) {
-    sections.push({ title: 'Menu', items });
-  }
-
-  return sections;
-};
-
-/* ------------------------------------------------------------------ */
-/*  WordPress REST API parser (icaneat.ca)                             */
-/* ------------------------------------------------------------------ */
-
-interface WpPage {
-  id: number;
-  slug: string;
-  title?: { rendered?: string };
-  content?: { rendered?: string };
-}
-
-/**
- * Discover Dana Hospitality iframe URLs from the WordPress page content.
- * The Divi builder embeds iframes pointing to menu.danahospitality.ca.
- */
-const extractDanaIframeUrls = (html: string): string[] => {
-  const decodeHtmlEntities = (value: string): string =>
-    value
-      .replace(/\\\//g, '/')
-      .replace(/&amp;|&#038;/g, '&')
-      .replace(/&#8220;|&#8221;|&quot;/g, '"')
-      .replace(/&#x2F;/gi, '/');
-
-  const withGridParam = (rawUrl: string): string => {
-    const normalized = decodeHtmlEntities(rawUrl)
-      .replace(/menu\.dinahospitality\.ca/gi, 'menu.danahospitality.ca')
-      .trim();
-
-    if (!normalized) return '';
-    if (/[\?&]grid=/i.test(normalized)) return normalized;
-    return `${normalized}${normalized.includes('?') ? '&' : '?'}grid=1`;
-  };
-
-  const normalizedHtml = decodeHtmlEntities(html);
-  const urls: string[] = [];
-  const iframePattern = /<iframe[^>]*src="([^"]*menu\.d[ai]nahospitality[^"]*)"/gi;
-  let match;
-  while ((match = iframePattern.exec(normalizedHtml)) !== null) {
-    const url = withGridParam(match[1] ?? '');
-    if (url && !urls.includes(url)) urls.push(url);
-  }
-  // Also check for direct anchor links to menu.danahospitality.ca
-  const linkPattern = /href="([^"]*menu\.d[ai]nahospitality[^"]*)"/gi;
-  while ((match = linkPattern.exec(normalizedHtml)) !== null) {
-    const url = withGridParam(match[1] ?? '');
-    if (url && !urls.includes(url)) urls.push(url);
-  }
-
-  // Last resort: extract plain URLs embedded in shortcode blobs.
-  const rawUrlPattern = /https?:\/\/menu\.d[ai]nahospitality\.ca\/[^\s"'<>\\]+/gi;
-  while ((match = rawUrlPattern.exec(normalizedHtml)) !== null) {
-    const url = withGridParam(match[0] ?? '');
-    if (url && !urls.includes(url)) urls.push(url);
-  }
-
-  return urls;
-};
-
-/**
- * Categorise sections from the WordPress page by looking at heading/title keywords
- * near the embedded content.
- */
-const categoriseWpContent = (html: string): ParsedMenu => {
-  const result: ParsedMenu = {
-    weekly: [],
-    breakfast: [],
-    lunch: [],
-    dinner: [],
-    showtime: [],
-  };
-
-  // Split by major headings to find labelled sections
-  const fragments = html.split(/<h[1-4][^>]*>/i);
-
-  for (const frag of fragments) {
-    const fragLower = frag.toLowerCase();
-    const items = extractItemsFromGenericHtml(frag);
-    if (items.length === 0) continue;
-
-    const titleMatch = frag.match(/^([\s\S]*?)<\/h[1-4]>/i);
-    const title = stripHtml(titleMatch?.[1] ?? '').trim();
-    const section: MealSection = { title: title || 'Menu', items };
-
-    if (/showtime/i.test(fragLower)) {
-      result.showtime.push(section);
-    } else if (/weekly\s*special|special/i.test(fragLower)) {
-      result.weekly.push(section);
-    } else if (/breakfast|morning|brunch/i.test(fragLower)) {
-      result.breakfast.push(section);
-    } else if (/dinner|supper|evening/i.test(fragLower)) {
-      result.dinner.push(section);
-    } else if (/lunch|midday|entrée|entree/i.test(fragLower)) {
-      result.lunch.push(section);
-    } else {
-      result.weekly.push(section);
-    }
-  }
-
-  return result;
-};
-
-/* ------------------------------------------------------------------ */
-/*  Generic HTML item extractor (fallback)                             */
-/* ------------------------------------------------------------------ */
-
-const extractItemsFromGenericHtml = (html: string): MenuItem[] => {
-  const items: MenuItem[] = [];
-  const seen = new Set<string>();
-  let match;
-
-  const liPattern = /<li[^>]*>([\s\S]*?)<\/li>/gi;
-  while ((match = liPattern.exec(html)) !== null) {
-    const text = stripHtml(match[1] ?? '').trim();
-    if (text && text.length > 1 && text.length < 200 && !seen.has(text.toLowerCase())) {
-      seen.add(text.toLowerCase());
-      items.push({ name: text });
-    }
-  }
-  if (items.length > 0) return items;
-
-  const pPattern = /<p[^>]*>([\s\S]*?)<\/p>/gi;
-  while ((match = pPattern.exec(html)) !== null) {
-    const text = stripHtml(match[1] ?? '').trim();
-    if (text && text.length > 2 && text.length < 200 && !seen.has(text.toLowerCase())) {
-      seen.add(text.toLowerCase());
-      items.push({ name: text });
-    }
-  }
-  if (items.length > 0) return items;
-
-  const strongPattern = /<(?:strong|b)[^>]*>([\s\S]*?)<\/(?:strong|b)>/gi;
-  while ((match = strongPattern.exec(html)) !== null) {
-    const text = stripHtml(match[1] ?? '').trim();
-    if (text && text.length > 2 && text.length < 100 && !seen.has(text.toLowerCase())) {
-      seen.add(text.toLowerCase());
-      items.push({ name: text });
-    }
-  }
-
-  return items;
-};
-
-const stripHtml = (html: string): string =>
-  html
-    .replace(/<[^>]+>/g, '')
-    .replace(/&amp;/g, '&')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&#\d+;/g, '')
-    .trim();
-
-const getMenuStatusFromHtml = (html: string): MenuStatus => {
-  const text = stripHtml(html).replace(/\s+/g, ' ').toLowerCase();
-
-  if (
-    /\bclosed\s+for\s+(?:the\s+)?season\b/.test(text) ||
-    /\bclosed\s+for\s+(?:the\s+)?summer\b/.test(text) ||
-    /\bclosed\s+for\s+(?:winter|spring|fall|autumn)\s+break\b/.test(text)
-  ) {
-    return 'seasonClosed';
-  }
-
-  if (
-    /\bmenu\s+for\s+this\s+location\s+is\s+temporarily\s+unavailable\b/.test(text) ||
-    /\bmenu\s+is\s+temporarily\s+unavailable\b/.test(text) ||
-    /\bplease\s+try\s+again\s+later\b/.test(text)
-  ) {
-    return 'unavailable';
-  }
-
-  return 'ready';
-};
-
-const hasAnyMenuContent = (parsed: ParsedMenu): boolean =>
-  parsed.weekly.length + parsed.breakfast.length + parsed.lunch.length +
-  parsed.dinner.length + parsed.showtime.length > 0;
-
 const WEEKDAY_PREFIX_PATTERN = /^(Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday):\s*/i;
 
-const filterSectionsToToday = (sections: MealSection[], date = new Date()): MealSection[] => {
-  const todayLabel = DAY_NAMES[date.getDay()];
+const filterSectionsToToday = (sections: CafeteriaMealSection[], date = new Date()): CafeteriaMealSection[] => {
+  const todayLabel = CAFETERIA_DAY_NAMES[date.getDay()];
 
   return sections
     .map((section) => {
@@ -554,7 +171,7 @@ const filterSectionsToToday = (sections: MealSection[], date = new Date()): Meal
 /*  Demo data                                                          */
 /* ------------------------------------------------------------------ */
 
-const DEMO_MENU: ParsedMenu = {
+const DEMO_MENU: ParsedCafeteriaMenu = {
   weekly: [
     {
       title: 'Weekly Specials',
@@ -630,10 +247,10 @@ export default function CafeteriaMenu({
   const refreshInterval = cfg?.refreshInterval ?? 30;
   const useCorsProxy = cfg?.useCorsProxy ?? true;
 
-  const [menu, setMenu] = useState<ParsedMenu>(DEMO_MENU);
+  const [menu, setMenu] = useState<ParsedCafeteriaMenu>(DEMO_MENU);
   const [isDemo, setIsDemo] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [menuStatus, setMenuStatus] = useState<MenuStatus>('ready');
+  const [menuStatus, setMenuStatus] = useState<CafeteriaMenuStatus>('ready');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [servicePeriod, setServicePeriod] = useState<ServicePeriod>(() =>
@@ -657,149 +274,29 @@ export default function CafeteriaMenu({
   //   3. Generic HTML parse of the menu page
 
   const fetchMenu = useCallback(async () => {
-    if (!menuUrl || !useCorsProxy || !getCorsProxyUrl()) return; // stay on demo data
+    if (!menuUrl || !useCorsProxy || !getCorsProxyUrl()) return;
 
     try {
       setError(null);
-      setMenuStatus('ready');
-      let result: ParsedMenu | null = null;
-      let detectedStatus: MenuStatus = 'ready';
-      const rememberStatus = (status: MenuStatus) => {
-        if (status === 'seasonClosed' || detectedStatus === 'ready') {
-          detectedStatus = status;
-        }
-      };
+      const source = await loadCafeteriaSource({
+        menuUrl,
+        danaLocations,
+        ttlMs: refreshMs,
+        useCorsProxy,
+      });
 
-      // --- Strategy 1: Dana Hospitality direct endpoints ---
-      if (danaLocations) {
-        const locIds = danaLocations.split(',').map(s => s.trim()).filter(Boolean);
-        const allSections: MealSection[] = [];
+      setMenuStatus(source.status);
+      setIsDemo(false);
+      setLastUpdated(new Date());
 
-        for (const loc of locIds) {
-          const danaUrl = `https://menu.danahospitality.ca/unbc/menu.asp?loc=${loc}&grid=1`;
-          try {
-            const { text } = await fetchTextWithCache(
-              useCorsProxy ? buildProxyUrl(danaUrl) : danaUrl,
-              {
-                cacheKey: buildCacheKey('cafeteria-dana', loc),
-                ttlMs: refreshMs,
-              },
-            );
-            rememberStatus(getMenuStatusFromHtml(text));
-            const sections = parseDanaMenuHtml(text);
-            allSections.push(...sections);
-          } catch {
-            // Individual location failed — continue with others
-          }
-        }
-
-        if (allSections.length > 0) {
-          result = categorizeDanaSections(allSections);
-        } else if (detectedStatus !== 'ready') {
-          setMenuStatus(detectedStatus);
-          setIsDemo(false);
-          setLastUpdated(new Date());
-          return;
-        }
-      }
-
-      // --- Strategy 2: WordPress REST API discovery ---
-      if (!result) {
-        try {
-          // Extract base domain from menuUrl
-          const baseUrl = new URL(menuUrl).origin;
-          const wpApiUrl = `${baseUrl}/wp-json/wp/v2/pages?slug=menu&_fields=id,slug,content`;
-          const { data: pages } = await fetchJsonWithCache<WpPage[]>(
-            useCorsProxy ? buildProxyUrl(wpApiUrl) : wpApiUrl,
-            {
-              cacheKey: buildCacheKey('cafeteria-wp', wpApiUrl),
-              ttlMs: refreshMs,
-            },
-          );
-
-          if (pages && pages.length > 0) {
-            const content = pages[0]?.content?.rendered ?? '';
-
-            // Try to discover Dana Hospitality iframe URLs
-            const danaUrls = extractDanaIframeUrls(content);
-            if (danaUrls.length > 0) {
-              const allSections: MealSection[] = [];
-              for (const url of danaUrls) {
-                try {
-                  const { text } = await fetchTextWithCache(
-                    useCorsProxy ? buildProxyUrl(url) : url,
-                    {
-                      cacheKey: buildCacheKey('cafeteria-dana-disc', url),
-                      ttlMs: refreshMs,
-                    },
-                  );
-                  rememberStatus(getMenuStatusFromHtml(text));
-                  allSections.push(...parseDanaMenuHtml(text));
-                } catch {
-                  // continue
-                }
-              }
-              if (allSections.length > 0) {
-                result = categorizeDanaSections(allSections);
-              } else if (detectedStatus !== 'ready') {
-                setMenuStatus(detectedStatus);
-                setIsDemo(false);
-                setLastUpdated(new Date());
-                return;
-              }
-            }
-
-            // If no Dana iframes found, parse the WP content directly
-            if (!result && content) {
-              const status = getMenuStatusFromHtml(content);
-              if (status !== 'ready') {
-                setMenuStatus(status);
-                setIsDemo(false);
-                setLastUpdated(new Date());
-                return;
-              }
-              const parsed = categoriseWpContent(content);
-              const hasContent = hasAnyMenuContent(parsed);
-              if (hasContent) result = parsed;
-            }
-          }
-        } catch {
-          // WP API failed — fall through to strategy 3
-        }
-      }
-
-      // --- Strategy 3: Generic HTML scrape of menu page ---
-      if (!result) {
-        const { text } = await fetchTextWithCache(
-          useCorsProxy ? buildProxyUrl(menuUrl) : menuUrl,
-          {
-            cacheKey: buildCacheKey('cafeteria-page', menuUrl),
-            ttlMs: refreshMs,
-          },
-        );
-        const status = getMenuStatusFromHtml(text);
-        if (status !== 'ready') {
-          setMenuStatus(status);
-          setIsDemo(false);
-          setLastUpdated(new Date());
-          return;
-        }
-        const parsed = categoriseWpContent(text);
-        const hasContent = hasAnyMenuContent(parsed);
-        if (hasContent) result = parsed;
-      }
-
-      if (result) {
-        setMenu(result);
-        setIsDemo(false);
-        setMenuStatus('ready');
-        setLastUpdated(new Date());
+      if (source.status !== 'ready') return;
+      if (hasCafeteriaMenuContent(source.menu)) {
+        setMenu(source.menu);
       } else {
         setError('No menu items found');
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(msg);
+      setError(err instanceof Error ? err.message : String(err));
     }
   }, [menuUrl, danaLocations, refreshMs, useCorsProxy]);
 
@@ -818,7 +315,7 @@ export default function CafeteriaMenu({
   }, [fetchMenu, refreshMs]);
 
   // ---- Display logic ----
-  const currentMealSections = useMemo<MealSection[]>(
+  const currentMealSections = useMemo<CafeteriaMealSection[]>(
     () => (servicePeriod === 'closed' ? [] : menu[servicePeriod]),
     [menu, servicePeriod],
   );
@@ -832,7 +329,7 @@ export default function CafeteriaMenu({
     const showtimeSections = servicePeriod === 'lunch' || servicePeriod === 'dinner'
       ? menu.showtime
       : [];
-    const sections: { title: string; items: MenuItem[]; isSpecial: boolean }[] = [];
+    const sections: { title: string; items: CafeteriaMenuItem[]; isSpecial: boolean }[] = [];
 
     const todaysWeekly = filterSectionsToToday(weeklySections);
     const todaysShowtime = filterSectionsToToday(showtimeSections);
@@ -1039,44 +536,6 @@ export default function CafeteriaMenu({
 }
 
 /* ------------------------------------------------------------------ */
-/*  Helpers                                                            */
-/* ------------------------------------------------------------------ */
-
-/**
- * Categorise flat Dana Hospitality sections into the ParsedMenu structure
- * using keyword matching on titles/items.
- */
-function categorizeDanaSections(sections: MealSection[]): ParsedMenu {
-  const result: ParsedMenu = {
-    weekly: [],
-    breakfast: [],
-    lunch: [],
-    dinner: [],
-    showtime: [],
-  };
-
-  for (const s of sections) {
-    const combined = (s.title + ' ' + s.items.map(i => i.name).join(' ')).toLowerCase();
-
-    if (/showtime/i.test(combined)) {
-      result.showtime.push(s);
-    } else if (/weekly\s*special|special/i.test(combined)) {
-      result.weekly.push(s);
-    } else if (/breakfast|morning|brunch|pancake|egg|omelette|waffle/i.test(combined)) {
-      result.breakfast.push(s);
-    } else if (/born of fire\s*lunch|lunch|midday|entrée|entree/i.test(combined)) {
-      result.lunch.push(s);
-    } else if (/born of fire\s*dinner|dinner|supper|evening/i.test(combined)) {
-      result.dinner.push(s);
-    } else {
-      result.weekly.push(s);
-    }
-  }
-
-  return result;
-}
-
-/* ------------------------------------------------------------------ */
 /*  Registration                                                       */
 /* ------------------------------------------------------------------ */
 
@@ -1091,7 +550,16 @@ registerWidget({
   defaultH: 3,
   component: CafeteriaMenu,
   OptionsComponent: CafeteriaMenuOptions,
-  acceptsSources: [{ propName: 'menuUrl', types: ['api'] }],
+  acceptsSources: [{
+    propName: 'menuUrl',
+    types: ['api'],
+    matchSource: (source) =>
+      resolveSourceAdapter({ url: source.url, presetId: source.presetId })?.id === 'unbc-cafeteria-menu',
+    applySource: (source) => ({
+      menuUrl: source.url,
+      sourceAdapter: 'unbc-cafeteria-menu',
+    }),
+  }],
   defaultProps: {
     menuUrl: '',
     danaLocations: '48784',

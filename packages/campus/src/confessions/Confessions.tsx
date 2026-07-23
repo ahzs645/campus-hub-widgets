@@ -1,25 +1,20 @@
 'use client';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { WidgetComponentProps, registerWidget, PillIndicator } from '@firstform/campus-hub-widget-sdk';
+import {
+  WidgetComponentProps,
+  registerWidget,
+  PillIndicator,
+  normalizeSourcePayload,
+  resolveSourceAdapter,
+  type ConfessionItem,
+} from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, buildProxyUrl, fetchJsonWithCache, fetchTextWithCache } from '@firstform/campus-hub-widget-sdk';
 import ConfessionsOptions from './ConfessionsOptions';
-
-interface RawConfession {
-  id?: number | string;
-  testimonial?: string;
-  by?: string;
-  imgSrc?: string;
-}
-
-interface ConfessionItem {
-  id: string;
-  text: string;
-  by: string;
-}
 
 interface ConfessionsConfig {
   apiUrl?: string;
   pageUrl?: string;
+  sourceAdapter?: string;
   maxItems?: number;
   rotationSeconds?: number;
   cacheTtlSeconds?: number;
@@ -27,18 +22,6 @@ interface ConfessionsConfig {
   useCorsProxy?: boolean;
   showByline?: boolean;
 }
-
-interface WordPressPageResponse {
-  id?: number;
-  slug?: string;
-  content?: {
-    rendered?: string;
-  };
-}
-
-const DEFAULT_API_URL =
-  'https://overtheedge.unbc.ca/wp-json/wp/v2/pages?slug=confession&_fields=id,slug,content.rendered';
-const DEFAULT_PAGE_URL = 'https://overtheedge.unbc.ca/confession/';
 
 const DEMO_CONFESSIONS: ConfessionItem[] = [
   { id: 'demo-1', text: 'I accidentally walked into the wrong lecture hall and stayed for the entire seminar because I was too embarrassed to leave.', by: 'Anonymous' },
@@ -52,56 +35,6 @@ const MAX_TEXT_SIZE = 38;
 const COMPACT_MIN_TEXT_SIZE = 11;
 const COMPACT_MAX_TEXT_SIZE = 30;
 
-const decodeHtmlEntities = (value: string): string => {
-  if (typeof window === 'undefined') return value;
-  const textarea = document.createElement('textarea');
-  textarea.innerHTML = value;
-  return textarea.value;
-};
-
-const toConfessionItems = (items: RawConfession[], maxItems: number): ConfessionItem[] =>
-  items
-    .map((item, index) => {
-      const text = decodeHtmlEntities(String(item.testimonial ?? '')).trim();
-      const by = decodeHtmlEntities(String(item.by ?? '')).trim();
-      return {
-        id: String(item.id ?? index),
-        text,
-        by,
-      };
-    })
-    .filter((item) => item.text.length > 0)
-    .slice(0, Math.max(1, maxItems));
-
-const parseConfessionsFromMarkup = (html: string, maxItems: number): ConfessionItem[] => {
-  if (typeof window === 'undefined') return [];
-
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-  const container = doc.querySelector<HTMLElement>('.ote-confessions-block-container[data-confessions]')
-    ?? doc.querySelector<HTMLElement>('[data-confessions]');
-  const rawAttr = container?.getAttribute('data-confessions');
-  if (!rawAttr) return [];
-
-  try {
-    const parsed = JSON.parse(rawAttr) as RawConfession[];
-    return toConfessionItems(parsed, maxItems);
-  } catch {
-    try {
-      const decoded = decodeHtmlEntities(rawAttr);
-      const parsed = JSON.parse(decoded) as RawConfession[];
-      return toConfessionItems(parsed, maxItems);
-    } catch {
-      return [];
-    }
-  }
-};
-
-const pickPage = (payload: WordPressPageResponse[] | WordPressPageResponse): WordPressPageResponse | null => {
-  if (Array.isArray(payload)) return payload[0] ?? null;
-  if (payload && typeof payload === 'object') return payload;
-  return null;
-};
-
 const appendCacheBust = (url: string, token: number): string => {
   const separator = url.includes('?') ? '&' : '?';
   return `${url}${separator}_batch=${token}`;
@@ -111,6 +44,7 @@ export default function Confessions({ config, theme }: WidgetComponentProps) {
   const confConfig = config as ConfessionsConfig | undefined;
   const apiUrl = confConfig?.apiUrl?.trim() || '';
   const pageUrl = confConfig?.pageUrl?.trim() || '';
+  const sourceAdapterId = confConfig?.sourceAdapter ?? 'unbc-confessions';
   const maxItems = Math.min(50, Math.max(1, Math.round(confConfig?.maxItems ?? 10)));
   const rotationSeconds = Math.min(120, Math.max(4, Math.round(confConfig?.rotationSeconds ?? 12)));
   const cacheTtlSeconds = Math.min(3600, Math.max(30, Math.round(confConfig?.cacheTtlSeconds ?? 300)));
@@ -140,7 +74,7 @@ export default function Confessions({ config, theme }: WidgetComponentProps) {
     try {
       const pageApiUrlBase = useCorsProxy ? buildProxyUrl(apiUrl) : apiUrl;
       const pageApiUrl = cacheBustToken ? appendCacheBust(pageApiUrlBase, cacheBustToken) : pageApiUrlBase;
-      const { data } = await fetchJsonWithCache<WordPressPageResponse[] | WordPressPageResponse>(
+      const { data } = await fetchJsonWithCache<unknown>(
         pageApiUrl,
         {
           cacheKey: buildCacheKey(
@@ -151,9 +85,13 @@ export default function Confessions({ config, theme }: WidgetComponentProps) {
         },
       );
 
-      const page = pickPage(data);
-      const rendered = page?.content?.rendered ?? '';
-      const parsed = parseConfessionsFromMarkup(rendered, maxItems);
+      const normalized = normalizeSourcePayload({
+        adapterId: sourceAdapterId,
+        url: apiUrl,
+        payload: data,
+        options: { maxItems },
+      });
+      const parsed = (normalized?.data ?? []) as ConfessionItem[];
 
       if (parsed.length > 0) {
         setItems(parsed);
@@ -176,7 +114,13 @@ export default function Confessions({ config, theme }: WidgetComponentProps) {
         ),
         ttlMs,
       });
-      const parsed = parseConfessionsFromMarkup(text, maxItems);
+      const normalized = normalizeSourcePayload({
+        adapterId: sourceAdapterId,
+        url: pageUrl,
+        rawText: text,
+        options: { maxItems },
+      });
+      const parsed = (normalized?.data ?? []) as ConfessionItem[];
       if (parsed.length > 0) {
         setItems(parsed);
 
@@ -187,7 +131,7 @@ export default function Confessions({ config, theme }: WidgetComponentProps) {
     } finally {
       setLoading(false);
     }
-  }, [apiUrl, pageUrl, maxItems, cacheTtlSeconds, useCorsProxy]);
+  }, [apiUrl, pageUrl, maxItems, cacheTtlSeconds, sourceAdapterId, useCorsProxy]);
 
   useEffect(() => {
     fetchConfessions(false);
@@ -383,7 +327,16 @@ registerWidget({
   defaultH: 3,
   component: Confessions,
   OptionsComponent: ConfessionsOptions,
-  acceptsSources: [{ propName: 'apiUrl', types: ['api'] }],
+  acceptsSources: [{
+    propName: 'apiUrl',
+    types: ['api'],
+    matchSource: (source) =>
+      resolveSourceAdapter({ url: source.url, presetId: source.presetId })?.id === 'unbc-confessions',
+    applySource: (source) => ({
+      apiUrl: source.url,
+      sourceAdapter: 'unbc-confessions',
+    }),
+  }],
   defaultProps: {
     apiUrl: '',
     pageUrl: '',
