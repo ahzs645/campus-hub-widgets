@@ -88,6 +88,14 @@ let _fontLoaded = false;
 let _fontCanvas: HTMLCanvasElement | null = null;
 let _fontCtx: CanvasRenderingContext2D | null = null;
 
+/**
+ * Text widths are re-measured for the same handful of strings on every frame
+ * (route names, headsigns, and a small set of formatted times). Each measure
+ * costs a font parse plus a shaping pass, so results are memoised.
+ */
+const _measureCache = new Map<string, number>();
+const MEASURE_CACHE_LIMIT = 512;
+
 export async function loadPixollettaFont(): Promise<void> {
   if (_fontLoaded) return;
   try {
@@ -100,6 +108,9 @@ export async function loadPixollettaFont(): Promise<void> {
   }
   _fontCanvas = document.createElement('canvas');
   _fontCtx = _fontCanvas.getContext('2d', { willReadFrequently: true });
+  // Widths measured before the face was registered would be wrong.
+  _measureCache.clear();
+  if (_fontCtx) setupCtx(_fontCtx);
   _fontLoaded = true;
 }
 
@@ -109,10 +120,32 @@ function setupCtx(ctx: CanvasRenderingContext2D): void {
   ctx.imageSmoothingEnabled = false;
 }
 
+/**
+ * Grow the shared scratch canvas to fit a draw, if needed.
+ *
+ * Assigning to `width`/`height` reallocates the backing store and resets every
+ * context property, so the canvas only ever grows and is reconfigured on the
+ * rare growth step rather than on every text draw.
+ */
+function ensureScratchSize(width: number, height: number): boolean {
+  if (!_fontCanvas || !_fontCtx) return false;
+  if (_fontCanvas.width >= width && _fontCanvas.height >= height) return true;
+  _fontCanvas.width = Math.max(width, _fontCanvas.width);
+  _fontCanvas.height = Math.max(height, _fontCanvas.height);
+  setupCtx(_fontCtx);
+  return true;
+}
+
 export function measureText(text: string): number {
   if (!_fontCtx) return text.length * 6;
-  setupCtx(_fontCtx);
-  return Math.ceil(_fontCtx.measureText(text).width);
+  const cached = _measureCache.get(text);
+  if (cached !== undefined) return cached;
+  const width = Math.ceil(_fontCtx.measureText(text).width);
+  // Bounded so a widget left running for weeks can't accumulate every headsign
+  // variant a feed has ever produced.
+  if (_measureCache.size >= MEASURE_CACHE_LIMIT) _measureCache.clear();
+  _measureCache.set(text, width);
+  return width;
 }
 
 function renderText(
@@ -122,9 +155,7 @@ function renderText(
   if (!_fontCtx || !_fontCanvas || !text) return;
   const tw = measureText(text) + 2;
   const th = NOMINAL_HEIGHT + 2;
-  _fontCanvas.width = tw;
-  _fontCanvas.height = th;
-  setupCtx(_fontCtx);
+  if (!ensureScratchSize(tw, th)) return;
   _fontCtx.clearRect(0, 0, tw, th);
   _fontCtx.fillStyle = 'white';
   _fontCtx.fillText(text, 0, 0);
@@ -161,9 +192,7 @@ function renderTextClipped(
   if (!_fontCtx || !_fontCanvas || !text) return;
   const tw = measureText(text) + 2;
   const th = NOMINAL_HEIGHT + 2;
-  _fontCanvas.width = tw;
-  _fontCanvas.height = th;
-  setupCtx(_fontCtx);
+  if (!ensureScratchSize(tw, th)) return;
   _fontCtx.clearRect(0, 0, tw, th);
   _fontCtx.fillStyle = 'white';
   _fontCtx.fillText(text, 0, 0);

@@ -39,6 +39,29 @@ function parseDateStr(str: string | null): { y: number; m: number; d: number } |
   };
 }
 
+/**
+ * The output is quantised to whole LED pixels, and the fastest-moving element
+ * is the headsign scroll at SCROLL_SPEED (10px/s) — so the frame can only
+ * change ~10 times a second. Running the loop at the panel's native 60Hz
+ * produced ~50 byte-identical frames a second, each paying a full per-pixel
+ * colour parse plus a full-canvas ImageData rebuild.
+ */
+const MIN_FRAME_INTERVAL_MS = 1000 / 15;
+
+/**
+ * Even when nothing changed, redraw occasionally so the renderer can re-attach
+ * its canvas if the container was emptied out from under it.
+ */
+const FORCED_REDRAW_INTERVAL_MS = 2000;
+
+function pixelsEqual(next: string[], prev: string[] | null): boolean {
+  if (!prev || prev.length !== next.length) return false;
+  for (let i = 0; i < next.length; i += 1) {
+    if (next[i] !== prev[i]) return false;
+  }
+  return true;
+}
+
 export default function BusConnection({ config, theme }: WidgetComponentProps) {
   const busConfig = config as BusConnectionConfig | undefined;
   const glow = busConfig?.glow ?? true;
@@ -132,14 +155,17 @@ export default function BusConnection({ config, theme }: WidgetComponentProps) {
     if (!fontReady || !displaySize) return;
 
     let running = true;
-    let animId: number;
+    let animId = 0;
+    let lastFrameAt = 0;
+    let lastPaintAt = 0;
+    let lastPixels: string[] | null = null;
 
-    const render = () => {
+    const render = (frameTime: number) => {
       if (!running) return;
-      if (!rendererRef.current) {
-        animId = requestAnimationFrame(render);
-        return;
-      }
+      animId = requestAnimationFrame(render);
+      if (!rendererRef.current) return;
+      if (frameTime - lastFrameAt < MIN_FRAME_INTERVAL_MS) return;
+      lastFrameAt = frameTime;
 
       const simNow = simTimeRef.current;
       const now = simNow ? simNow.getTime() : Date.now();
@@ -157,13 +183,19 @@ export default function BusConnection({ config, theme }: WidgetComponentProps) {
         currentTrips, displayW, displayH, now, uptimeMs, null, scrollHeadsigns, departureTimeOnly, entrySpacing
       );
 
+      // Pushing to the renderer is the expensive half: it re-parses every
+      // pixel's colour and rewrites the whole ImageData buffer. Skip it
+      // outright when the frame is identical to the one already on screen.
+      const forced = frameTime - lastPaintAt >= FORCED_REDRAW_INTERVAL_MS;
+      if (!forced && pixelsEqual(pixels, lastPixels)) return;
+
+      lastPixels = pixels;
+      lastPaintAt = frameTime;
       rendererRef.current.setData(pixels);
       rendererRef.current.renderStatic();
-
-      animId = requestAnimationFrame(render);
     };
 
-    render();
+    animId = requestAnimationFrame(render);
     return () => {
       running = false;
       cancelAnimationFrame(animId);

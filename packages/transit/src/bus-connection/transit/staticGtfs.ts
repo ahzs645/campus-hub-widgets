@@ -72,61 +72,134 @@ function writeCachedStaticGtfs(data: StaticGtfsData): void {
   }
 }
 
-function parseCsv(text: string): string[][] {
-  const rows: string[][] = [];
-  let row: string[] = [];
-  let field = '';
-  let inQuotes = false;
+/**
+ * Streaming CSV row reader.
+ *
+ * Rows are handed to `onRow` one at a time and the array is reused, so nothing
+ * is retained unless the caller copies it. Fields are produced by slicing the
+ * source string between delimiters; the per-character accumulator is only
+ * engaged for the rare quoted field.
+ */
+function streamCsvRows(text: string, onRow: (row: string[]) => void): void {
+  const normalized = text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
+  const length = normalized.length;
 
-  const normalized = text.replace(/^\uFEFF/, '');
-  for (let i = 0; i < normalized.length; i += 1) {
+  const row: string[] = [];
+  let fieldStart = 0;
+  let assembled = '';
+  let hasAssembled = false;
+  let inQuotes = false;
+  let sawContent = false;
+
+  const endField = (end: number) => {
+    const value = hasAssembled
+      ? assembled + normalized.slice(fieldStart, end)
+      : normalized.slice(fieldStart, end);
+    row.push(value);
+    if (value.length > 0) sawContent = true;
+    assembled = '';
+    hasAssembled = false;
+  };
+
+  const endRow = () => {
+    if (sawContent) onRow(row);
+    row.length = 0;
+    sawContent = false;
+  };
+
+  for (let i = 0; i < length; i += 1) {
     const char = normalized[i];
-    const next = normalized[i + 1];
 
     if (char === '"') {
-      if (inQuotes && next === '"') {
-        field += '"';
+      if (inQuotes && normalized[i + 1] === '"') {
+        // Escaped quote: fold the pending slice plus one literal quote into the
+        // accumulator, then resume slicing after it.
+        assembled += `${normalized.slice(fieldStart, i)}"`;
+        hasAssembled = true;
         i += 1;
-      } else {
-        inQuotes = !inQuotes;
+        fieldStart = i + 1;
+        continue;
       }
+      // Quote boundary \u2014 the quote itself is not part of the value.
+      assembled += normalized.slice(fieldStart, i);
+      hasAssembled = true;
+      inQuotes = !inQuotes;
+      fieldStart = i + 1;
       continue;
     }
 
-    if (char === ',' && !inQuotes) {
-      row.push(field);
-      field = '';
+    if (inQuotes) continue;
+
+    if (char === ',') {
+      endField(i);
+      fieldStart = i + 1;
       continue;
     }
 
-    if ((char === '\n' || char === '\r') && !inQuotes) {
-      if (char === '\r' && next === '\n') i += 1;
-      row.push(field);
-      if (row.some((value) => value.length > 0)) rows.push(row);
-      row = [];
-      field = '';
-      continue;
+    if (char === '\n' || char === '\r') {
+      endField(i);
+      if (char === '\r' && normalized[i + 1] === '\n') i += 1;
+      fieldStart = i + 1;
+      endRow();
     }
-
-    field += char;
   }
 
-  row.push(field);
-  if (row.some((value) => value.length > 0)) rows.push(row);
-  return rows;
+  endField(length);
+  endRow();
+}
+
+/**
+ * Cursor over a CSV row, addressed by header name.
+ *
+ * `get` reads a column without allocating anything, so a caller can reject a
+ * row on one field before paying for a keyed record. This matters for
+ * `stop_times.txt`, which carries every stop of every trip in the agency \u2014
+ * millions of rows, of which this widget keeps the few dozen at one stop.
+ */
+interface CsvRowCursor {
+  get(column: string): string;
+  toRecord(): Record<string, string>;
+}
+
+function streamCsvRecords(text: string, visit: (row: CsvRowCursor) => void): void {
+  let headers: string[] | null = null;
+  const columnIndex = new Map<string, number>();
+  let current: string[] = [];
+
+  // A single cursor is reused for every row \u2014 see `visit` contract below.
+  const cursor: CsvRowCursor = {
+    get(column) {
+      const at = columnIndex.get(column);
+      return at === undefined ? '' : current[at] ?? '';
+    },
+    toRecord() {
+      const record: Record<string, string> = {};
+      headers?.forEach((header, index) => {
+        record[header] = current[index] ?? '';
+      });
+      return record;
+    },
+  };
+
+  streamCsvRows(text, (row) => {
+    if (!headers) {
+      headers = [...row];
+      headers.forEach((header, index) => columnIndex.set(header, index));
+      return;
+    }
+    // Valid only for the duration of the call: both `row` and `cursor` are
+    // reused on the next line, so callers must copy anything they keep.
+    current = row;
+    visit(cursor);
+  });
 }
 
 function csvRecords(text: string): Record<string, string>[] {
-  const rows = parseCsv(text);
-  if (rows.length === 0) return [];
-  const headers = rows[0];
-  return rows.slice(1).map((row) => {
-    const record: Record<string, string> = {};
-    headers.forEach((header, index) => {
-      record[header] = row[index] ?? '';
-    });
-    return record;
+  const records: Record<string, string>[] = [];
+  streamCsvRecords(text, (row) => {
+    records.push(row.toRecord());
   });
+  return records;
 }
 
 function dateToStr(date: Date): string {
@@ -157,34 +230,33 @@ function buildServiceDates(files: Record<string, string>): Record<string, string
     serviceDates[serviceId]?.delete(date);
   };
 
+  const WEEKDAY_COLUMNS = [
+    'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday',
+  ] as const;
+
   if (files['calendar.txt']) {
-    for (const row of csvRecords(files['calendar.txt'])) {
-      const start = row.start_date;
-      const end = row.end_date;
-      if (!row.service_id || !start || !end) continue;
+    streamCsvRecords(files['calendar.txt'], (row) => {
+      const serviceId = row.get('service_id');
+      const start = row.get('start_date');
+      const end = row.get('end_date');
+      if (!serviceId || !start || !end) return;
       const current = parseDateStr(start);
       const last = parseDateStr(end);
+      // Read the seven day flags once rather than per day in the range.
+      const active = WEEKDAY_COLUMNS.map((column) => row.get(column) === '1');
       while (current <= last) {
-        const weekday = current.getDay();
-        const active =
-          (weekday === 0 && row.sunday === '1') ||
-          (weekday === 1 && row.monday === '1') ||
-          (weekday === 2 && row.tuesday === '1') ||
-          (weekday === 3 && row.wednesday === '1') ||
-          (weekday === 4 && row.thursday === '1') ||
-          (weekday === 5 && row.friday === '1') ||
-          (weekday === 6 && row.saturday === '1');
-        if (active) addDate(row.service_id, dateToStr(current));
+        if (active[current.getDay()]) addDate(serviceId, dateToStr(current));
         current.setDate(current.getDate() + 1);
       }
-    }
+    });
   }
 
   if (files['calendar_dates.txt']) {
-    for (const row of csvRecords(files['calendar_dates.txt'])) {
-      if (row.exception_type === '1') addDate(row.service_id, row.date);
-      if (row.exception_type === '2') removeDate(row.service_id, row.date);
-    }
+    streamCsvRecords(files['calendar_dates.txt'], (row) => {
+      const exceptionType = row.get('exception_type');
+      if (exceptionType === '1') addDate(row.get('service_id'), row.get('date'));
+      if (exceptionType === '2') removeDate(row.get('service_id'), row.get('date'));
+    });
   }
 
   return Object.fromEntries(
@@ -196,44 +268,54 @@ function buildServiceDates(files: Record<string, string>): Record<string, string
 }
 
 export function parseStaticGtfsFiles(files: Record<string, string>): StaticGtfsData {
-  const stop = csvRecords(files['stops.txt'] ?? '').find(
-    (row) => row.stop_id === TARGET_STOP_ID || row.stop_code === TARGET_STOP_ID,
-  );
+  let stop: Record<string, string> | undefined;
+  streamCsvRecords(files['stops.txt'] ?? '', (row) => {
+    if (stop) return;
+    if (row.get('stop_id') === TARGET_STOP_ID || row.get('stop_code') === TARGET_STOP_ID) {
+      stop = row.toRecord();
+    }
+  });
 
   const routes: Record<string, RouteInfo> = {};
-  for (const row of csvRecords(files['routes.txt'] ?? '')) {
-    if (!TARGET_ROUTE_IDS.has(row.route_id)) continue;
-    routes[row.route_id] = {
-      shortName: row.route_short_name,
-      longName: row.route_long_name,
-      color: row.route_color || BAKED_ROUTES[row.route_id]?.color || 'FFFFFF',
+  streamCsvRecords(files['routes.txt'] ?? '', (row) => {
+    const routeId = row.get('route_id');
+    if (!TARGET_ROUTE_IDS.has(routeId)) return;
+    routes[routeId] = {
+      shortName: row.get('route_short_name'),
+      longName: row.get('route_long_name'),
+      color: row.get('route_color') || BAKED_ROUTES[routeId]?.color || 'FFFFFF',
     };
-  }
+  });
 
   const trips = new Map<string, { routeId: string; serviceId: string; headsign: string }>();
-  for (const row of csvRecords(files['trips.txt'] ?? '')) {
-    if (!TARGET_ROUTE_IDS.has(row.route_id)) continue;
-    trips.set(row.trip_id, {
-      routeId: row.route_id,
-      serviceId: row.service_id,
-      headsign: row.trip_headsign,
+  streamCsvRecords(files['trips.txt'] ?? '', (row) => {
+    const routeId = row.get('route_id');
+    if (!TARGET_ROUTE_IDS.has(routeId)) return;
+    trips.set(row.get('trip_id'), {
+      routeId,
+      serviceId: row.get('service_id'),
+      headsign: row.get('trip_headsign'),
     });
-  }
+  });
 
+  // stop_times.txt is the whole agency's timetable — the stop_id check runs
+  // before anything is allocated for the row so the ~99.99% that miss cost
+  // only a map lookup.
   const stopSchedule: ScheduleEntry[] = [];
-  for (const row of csvRecords(files['stop_times.txt'] ?? '')) {
-    if (row.stop_id !== TARGET_STOP_ID) continue;
-    const trip = trips.get(row.trip_id);
-    if (!trip) continue;
+  streamCsvRecords(files['stop_times.txt'] ?? '', (row) => {
+    if (row.get('stop_id') !== TARGET_STOP_ID) return;
+    const tripId = row.get('trip_id');
+    const trip = trips.get(tripId);
+    if (!trip) return;
     stopSchedule.push({
-      tripId: row.trip_id,
+      tripId,
       routeId: trip.routeId,
-      headsign: row.stop_headsign || trip.headsign,
+      headsign: row.get('stop_headsign') || trip.headsign,
       serviceId: trip.serviceId,
-      arrivalTime: row.arrival_time,
-      departureTime: row.departure_time,
+      arrivalTime: row.get('arrival_time'),
+      departureTime: row.get('departure_time'),
     });
-  }
+  });
 
   const feedInfo = csvRecords(files['feed_info.txt'] ?? '')[0] ?? {};
 
