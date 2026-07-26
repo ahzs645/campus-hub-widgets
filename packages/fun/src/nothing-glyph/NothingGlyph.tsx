@@ -7,7 +7,7 @@ import { createPendulumEngine } from './matrix/PendulumEngine';
 import { createStackEngine } from './matrix/StackEngine';
 import { createScreenieEngine } from './matrix/ScreenieEngine';
 import { createLottieEngine, type LottieEngineInstance } from './matrix/LottieEngine';
-import GLYPH_CATALOG from './glyphCatalog';
+import { MODES } from './modes';
 
 interface NothingGlyphConfig {
   mode?: string;
@@ -15,32 +15,6 @@ interface NothingGlyphConfig {
   pixelSize?: number;
   brightness?: number;
 }
-
-interface ModeEntry {
-  id: string;
-  name: string;
-  description: string;
-  type: 'native' | 'lottie';
-  jsonUrl?: string;
-}
-
-// Native engines
-const NATIVE_MODES: ModeEntry[] = [
-  { id: 'pendulum', name: 'Pendulum', description: 'Physics pendulum with trail', type: 'native' },
-  { id: 'stack', name: 'Stack', description: 'Auto-playing stacker arcade', type: 'native' },
-  { id: 'screenie', name: 'Screenie', description: 'Mood face with border fill', type: 'native' },
-];
-
-// Lottie preview modes from Nothing Playground catalog
-const LOTTIE_MODES: ModeEntry[] = GLYPH_CATALOG.map(g => ({
-  id: `lottie-${g.id}`,
-  name: g.name,
-  description: `${g.description} — ${g.creator}`,
-  type: 'lottie' as const,
-  jsonUrl: g.jsonUrl,
-}));
-
-const MODES: ModeEntry[] = [...NATIVE_MODES, ...LOTTIE_MODES];
 
 interface Engine {
   tick(): number[];
@@ -196,4 +170,3 @@ export default function NothingGlyph({ config }: WidgetComponentProps) {
   );
 }
 
-export { MODES };

@@ -22,3 +22,7 @@ registerWidgetModule(trivia);
 registerWidgetModule(wordOfTheDay);
 
 export { bottleSpin, coinDice, flashcard, fortuneCookie, kaomoji, nothingGlyph, rockPaperScissors, trivia, wordOfTheDay };
+
+// Public re-export used by the engine; sourced from the standalone modes
+// module so it does not pull the widget component into the entry bundle.
+export { MODES as NOTHING_GLYPH_MODES } from './nothing-glyph/modes';
