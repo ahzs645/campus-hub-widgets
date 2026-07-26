@@ -31,5 +31,8 @@
     "@firstform/campus-hub-widget-sdk": {
       "optional": true
     }
+  },
+  "campusHub": {
+    "widgets": "./src/index.ts"
   }
 }

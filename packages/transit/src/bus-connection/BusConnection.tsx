@@ -1,11 +1,10 @@
 'use client';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { usePixelDisplay } from 'react-pixel-display';
-import { WidgetComponentProps, registerWidget, DarkContainer } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, DarkContainer } from '@firstform/campus-hub-widget-sdk';
 import { renderTransitDisplay, loadPixollettaFont } from './transit/renderer';
 import { createLiveTripProvider, getScheduledTrips, type Trip } from './transit/gtfsService';
 import { SERVICE_DATES } from './transit/gtfsData';
-import BusConnectionOptions from './BusConnectionOptions';
 
 interface BusConnectionConfig {
   glow?: boolean;
@@ -222,29 +221,5 @@ export default function BusConnection({ config, theme }: WidgetComponentProps) {
   );
 }
 
-registerWidget({
-  type: 'bus-connection',
-  name: 'Bus Connection',
-  description: 'Live bus arrival display for UNBC Exchange',
-  icon: 'bus',
-  minW: 3,
-  minH: 2,
-  defaultW: 6,
-  defaultH: 2,
-  component: BusConnection,
-  OptionsComponent: BusConnectionOptions,
-  defaultProps: {
-    glow: true,
-    scrollHeadsigns: true,
-    departureTimeOnly: false,
-    hideStationPrefix: false,
-    pixelPitch: 6,
-    padding: 8,
-    entrySpacing: 2,
-    proxyUrl: '',
-    simulate: false,
-    simMode: 'weekday',
-    simTime: 540,
-    useCorsProxy: true,
-  },
-});
+// Registration lives in ./meta.ts, which carries the widget's metadata without
+// importing this module or its dependencies.
