@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { FormSelect, FormSwitch, FormStepper } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
-import { MODES } from './NothingGlyph';
+import { MODES } from './modes';
 
 interface NothingGlyphData {
   mode: string;
