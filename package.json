@@ -2,17 +2,15 @@
   "name": "@firstform/campus-hub-widgets",
   "private": true,
   "description": "Campus Hub widget packages",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "devDependencies": {
-    "typescript": "^5.7.2"
-  },
-  "dependencies": {
-    "fflate": "^0.8.2",
-    "gtfs-realtime-bindings": "^1.1.1",
-    "lottie-web": "^5.13.0",
-    "qrcode": "^1.5.4",
-    "react-pixel-display": "git+https://github.com/ahzs645/react-pixel-display.git#17e8e9f6df6efa97d3f591f23e3f2d7613884116"
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
   }
 }
