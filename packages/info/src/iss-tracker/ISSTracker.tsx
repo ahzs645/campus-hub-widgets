@@ -1,8 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback, useId } from 'react';
-import { WidgetComponentProps, registerWidget, DarkContainer } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, DarkContainer } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale } from '@firstform/campus-hub-widget-sdk';
-import ISSTrackerOptions from './ISSTrackerOptions';
 
 interface ISSTrackerConfig {
   refreshInterval?: number;
@@ -229,19 +228,3 @@ export default function ISSTracker({ config, theme }: WidgetComponentProps) {
     </DarkContainer>
   );
 }
-
-registerWidget({
-  type: 'iss-tracker',
-  name: 'ISS Tracker',
-  description: 'Real-time ISS position tracker',
-  icon: 'satellite',
-  minW: 2,
-  minH: 2,
-  maxW: 6,
-  maxH: 4,
-  defaultW: 3,
-  defaultH: 2,
-  component: ISSTracker,
-  OptionsComponent: ISSTrackerOptions,
-  defaultProps: { refreshInterval: 1, showMap: true },
-});

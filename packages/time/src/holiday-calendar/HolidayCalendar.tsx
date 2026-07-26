@@ -1,9 +1,8 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
-import { WidgetComponentProps, registerWidget, DarkContainer } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, DarkContainer } from '@firstform/campus-hub-widget-sdk';
 import { useFitScale } from '@firstform/campus-hub-widget-sdk';
 import { DotMatrixText, textToChars, type DotChar } from '@firstform/campus-hub-widget-sdk';
-import HolidayCalendarOptions from './HolidayCalendarOptions';
 
 interface HolidayCalendarConfig {
   style?: 'modern' | 'bauhaus';
@@ -305,19 +304,3 @@ export default function HolidayCalendar({ config, theme }: WidgetComponentProps)
     </DarkContainer>
   );
 }
-
-registerWidget({
-  type: 'holiday-calendar',
-  name: 'Holiday Calendar',
-  description: 'Daily holiday celebrations',
-  icon: 'partyPopper',
-  minW: 2,
-  minH: 2,
-  maxW: 4,
-  maxH: 4,
-  defaultW: 2,
-  defaultH: 2,
-  component: HolidayCalendar,
-  OptionsComponent: HolidayCalendarOptions,
-  defaultProps: { style: 'modern' },
-});

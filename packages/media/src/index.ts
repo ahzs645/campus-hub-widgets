@@ -1,33 +1,34 @@
-import { registerWidgetLoader } from '@firstform/campus-hub-widget-sdk';
+import { registerWidgetModule } from '@firstform/campus-hub-widget-sdk';
+import canva from './canva/meta';
+import googleSheets from './google-sheets/meta';
+import image from './image/meta';
+import mediaPlayer from './media-player/meta';
+import posterCarousel from './poster-carousel/meta';
+import posterFeed from './poster-feed/meta';
+import powerpoint from './powerpoint/meta';
+import radioStation from './radio-station/meta';
+import richText from './rich-text/meta';
+import slideshow from './slideshow/meta';
+import streamPlayer from './stream-player/meta';
+import webRegion from './web-region/meta';
+import web from './web/meta';
+import youtube from './youtube/meta';
 
-// Side-effect imports — trigger registerWidget calls
-import './poster-carousel/PosterCarousel';
-import './poster-feed/PosterFeed';
-import './slideshow/Slideshow';
-import './image/Image';
-import './media-player/MediaPlayer';
-import './radio-station/RadioStation';
-import './youtube/YouTube';
-import './web/Web';
-import './web-region/WebRegion';
-import './rich-text/RichText';
-import './google-sheets/GoogleSheets';
-import './canva/Canva';
-import './powerpoint/PowerPoint';
-import './stream-player/StreamPlayer';
+// Metadata only — every component stays behind its module's loaders until a
+// board actually places the widget.
+registerWidgetModule(canva);
+registerWidgetModule(googleSheets);
+registerWidgetModule(image);
+registerWidgetModule(mediaPlayer);
+registerWidgetModule(posterCarousel);
+registerWidgetModule(posterFeed);
+registerWidgetModule(powerpoint);
+registerWidgetModule(radioStation);
+registerWidgetModule(richText);
+registerWidgetModule(slideshow);
+registerWidgetModule(streamPlayer);
+registerWidgetModule(webRegion);
+registerWidgetModule(web);
+registerWidgetModule(youtube);
 
-// Register lazy loaders for display mode
-registerWidgetLoader('poster-carousel', () => import('./poster-carousel/PosterCarousel'));
-registerWidgetLoader('poster-feed', () => import('./poster-feed/PosterFeed'));
-registerWidgetLoader('slideshow', () => import('./slideshow/Slideshow'));
-registerWidgetLoader('image', () => import('./image/Image'));
-registerWidgetLoader('media-player', () => import('./media-player/MediaPlayer'));
-registerWidgetLoader('radio-station', () => import('./radio-station/RadioStation'));
-registerWidgetLoader('youtube', () => import('./youtube/YouTube'));
-registerWidgetLoader('web', () => import('./web/Web'));
-registerWidgetLoader('web-region', () => import('./web-region/WebRegion'));
-registerWidgetLoader('rich-text', () => import('./rich-text/RichText'));
-registerWidgetLoader('google-sheets', () => import('./google-sheets/GoogleSheets'));
-registerWidgetLoader('canva', () => import('./canva/Canva'));
-registerWidgetLoader('powerpoint', () => import('./powerpoint/PowerPoint'));
-registerWidgetLoader('stream-player', () => import('./stream-player/StreamPlayer'));
+export { canva, googleSheets, image, mediaPlayer, posterCarousel, posterFeed, powerpoint, radioStation, richText, slideshow, streamPlayer, webRegion, web, youtube };

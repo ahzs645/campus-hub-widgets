@@ -1,21 +1,22 @@
-import './styles.css';
+import { registerWidgetModule } from '@firstform/campus-hub-widget-sdk';
+import calendar from './calendar/meta';
+import clock from './clock/meta';
+import dictionary from './dictionary/meta';
+import ipod from './ipod/meta';
+import stickyNote from './sticky-note/meta';
+import stocks from './stocks/meta';
+import translation from './translation/meta';
+import weather from './weather/meta';
 
-import { registerWidgetLoader } from '@firstform/campus-hub-widget-sdk';
+// Metadata only — every component stays behind its module's loaders until a
+// board actually places the widget.
+registerWidgetModule(calendar);
+registerWidgetModule(clock);
+registerWidgetModule(dictionary);
+registerWidgetModule(ipod);
+registerWidgetModule(stickyNote);
+registerWidgetModule(stocks);
+registerWidgetModule(translation);
+registerWidgetModule(weather);
 
-import './clock/MacOSClock';
-import './weather/MacOSWeather';
-import './stocks/MacOSStocks';
-import './calendar/MacOSCalendar';
-import './dictionary/MacOSDictionary';
-import './translation/MacOSTranslation';
-import './sticky-note/MacOSStickyNote';
-import './ipod/MacOSIPod';
-
-registerWidgetLoader('macos-clock', () => import('./clock/MacOSClock'));
-registerWidgetLoader('macos-weather', () => import('./weather/MacOSWeather'));
-registerWidgetLoader('macos-stocks', () => import('./stocks/MacOSStocks'));
-registerWidgetLoader('macos-calendar', () => import('./calendar/MacOSCalendar'));
-registerWidgetLoader('macos-dictionary', () => import('./dictionary/MacOSDictionary'));
-registerWidgetLoader('macos-translation', () => import('./translation/MacOSTranslation'));
-registerWidgetLoader('macos-sticky-note', () => import('./sticky-note/MacOSStickyNote'));
-registerWidgetLoader('macos-ipod', () => import('./ipod/MacOSIPod'));
+export { calendar, clock, dictionary, ipod, stickyNote, stocks, translation, weather };

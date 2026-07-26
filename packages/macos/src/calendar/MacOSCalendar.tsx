@@ -1,13 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import {
-  registerWidget,
-  useEvents,
-  useFitScale,
-  type WidgetComponentProps,
-} from '@firstform/campus-hub-widget-sdk';
-import MacOSCalendarOptions from './MacOSCalendarOptions';
+import { useEvents, useFitScale, type WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 
 interface CalendarConfig {
   title?: string;
@@ -384,37 +378,3 @@ export default function MacOSCalendar({ config }: WidgetComponentProps) {
     </div>
   );
 }
-
-registerWidget({
-  type: 'macos-calendar',
-  name: 'macOS Calendar',
-  description: 'Aqua-style month view with upcoming events',
-  icon: 'calendarRange',
-  minW: 3,
-  minH: 3,
-  defaultW: 4,
-  defaultH: 3,
-  component: MacOSCalendar,
-  OptionsComponent: MacOSCalendarOptions,
-  tags: ['retro', 'campus'],
-  acceptsSources: [{
-    propName: 'apiUrl',
-    types: ['api', 'calendar', 'feed'],
-    applySource: (source) => ({
-      apiUrl: source.url,
-      sourceType:
-        source.sourceType === 'calendar'
-          ? 'ical'
-          : source.sourceType === 'feed'
-            ? 'rss'
-            : 'json',
-    }),
-  }],
-  defaultProps: {
-    title: 'Calendar',
-    apiUrl: '',
-    sourceType: 'ical',
-    maxItems: 6,
-    layoutMode: 'auto',
-  },
-});

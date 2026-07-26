@@ -1,10 +1,9 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { WidgetComponentProps, registerWidget, useLoopingAutoScroll } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, useLoopingAutoScroll } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, buildProxyUrl, fetchTextWithCache } from '@firstform/campus-hub-widget-sdk';
 import { parseICal } from '@firstform/campus-hub-widget-sdk';
-import CalendarOptions from './CalendarOptions';
 
 interface CalendarEvent {
   title: string;
@@ -249,27 +248,3 @@ export default function CalendarWidget({ config, theme }: WidgetComponentProps) 
     </ThemedContainer>
   );
 }
-
-registerWidget({
-  type: 'calendar',
-  name: 'Calendar',
-  description: 'Show upcoming events from iCal, Google Calendar, or any calendar URL',
-  icon: 'calendarRange',
-  minW: 2,
-  minH: 3,
-  defaultW: 3,
-  defaultH: 4,
-  component: CalendarWidget,
-  OptionsComponent: CalendarOptions,
-  acceptsSources: [{ propName: 'calendarUrl', types: ['calendar'] }],
-  defaultProps: {
-    calendarUrl: '',
-    sourceFormat: 'ical',
-    maxEvents: 10,
-    refreshInterval: 15,
-    showLocation: true,
-    daysAhead: 7,
-    title: '',
-    useCorsProxy: true,
-  },
-});

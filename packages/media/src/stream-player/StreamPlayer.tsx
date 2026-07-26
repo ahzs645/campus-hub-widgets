@@ -1,13 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type Hls from 'hls.js';
-import {
-  AppIcon,
-  WidgetComponentProps,
-  buildProxyUrl,
-  getCorsProxyUrl,
-  registerWidget,
-} from '@firstform/campus-hub-widget-sdk';
-import StreamPlayerOptions from './StreamPlayerOptions';
+import { AppIcon, WidgetComponentProps, buildProxyUrl, getCorsProxyUrl } from '@firstform/campus-hub-widget-sdk';
 import {
   buildYouTubeEmbedUrl,
   parseYouTubeLiveProbeHtml,
@@ -410,32 +403,3 @@ export default function StreamPlayer({ config, theme }: WidgetComponentProps) {
     </div>
   );
 }
-
-registerWidget({
-  type: 'stream-player',
-  name: 'Stream Player',
-  description: 'Universal player for live feeds, YouTube channels, HLS, direct media, and embeds',
-  icon: 'satellite',
-  minW: 3,
-  minH: 2,
-  defaultW: 6,
-  defaultH: 4,
-  component: StreamPlayer,
-  OptionsComponent: StreamPlayerOptions,
-  acceptsSources: [
-    { propName: 'url', types: ['video', 'embed', 'youtube', 'vimeo', 'google-drive'] },
-    { propName: 'fallbackUrl', types: ['video', 'embed', 'youtube', 'vimeo', 'google-drive'] },
-  ],
-  defaultProps: {
-    preset: 'custom',
-    format: 'auto',
-    url: '',
-    fallbackUrl: '',
-    autoplay: true,
-    muted: true,
-    loop: true,
-    controls: true,
-    pollIntervalSeconds: 300,
-    showStatus: true,
-  },
-});

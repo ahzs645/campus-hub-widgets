@@ -1,19 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import {
-  AppIcon,
-  ThemedContainer,
-  buildCacheKey,
-  buildProxyUrl,
-  fetchTextWithCache,
-  normalizeSourcePayload,
-  registerWidget,
-  resolveSourceAdapter,
-  useAdaptiveFitScale,
-  type NormalizedOccupancy,
-  type WidgetComponentProps,
-} from '@firstform/campus-hub-widget-sdk';
-import ClimbingGymOptions from './ClimbingGymOptions';
+import { AppIcon, ThemedContainer, buildCacheKey, buildProxyUrl, fetchTextWithCache, normalizeSourcePayload, resolveSourceAdapter, useAdaptiveFitScale, type NormalizedOccupancy, type WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 
 interface OccupancyData {
   count: number;
@@ -297,36 +284,3 @@ export default function ClimbingGym({ config, theme }: WidgetComponentProps) {
     </ThemedContainer>
   );
 }
-
-registerWidget({
-  type: 'climbing-gym',
-  name: 'Climbing Gym',
-  description: 'Live occupancy counter for a climbing gym via Rock Gym Pro',
-  icon: 'mountain',
-  minW: 2,
-  minH: 2,
-  maxW: 6,
-  maxH: 5,
-  defaultW: 3,
-  defaultH: 2,
-  component: ClimbingGym,
-  OptionsComponent: ClimbingGymOptions,
-  acceptsSources: [{
-    propName: 'portalUrl',
-    types: ['api'],
-    matchSource: (source) =>
-      resolveSourceAdapter({ url: source.url, presetId: source.presetId })?.id === 'rock-gym-pro-occupancy',
-    applySource: (source) => ({
-      portalUrl: source.url,
-      sourceAdapter: 'rock-gym-pro-occupancy',
-    }),
-  }],
-  defaultProps: {
-    gymName: 'OVERhang',
-    portalUrl: '',
-    refreshInterval: 5,
-    showCapacityBar: true,
-    showHours: true,
-    useCorsProxy: true,
-  },
-});

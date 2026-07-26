@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { useEvents, useTransitionSettled, type CalendarEvent } from '@firstform/campus-hub-widget-sdk';
 import {
   ThemedCard,
@@ -11,7 +11,6 @@ import {
   ScrollableList,
   MarqueeText,
 } from '@firstform/campus-hub-widget-sdk';
-import EventsListOptions from './EventsListOptions';
 
 type Event = CalendarEvent;
 
@@ -296,39 +295,3 @@ export default function EventsList({ config, theme }: WidgetComponentProps) {
     </div>
   );
 }
-
-// Register the widget
-registerWidget({
-  type: 'events-list',
-  name: 'Events List',
-  description: 'Display upcoming campus events',
-  icon: 'calendar',
-  minW: 3,
-  minH: 2,
-  defaultW: 4,
-  defaultH: 3,
-  component: EventsList,
-  OptionsComponent: EventsListOptions,
-  acceptsSources: [{
-    propName: 'apiUrl',
-    types: ['api', 'calendar', 'feed'],
-    applySource: (source) => ({
-      apiUrl: source.url,
-      sourceType:
-        source.sourceType === 'calendar'
-          ? 'ical'
-          : source.sourceType === 'feed'
-            ? 'rss'
-            : 'json',
-    }),
-  }],
-  defaultProps: {
-    maxItems: 10,
-    title: 'Upcoming Events',
-    sourceType: 'json',
-    cacheTtlSeconds: 300,
-    displayMode: 'scroll',
-    rotationSeconds: 5,
-    useCorsProxy: true,
-  },
-});

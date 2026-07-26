@@ -1,11 +1,7 @@
 'use client';
 
 import { useEffect, useId, useMemo, useState } from 'react';
-import {
-  registerWidget,
-  type WidgetComponentProps,
-} from '@firstform/campus-hub-widget-sdk';
-import MacOSClockOptions from './MacOSClockOptions';
+import { type WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { MACOS_UI_FONT, MacOSDashboardSurface } from '../shared/ui';
 
 interface ClockConfig {
@@ -208,23 +204,3 @@ export default function MacOSClock({ config }: WidgetComponentProps) {
     </MacOSDashboardSurface>
   );
 }
-
-registerWidget({
-  type: 'macos-clock',
-  name: 'Dashboard Clock',
-  description: 'Classic dashboard analog clock',
-  icon: 'clock',
-  minW: 2,
-  minH: 2,
-  defaultW: 2,
-  defaultH: 2,
-  component: MacOSClock,
-  OptionsComponent: MacOSClockOptions,
-  tags: ['retro', 'time'],
-  defaultProps: {
-    timezone: '',
-    cityLabel: '',
-    showSeconds: true,
-    showDigital: true,
-  },
-});

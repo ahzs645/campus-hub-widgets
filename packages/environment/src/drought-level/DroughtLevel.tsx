@@ -1,9 +1,8 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, buildProxyUrl, fetchJsonWithCache, getCorsProxyUrl } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
-import DroughtLevelOptions from './DroughtLevelOptions';
 
 interface DroughtLevelConfig {
   basin?: string;
@@ -407,24 +406,3 @@ export default function DroughtLevel({
     </ThemedContainer>
   );
 }
-
-registerWidget({
-  type: 'drought-level',
-  name: 'Drought Level',
-  description: 'BC provincial drought level by water basin',
-  icon: 'cloudOff',
-  minW: 2,
-  minH: 2,
-  maxW: 6,
-  maxH: 5,
-  defaultW: 3,
-  defaultH: 3,
-  component: DroughtLevel,
-  OptionsComponent: DroughtLevelOptions,
-  defaultProps: {
-    basin: '',
-    displayMode: 'single',
-    refreshInterval: 60,
-    useCorsProxy: true,
-  },
-});

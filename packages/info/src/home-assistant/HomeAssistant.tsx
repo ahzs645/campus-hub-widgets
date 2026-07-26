@@ -1,8 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { registerWidget, type WidgetComponentProps, useLoopingAutoScroll } from '@firstform/campus-hub-widget-sdk';
+import { type WidgetComponentProps, useLoopingAutoScroll } from '@firstform/campus-hub-widget-sdk';
 import { createSignalingClient, type SignalingClient } from '@firstform/campus-hub-widget-sdk';
-import HomeAssistantOptions from './HomeAssistantOptions';
 
 interface HAEntityState {
   entity_id: string;
@@ -317,7 +316,10 @@ function HomeAssistantWidget({ config, theme }: WidgetComponentProps) {
     setError(null);
 
     const setup = async () => {
-      client = createSignalingClient(signalUrl, 'display', displayId, {
+      // Async because the SDK resolves the engine implementation lazily,
+      // rather than re-exporting it and forcing the dependency on every
+      // package that imports the SDK.
+      client = await createSignalingClient(signalUrl, 'display', displayId, {
         name: displayId,
       });
       clientRef.current = client;
@@ -472,30 +474,5 @@ function HomeAssistantWidget({ config, theme }: WidgetComponentProps) {
     </div>
   );
 }
-
-registerWidget({
-  type: 'home-assistant',
-  name: 'Home Assistant',
-  description: 'Display live Home Assistant entity data — sensors, 3D printers, media players, cameras, and more',
-  icon: 'brandHomeAssistant',
-  minW: 2,
-  minH: 2,
-  maxW: 12,
-  maxH: 8,
-  defaultW: 3,
-  defaultH: 3,
-  tags: ['iot', 'smart-home', 'sensors'],
-  component: HomeAssistantWidget,
-  OptionsComponent: HomeAssistantOptions,
-  defaultProps: {
-    mode: 'signaling',
-    signalUrl: '',
-    displayId: '',
-    httpUrl: '',
-    pollIntervalSeconds: 30,
-    entityIds: [],
-    layout: 'auto',
-  },
-});
 
 export default HomeAssistantWidget;

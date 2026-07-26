@@ -1,6 +1,5 @@
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon } from '@firstform/campus-hub-widget-sdk';
-import YouTubeOptions from './YouTubeOptions';
 
 interface YouTubeConfig {
   videoId?: string;
@@ -156,24 +155,3 @@ export default function YouTube({ config, theme }: WidgetComponentProps) {
     </div>
   );
 }
-
-// Register the widget
-registerWidget({
-  type: 'youtube',
-  name: 'YouTube',
-  description: 'Embed YouTube videos',
-  icon: 'brandYoutube',
-  minW: 3,
-  minH: 2,
-  defaultW: 6,
-  defaultH: 4,
-  component: YouTube,
-  OptionsComponent: YouTubeOptions,
-  acceptsSources: [{ propName: 'videoId', types: ['video'] }],
-  defaultProps: {
-    videoId: '',
-    autoplay: false,
-    muted: true,
-    loop: true,
-  },
-});

@@ -1,26 +1,24 @@
-import { registerWidgetLoader } from '@firstform/campus-hub-widget-sdk';
+import { registerWidgetModule } from '@firstform/campus-hub-widget-sdk';
+import bottleSpin from './bottle-spin/meta';
+import coinDice from './coin-dice/meta';
+import flashcard from './flashcard/meta';
+import fortuneCookie from './fortune-cookie/meta';
+import kaomoji from './kaomoji/meta';
+import nothingGlyph from './nothing-glyph/meta';
+import rockPaperScissors from './rock-paper-scissors/meta';
+import trivia from './trivia/meta';
+import wordOfTheDay from './word-of-the-day/meta';
 
-// Side-effect imports — trigger registerWidget calls
-import './nothing-glyph/NothingGlyph';
-import './bottle-spin/BottleSpin';
-import './rock-paper-scissors/RockPaperScissors';
-import './kaomoji/Kaomoji';
-import './coin-dice/CoinDice';
-import './word-of-the-day/WordOfTheDay';
-import './flashcard/Flashcard';
-import './trivia/TriviaGame';
-import './fortune-cookie/FortuneCookie';
+// Metadata only — every component stays behind its module's loaders until a
+// board actually places the widget.
+registerWidgetModule(bottleSpin);
+registerWidgetModule(coinDice);
+registerWidgetModule(flashcard);
+registerWidgetModule(fortuneCookie);
+registerWidgetModule(kaomoji);
+registerWidgetModule(nothingGlyph);
+registerWidgetModule(rockPaperScissors);
+registerWidgetModule(trivia);
+registerWidgetModule(wordOfTheDay);
 
-// Register lazy loaders for display mode
-registerWidgetLoader('nothing-glyph', () => import('./nothing-glyph/NothingGlyph'));
-registerWidgetLoader('bottle-spin', () => import('./bottle-spin/BottleSpin'));
-registerWidgetLoader('rock-paper-scissors', () => import('./rock-paper-scissors/RockPaperScissors'));
-registerWidgetLoader('kaomoji', () => import('./kaomoji/Kaomoji'));
-registerWidgetLoader('coin-dice', () => import('./coin-dice/CoinDice'));
-registerWidgetLoader('word-of-the-day', () => import('./word-of-the-day/WordOfTheDay'));
-registerWidgetLoader('flashcard', () => import('./flashcard/Flashcard'));
-registerWidgetLoader('trivia-game', () => import('./trivia/TriviaGame'));
-registerWidgetLoader('fortune-cookie', () => import('./fortune-cookie/FortuneCookie'));
-
-// Re-export MODES from nothing-glyph for external consumers
-export { MODES as NOTHING_GLYPH_MODES } from './nothing-glyph/NothingGlyph';
+export { bottleSpin, coinDice, flashcard, fortuneCookie, kaomoji, nothingGlyph, rockPaperScissors, trivia, wordOfTheDay };

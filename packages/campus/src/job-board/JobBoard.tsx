@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import QRCodeLib from 'qrcode';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, fetchJsonWithCache, fetchTextWithCache, buildProxyUrl } from '@firstform/campus-hub-widget-sdk';
 import { parseRss, useTransitionSettled } from '@firstform/campus-hub-widget-sdk';
 import {
@@ -11,7 +11,6 @@ import {
   SectionHeader,
   MarqueeText,
 } from '@firstform/campus-hub-widget-sdk';
-import JobBoardOptions from './JobBoardOptions';
 
 interface JobPosting {
   id: string | number;
@@ -470,37 +469,3 @@ export default function JobBoard({
     </div>
   );
 }
-
-registerWidget({
-  type: 'job-board',
-  name: 'Job Board',
-  description: 'Campus job postings with optional QR code link',
-  icon: 'newspaper',
-  minW: 3,
-  minH: 2,
-  defaultW: 4,
-  defaultH: 3,
-  component: JobBoard,
-  OptionsComponent: JobBoardOptions,
-  acceptsSources: [{
-    propName: 'apiUrl',
-    types: ['api', 'feed'],
-    applySource: (source) => ({
-      apiUrl: source.url,
-      sourceType: source.sourceType === 'feed' ? 'rss' : 'json',
-    }),
-  }],
-  defaultProps: {
-    maxItems: 10,
-    label: 'Campus Jobs',
-    sourceType: 'json',
-    cacheTtlSeconds: 120,
-    displayMode: 'scroll',
-    rotationSeconds: 5,
-    speed: 35,
-    qrEnabled: false,
-    qrUrl: '',
-    qrLabel: 'Scan to apply',
-    useCorsProxy: true,
-  },
-});

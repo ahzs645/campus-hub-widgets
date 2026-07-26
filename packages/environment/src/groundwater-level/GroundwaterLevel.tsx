@@ -1,9 +1,8 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, buildProxyUrl, fetchJsonWithCache, getCorsProxyUrl } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
-import GroundwaterLevelOptions from './GroundwaterLevelOptions';
 
 interface GroundwaterConfig {
   locationId?: string;
@@ -354,25 +353,3 @@ export default function GroundwaterLevel({
     </ThemedContainer>
   );
 }
-
-registerWidget({
-  type: 'groundwater-level',
-  name: 'Groundwater Level',
-  description: 'BC observation well groundwater levels',
-  icon: 'droplets',
-  minW: 2,
-  minH: 2,
-  maxW: 6,
-  maxH: 5,
-  defaultW: 3,
-  defaultH: 3,
-  component: GroundwaterLevel,
-  OptionsComponent: GroundwaterLevelOptions,
-  defaultProps: {
-    locationId: 'OW378',
-    datasetId: '',
-    displayMode: 'current',
-    refreshInterval: 30,
-    useCorsProxy: true,
-  },
-});

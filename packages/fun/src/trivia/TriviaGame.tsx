@@ -1,12 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import {
-  WidgetComponentProps,
-  registerWidget,
-  DarkContainer,
-  useFitScale,
-} from '@firstform/campus-hub-widget-sdk';
-import TriviaOptions from './TriviaOptions';
+import { WidgetComponentProps, DarkContainer, useFitScale } from '@firstform/campus-hub-widget-sdk';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -387,25 +381,3 @@ export default function TriviaGame({ config, theme }: WidgetComponentProps) {
     </DarkContainer>
   );
 }
-
-registerWidget({
-  type: 'trivia-game',
-  name: 'Trivia Game',
-  description: 'Fun trivia questions with auto-rotation and answer reveals',
-  icon: 'puzzle',
-  minW: 3,
-  minH: 3,
-  maxW: 6,
-  maxH: 6,
-  defaultW: 4,
-  defaultH: 4,
-  component: TriviaGame,
-  OptionsComponent: TriviaOptions,
-  defaultProps: {
-    category: 'all',
-    rotationInterval: 15,
-    revealDelay: 6,
-    shuffle: true,
-    customQuestions: '',
-  },
-});

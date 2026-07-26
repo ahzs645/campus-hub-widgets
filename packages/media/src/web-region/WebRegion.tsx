@@ -1,16 +1,8 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  AppIcon,
-  buildProxyUrl,
-  registerWidget,
-  useFitScale,
-  type WidgetComponentProps,
-} from '@firstform/campus-hub-widget-sdk';
-import WebRegionOptions from './WebRegionOptions';
-
-export const VIEWPORT_W = 1280;
-export const VIEWPORT_H = 800;
+import { AppIcon, buildProxyUrl, useFitScale, type WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
+import { VIEWPORT_H, VIEWPORT_W } from './meta';
+export { VIEWPORT_H, VIEWPORT_W };
 
 export interface WebRegionConfig {
   url?: string;
@@ -136,27 +128,3 @@ export default function WebRegion({ config, theme }: WidgetComponentProps) {
     </div>
   );
 }
-
-registerWidget({
-  type: 'web-region',
-  name: 'Web Region',
-  description: 'Embed a cropped region of a website as a live widget',
-  icon: 'globe',
-  minW: 2,
-  minH: 2,
-  defaultW: 4,
-  defaultH: 3,
-  component: WebRegion,
-  OptionsComponent: WebRegionOptions,
-  acceptsSources: [{ propName: 'url', types: ['embed'] }],
-  defaultProps: {
-    url: '',
-    refreshInterval: 0,
-    regionX: 0,
-    regionY: 0,
-    regionW: VIEWPORT_W,
-    regionH: VIEWPORT_H,
-    fit: 'cover',
-    useCorsProxy: false,
-  },
-});

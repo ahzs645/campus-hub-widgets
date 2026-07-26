@@ -1,8 +1,7 @@
 'use client';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { WidgetComponentProps, registerWidget, ThemedContainer, PillIndicator } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, ThemedContainer, PillIndicator } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale } from '@firstform/campus-hub-widget-sdk';
-import CountdownOptions from './CountdownOptions';
 
 type UnitVisibility = 'auto' | 'show' | 'hide';
 
@@ -508,29 +507,3 @@ export default function Countdown({ config, theme }: WidgetComponentProps) {
     </ThemedContainer>
   );
 }
-
-registerWidget({
-  type: 'countdown',
-  name: 'Countdown',
-  description: 'Countdown timer with multiple milestones, auto-rotation, and dot indicators',
-  icon: 'hourglass',
-  minW: 2,
-  minH: 2,
-  maxW: 7,
-  maxH: 5,
-  defaultW: 4,
-  defaultH: 2,
-  component: Countdown,
-  OptionsComponent: CountdownOptions,
-  defaultProps: {
-    milestones: [],
-    rotationSeconds: 8,
-    hideCompleted: true,
-    showYears: 'auto',
-    showDays: 'auto',
-    showHours: 'auto',
-    showMinutes: 'auto',
-    showSeconds: 'auto',
-    showMilliseconds: 'hide',
-  },
-});

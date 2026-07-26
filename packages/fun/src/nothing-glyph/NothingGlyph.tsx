@@ -1,13 +1,12 @@
 'use client';
 import { useEffect, useRef } from 'react';
-import { WidgetComponentProps, registerWidget, DarkContainer } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, DarkContainer } from '@firstform/campus-hub-widget-sdk';
 import { useFitScale } from '@firstform/campus-hub-widget-sdk';
 import { MatrixLayout } from './matrix/MatrixLayout';
 import { createPendulumEngine } from './matrix/PendulumEngine';
 import { createStackEngine } from './matrix/StackEngine';
 import { createScreenieEngine } from './matrix/ScreenieEngine';
 import { createLottieEngine, type LottieEngineInstance } from './matrix/LottieEngine';
-import NothingGlyphOptions from './NothingGlyphOptions';
 import GLYPH_CATALOG from './glyphCatalog';
 
 interface NothingGlyphConfig {
@@ -198,24 +197,3 @@ export default function NothingGlyph({ config }: WidgetComponentProps) {
 }
 
 export { MODES };
-
-registerWidget({
-  type: 'nothing-glyph',
-  name: 'Nothing Glyph',
-  description: 'Nothing Phone glyph matrix animations — Pendulum, Stack, Screenie & more',
-  icon: 'sparkles',
-  minW: 2,
-  minH: 2,
-  maxW: 5,
-  maxH: 5,
-  defaultW: 3,
-  defaultH: 3,
-  component: NothingGlyph,
-  OptionsComponent: NothingGlyphOptions,
-  defaultProps: {
-    mode: 'pendulum',
-    glow: true,
-    pixelSize: 12,
-    brightness: 4095,
-  },
-});

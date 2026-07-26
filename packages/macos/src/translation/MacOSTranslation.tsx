@@ -1,11 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import {
-  registerWidget,
-  type WidgetComponentProps,
-} from '@firstform/campus-hub-widget-sdk';
-import MacOSTranslationOptions from './MacOSTranslationOptions';
+import { type WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 
 interface TranslationConfig {
   fromLang?: string;
@@ -321,21 +317,3 @@ export default function MacOSTranslation({ config }: WidgetComponentProps) {
     </div>
   );
 }
-
-registerWidget({
-  type: 'macos-translation',
-  name: 'macOS Translate',
-  description: 'Aqua-style translation desk with live text conversion',
-  icon: 'languages',
-  minW: 3,
-  minH: 2,
-  defaultW: 4,
-  defaultH: 3,
-  component: MacOSTranslation,
-  OptionsComponent: MacOSTranslationOptions,
-  tags: ['retro', 'info'],
-  defaultProps: {
-    fromLang: 'en',
-    toLang: 'fr',
-  },
-});

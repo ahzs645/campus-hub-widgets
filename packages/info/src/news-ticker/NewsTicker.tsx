@@ -1,11 +1,10 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, fetchJsonWithCache, fetchTextWithCache } from '@firstform/campus-hub-widget-sdk';
 import { parseRss } from '@firstform/campus-hub-widget-sdk';
 import { useEvents, buildProxyUrl, type CalendarEvent } from '@firstform/campus-hub-widget-sdk';
 import { PulsingDot } from '@firstform/campus-hub-widget-sdk';
-import NewsTickerOptions from './NewsTickerOptions';
 
 interface TickerItem {
   id: string | number;
@@ -627,48 +626,3 @@ export default function NewsTicker({ config, theme }: WidgetComponentProps) {
     </div>
   );
 }
-
-// Register the widget
-registerWidget({
-  type: 'news-ticker',
-  name: 'News Ticker',
-  description: 'Scrolling announcements and alerts',
-  icon: 'megaphone',
-  minW: 4,
-  minH: 1,
-  // Banner ticker designed for a single ~70px row; cap height so it can't be
-  // stretched tall (content scales by containerHeight/70 and would balloon).
-  maxH: 1,
-  defaultW: 12,
-  defaultH: 1,
-  component: NewsTicker,
-  OptionsComponent: NewsTickerOptions,
-  acceptsSources: [{
-    propName: 'apiUrl',
-    types: ['api', 'feed'],
-    applySource: (source) => ({
-      apiUrl: source.url,
-      sourceType: source.sourceType === 'feed' ? 'rss' : 'json',
-    }),
-  }],
-  defaultProps: {
-    speed: 30,
-    scale: 1,
-    label: 'Breaking',
-    dataSource: 'announcements',
-    sourceType: 'json',
-    cacheTtlSeconds: 120,
-    templateCityName: 'SimCity',
-    templateMayorName: 'Mayor Sim',
-    templateRandomSimName: '',
-    templateRandomWorkplaceName: '',
-    templateSim: 'Sim',
-    templateSims: 'Sims',
-    simcityCategories: '',
-    simcityMaxItems: 40,
-    useCorsProxy: true,
-    eventSourceType: 'json',
-    eventCacheTtlSeconds: 300,
-    eventMaxItems: 10,
-  },
-});

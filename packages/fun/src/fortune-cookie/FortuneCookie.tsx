@@ -1,12 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import {
-  DarkContainer,
-  WidgetComponentProps,
-  registerWidget,
-  useAdaptiveFitScale,
-} from '@firstform/campus-hub-widget-sdk';
-import FortuneCookieOptions from './FortuneCookieOptions';
+import { DarkContainer, WidgetComponentProps, useAdaptiveFitScale } from '@firstform/campus-hub-widget-sdk';
 
 interface FortuneCookieConfig {
   openInterval?: number;
@@ -272,21 +266,3 @@ export default function FortuneCookie({ config, theme }: WidgetComponentProps) {
     </DarkContainer>
   );
 }
-
-registerWidget({
-  type: 'fortune-cookie',
-  name: 'Fortune Cookie',
-  description: 'Cracks open on a set interval to reveal a new fortune',
-  icon: 'sparkles',
-  minW: 2,
-  minH: 2,
-  maxW: 4,
-  maxH: 4,
-  defaultW: 2,
-  defaultH: 2,
-  component: FortuneCookie,
-  OptionsComponent: FortuneCookieOptions,
-  defaultProps: {
-    openInterval: 20,
-  },
-});

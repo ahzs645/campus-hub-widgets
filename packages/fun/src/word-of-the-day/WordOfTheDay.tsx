@@ -1,8 +1,7 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
-import { WidgetComponentProps, registerWidget, DarkContainer } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, DarkContainer } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale } from '@firstform/campus-hub-widget-sdk';
-import WordOfTheDayOptions from './WordOfTheDayOptions';
 
 interface WordOfTheDayConfig {
   category?: 'all' | 'academic' | 'literary' | 'scientific' | 'philosophical';
@@ -334,23 +333,3 @@ export default function WordOfTheDay({ config, theme }: WidgetComponentProps) {
     </DarkContainer>
   );
 }
-
-registerWidget({
-  type: 'word-of-the-day',
-  name: 'Word of the Day',
-  description: 'Daily vocabulary with definitions, examples, and etymology',
-  icon: 'sparkles',
-  minW: 2,
-  minH: 2,
-  maxW: 6,
-  maxH: 5,
-  defaultW: 3,
-  defaultH: 3,
-  component: WordOfTheDay,
-  OptionsComponent: WordOfTheDayOptions,
-  defaultProps: {
-    category: 'all',
-    refreshMode: 'daily',
-    cycleInterval: 30,
-  },
-});

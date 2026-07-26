@@ -1,8 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { WidgetComponentProps, registerWidget, DarkContainer } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, DarkContainer } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale } from '@firstform/campus-hub-widget-sdk';
-import KaomojiOptions from './KaomojiOptions';
 
 interface KaomojiConfig {
   cycleInterval?: number;
@@ -114,17 +113,3 @@ export default function Kaomoji({ config: rawConfig, theme }: WidgetComponentPro
     </DarkContainer>
   );
 }
-
-registerWidget({
-  type: 'kaomoji',
-  name: 'Kaomoji',
-  description: 'Cycling Japanese emoticons',
-  icon: 'smile',
-  minW: 2,
-  minH: 2,
-  defaultW: 2,
-  defaultH: 2,
-  component: Kaomoji,
-  OptionsComponent: KaomojiOptions,
-  defaultProps: { cycleInterval: 5 },
-});

@@ -1,9 +1,9 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, buildProxyUrl, fetchJsonWithCache, fetchTextWithCache, getCorsProxyUrl } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
-import UvIndexOptions from './UvIndexOptions';
+import { DEFAULT_CITY, DEFAULT_LATITUDE, DEFAULT_LONGITUDE, DEFAULT_REFRESH_MINUTES, DEFAULT_WEATHER_NETWORK_URL } from './meta';
 
 interface UvIndexConfig {
   dataSource?: 'openuv' | 'waqi' | 'weather-network';
@@ -71,12 +71,6 @@ interface ResolvedUvLocation {
   longitude: number;
   label: string;
 }
-
-const DEFAULT_CITY = 'Prince George, BC, Canada';
-const DEFAULT_LATITUDE = 53.9171;
-const DEFAULT_LONGITUDE = -122.7497;
-const DEFAULT_WEATHER_NETWORK_URL = 'https://www.theweathernetwork.com/en/city/ca/british-columbia/prince-george/uv';
-const DEFAULT_REFRESH_MINUTES = 30;
 const MIN_REFRESH_MINUTES = 10;
 const MAX_REFRESH_MINUTES = 120;
 const GEOCODING_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -598,30 +592,3 @@ export default function UvIndex({ config, theme }: WidgetComponentProps) {
     </ThemedContainer>
   );
 }
-
-registerWidget({
-  type: 'uv-index',
-  name: 'UV Index',
-  description: 'Display current UV index with sun protection advice',
-  icon: 'sun',
-  minW: 2,
-  minH: 2,
-  maxW: 6,
-  maxH: 5,
-  defaultW: 3,
-  defaultH: 3,
-  component: UvIndex,
-  OptionsComponent: UvIndexOptions,
-  defaultProps: {
-    dataSource: 'openuv',
-    openUvApiKey: '',
-    locationMode: 'city',
-    city: DEFAULT_CITY,
-    latitude: DEFAULT_LATITUDE,
-    longitude: DEFAULT_LONGITUDE,
-    waqiToken: '',
-    waqiCity: 'prince-george',
-    weatherNetworkUrl: DEFAULT_WEATHER_NETWORK_URL,
-    refreshInterval: DEFAULT_REFRESH_MINUTES,
-  },
-});

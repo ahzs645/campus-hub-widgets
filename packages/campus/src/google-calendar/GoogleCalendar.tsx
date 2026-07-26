@@ -1,9 +1,8 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { WidgetComponentProps, registerWidget, useLoopingAutoScroll } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, useLoopingAutoScroll } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, fetchJsonWithCache } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
-import GoogleCalendarOptions from './GoogleCalendarOptions';
 
 interface CalendarEvent {
   title: string;
@@ -245,26 +244,3 @@ export default function GoogleCalendar({ config, theme }: WidgetComponentProps) 
     </ThemedContainer>
   );
 }
-
-registerWidget({
-  type: 'google-calendar',
-  name: 'Google Calendar',
-  description: 'Display events from Google Calendar',
-  icon: 'brandGoogleCalendar',
-  minW: 2,
-  minH: 3,
-  defaultW: 3,
-  defaultH: 4,
-  component: GoogleCalendar,
-  OptionsComponent: GoogleCalendarOptions,
-  acceptsSources: [{ propName: 'calendarId', types: ['calendar'] }],
-  defaultProps: {
-    calendarId: '',
-    apiKey: '',
-    maxEvents: 10,
-    refreshInterval: 15,
-    showLocation: true,
-    daysAhead: 7,
-    title: '',
-  },
-});

@@ -1,13 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import {
-  buildCacheKey,
-  fetchJsonWithCache,
-  registerWidget,
-  type WidgetComponentProps,
-} from '@firstform/campus-hub-widget-sdk';
-import MacOSStocksOptions from './MacOSStocksOptions';
+import { buildCacheKey, fetchJsonWithCache, type WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import {
   EmptyState,
 } from '../shared/ui';
@@ -302,21 +296,3 @@ export default function MacOSStocks({ config }: WidgetComponentProps) {
     </div>
   );
 }
-
-registerWidget({
-  type: 'macos-stocks',
-  name: 'macOS Stocks',
-  description: 'Aqua-style stock tape with quotes and trend chart',
-  icon: 'coins',
-  minW: 3,
-  minH: 3,
-  defaultW: 4,
-  defaultH: 3,
-  component: MacOSStocks,
-  OptionsComponent: MacOSStocksOptions,
-  tags: ['retro', 'info'],
-  defaultProps: {
-    symbols: 'AAPL,MSFT,NVDA,GOOG',
-    range: '6mo',
-  },
-});

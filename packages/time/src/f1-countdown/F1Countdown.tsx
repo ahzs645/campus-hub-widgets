@@ -1,8 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { WidgetComponentProps, registerWidget, DarkContainer } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, DarkContainer } from '@firstform/campus-hub-widget-sdk';
 import { useFitScale } from '@firstform/campus-hub-widget-sdk';
-import F1CountdownOptions from './F1CountdownOptions';
 
 interface F1CountdownConfig {
   showSessions?: boolean;
@@ -276,19 +275,3 @@ export default function F1Countdown({ config, theme }: WidgetComponentProps) {
     </DarkContainer>
   );
 }
-
-registerWidget({
-  type: 'f1-countdown',
-  name: 'F1 Countdown',
-  description: 'Countdown to next F1 race',
-  icon: 'flag',
-  minW: 2,
-  minH: 2,
-  maxW: 6,
-  maxH: 4,
-  defaultW: 3,
-  defaultH: 2,
-  component: F1Countdown,
-  OptionsComponent: F1CountdownOptions,
-  defaultProps: { showSessions: true },
-});

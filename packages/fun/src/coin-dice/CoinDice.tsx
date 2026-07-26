@@ -1,8 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { WidgetComponentProps, registerWidget, DarkContainer } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, DarkContainer } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale } from '@firstform/campus-hub-widget-sdk';
-import CoinDiceOptions from './CoinDiceOptions';
 
 interface CoinDiceConfig {
   mode?: 'coin' | 'dice' | 'both';
@@ -354,23 +353,3 @@ export default function CoinDice({ config, theme }: WidgetComponentProps) {
     </DarkContainer>
   );
 }
-
-registerWidget({
-  type: 'coin-dice',
-  name: 'Coin & Dice',
-  description: 'Periodic coin flips and dice rolls with daily stats and distribution chart',
-  icon: 'coins',
-  minW: 2,
-  minH: 2,
-  maxW: 5,
-  maxH: 5,
-  defaultW: 3,
-  defaultH: 3,
-  component: CoinDice,
-  OptionsComponent: CoinDiceOptions,
-  defaultProps: {
-    mode: 'both',
-    interval: 60,
-    diceType: 'd6',
-  },
-});

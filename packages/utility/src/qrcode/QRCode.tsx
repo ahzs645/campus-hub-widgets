@@ -1,9 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
 import QRCodeLib from 'qrcode';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon } from '@firstform/campus-hub-widget-sdk';
-import QRCodeOptions from './QRCodeOptions';
 
 interface QRCodeConfig {
   text?: string;
@@ -77,23 +76,3 @@ export default function QRCodeWidget({ config, theme }: WidgetComponentProps) {
     </div>
   );
 }
-
-registerWidget({
-  type: 'qrcode',
-  name: 'QR Code',
-  description: 'Generate and display a QR code from text or a URL',
-  icon: 'qrCode',
-  minW: 2,
-  minH: 2,
-  defaultW: 3,
-  defaultH: 3,
-  component: QRCodeWidget,
-  OptionsComponent: QRCodeOptions,
-  defaultProps: {
-    text: '',
-    label: '',
-    fgColor: '',
-    bgColor: '',
-    errorCorrection: 'M',
-  },
-});

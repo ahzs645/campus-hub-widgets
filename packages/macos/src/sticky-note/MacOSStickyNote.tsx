@@ -1,11 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import {
-  registerWidget,
-  type WidgetComponentProps,
-} from '@firstform/campus-hub-widget-sdk';
-import MacOSStickyNoteOptions from './MacOSStickyNoteOptions';
+import { type WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 
 interface StickyNoteConfig {
   title?: string;
@@ -75,22 +71,3 @@ export default function MacOSStickyNote({ config }: WidgetComponentProps) {
     </div>
   );
 }
-
-registerWidget({
-  type: 'macos-sticky-note',
-  name: 'macOS Sticky Note',
-  description: 'Classic macOS note paper for quick reminders',
-  icon: 'info',
-  minW: 2,
-  minH: 2,
-  defaultW: 2,
-  defaultH: 3,
-  component: MacOSStickyNote,
-  OptionsComponent: MacOSStickyNoteOptions,
-  tags: ['retro', 'utility'],
-  defaultProps: {
-    title: 'Sticky note',
-    text: 'Add a reminder…',
-    color: '#fff8a6',
-  },
-});

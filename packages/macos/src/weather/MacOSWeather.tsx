@@ -1,14 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import {
-  buildCacheKey,
-  buildProxyUrl,
-  fetchJsonWithCache,
-  registerWidget,
-  type WidgetComponentProps,
-} from '@firstform/campus-hub-widget-sdk';
-import MacOSWeatherOptions from './MacOSWeatherOptions';
+import { buildCacheKey, buildProxyUrl, fetchJsonWithCache, type WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { MACOS_UI_FONT, MacOSDashboardSurface } from '../shared/ui';
 
 interface WeatherConfig {
@@ -397,22 +390,3 @@ export default function MacOSWeather({ config }: WidgetComponentProps) {
     </MacOSDashboardSurface>
   );
 }
-
-registerWidget({
-  type: 'macos-weather',
-  name: 'Dashboard Weather',
-  description: 'Classic dashboard weather forecast',
-  icon: 'weather',
-  minW: 2,
-  minH: 2,
-  defaultW: 3,
-  defaultH: 3,
-  component: MacOSWeather,
-  OptionsComponent: MacOSWeatherOptions,
-  tags: ['retro', 'environment'],
-  defaultProps: {
-    location: 'San Francisco',
-    units: 'metric',
-    showForecast: true,
-  },
-});
