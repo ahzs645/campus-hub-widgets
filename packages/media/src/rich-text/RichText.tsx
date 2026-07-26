@@ -1,7 +1,6 @@
 'use client';
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { WidgetComponentProps, registerWidget, FadeOverlay } from '@firstform/campus-hub-widget-sdk';
-import RichTextOptions from './RichTextOptions';
+import { WidgetComponentProps, FadeOverlay } from '@firstform/campus-hub-widget-sdk';
 
 interface RichTextConfig {
   content?: string;
@@ -146,25 +145,3 @@ export default function RichText({ config, theme }: WidgetComponentProps) {
     </div>
   );
 }
-
-// Register the widget
-registerWidget({
-  type: 'rich-text',
-  name: 'Rich Text',
-  description: 'Auto-scrolling rich text announcements',
-  icon: 'newspaper',
-  minW: 2,
-  minH: 2,
-  defaultW: 4,
-  defaultH: 3,
-  component: RichText,
-  OptionsComponent: RichTextOptions,
-  defaultProps: {
-    content: '',
-    scrollSpeed: 40,
-    fontSize: 16,
-    textColor: '',
-    scrollDirection: 'up',
-    pauseOnHover: false,
-  },
-});

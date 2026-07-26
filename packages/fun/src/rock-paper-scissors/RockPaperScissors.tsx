@@ -1,8 +1,7 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { WidgetComponentProps, registerWidget, DarkContainer } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, DarkContainer } from '@firstform/campus-hub-widget-sdk';
 import { useFitScale } from '@firstform/campus-hub-widget-sdk';
-import RockPaperScissorsOptions from './RockPaperScissorsOptions';
 
 interface RPSConfig {
   playInterval?: number;
@@ -143,19 +142,3 @@ export default function RockPaperScissors({ config, theme }: WidgetComponentProp
     </DarkContainer>
   );
 }
-
-registerWidget({
-  type: 'rock-paper-scissors',
-  name: 'Rock Paper Scissors',
-  description: 'Auto-playing RPS game',
-  icon: 'hand',
-  minW: 2,
-  minH: 2,
-  maxW: 4,
-  maxH: 4,
-  defaultW: 2,
-  defaultH: 2,
-  component: RockPaperScissors,
-  OptionsComponent: RockPaperScissorsOptions,
-  defaultProps: { playInterval: 15 },
-});

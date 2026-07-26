@@ -1,9 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
 import QRCodeLib from 'qrcode';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon } from '@firstform/campus-hub-widget-sdk';
-import WiFiShareOptions from './WiFiShareOptions';
 
 interface WiFiShareConfig {
   ssid?: string;
@@ -113,29 +112,3 @@ export default function WiFiShareWidget({ config, theme }: WidgetComponentProps)
     </div>
   );
 }
-
-registerWidget({
-  type: 'wifi-share',
-  name: 'WiFi Share',
-  description: 'Share your WiFi network via QR code with customizable display',
-  icon: 'wifi',
-  minW: 2,
-  minH: 3,
-  defaultW: 3,
-  defaultH: 4,
-  component: WiFiShareWidget,
-  OptionsComponent: WiFiShareOptions,
-  defaultProps: {
-    ssid: '',
-    password: '',
-    encryption: 'WPA',
-    hidden: false,
-    message: 'Scan to Connect to WiFi!',
-    showNetworkName: true,
-    showPassword: true,
-    bgColor: '',
-    textColor: '',
-    qrFgColor: '',
-    qrBgColor: '',
-  },
-});

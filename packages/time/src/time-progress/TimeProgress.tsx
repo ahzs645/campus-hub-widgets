@@ -1,8 +1,7 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
-import { WidgetComponentProps, registerWidget, DarkContainer } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, DarkContainer } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale } from '@firstform/campus-hub-widget-sdk';
-import TimeProgressOptions from './TimeProgressOptions';
 
 interface TimeProgressConfig {
   displayMode?: 'dots' | 'bars';
@@ -300,19 +299,3 @@ export default function TimeProgress({ config, theme }: WidgetComponentProps) {
     </DarkContainer>
   );
 }
-
-registerWidget({
-  type: 'time-progress',
-  name: 'Time Progress',
-  description: 'Day, week, month & year progress',
-  icon: 'hourglass',
-  minW: 2,
-  minH: 2,
-  maxW: 6,
-  maxH: 5,
-  defaultW: 3,
-  defaultH: 2,
-  component: TimeProgress,
-  OptionsComponent: TimeProgressOptions,
-  defaultProps: { displayMode: 'dots', showLabels: true },
-});

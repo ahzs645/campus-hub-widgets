@@ -1,9 +1,8 @@
 'use client';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { WidgetComponentProps, registerWidget, DarkContainer } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, DarkContainer } from '@firstform/campus-hub-widget-sdk';
 import { useFitScale } from '@firstform/campus-hub-widget-sdk';
 import { DotMatrixText, textToChars } from '@firstform/campus-hub-widget-sdk';
-import CryptoTrackerOptions from './CryptoTrackerOptions';
 
 interface CryptoTrackerConfig {
   coins?: string[];
@@ -299,23 +298,3 @@ export default function CryptoTracker({ config, theme }: WidgetComponentProps) {
     </DarkContainer>
   );
 }
-
-registerWidget({
-  type: 'crypto-tracker',
-  name: 'Crypto Tracker',
-  description: 'Live cryptocurrency prices',
-  icon: 'coins',
-  minW: 2,
-  minH: 2,
-  maxW: 4,
-  maxH: 4,
-  defaultW: 2,
-  defaultH: 2,
-  component: CryptoTracker,
-  OptionsComponent: CryptoTrackerOptions,
-  defaultProps: {
-    coins: ['bitcoin', 'ethereum', 'solana'],
-    cycleInterval: 10,
-    showSparkline: true,
-  },
-});

@@ -1,17 +1,6 @@
 'use client';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  buildProxyUrl,
-  createLibCalAvailabilityFormData,
-  getCorsProxyUrl,
-  normalizeSourcePayload,
-  registerWidget,
-  resolveSourceAdapter,
-  WidgetComponentProps,
-  type LibCalGridResponse,
-  type LibCalSlot,
-} from '@firstform/campus-hub-widget-sdk';
-import LibraryAvailabilityOptions from './LibraryAvailabilityOptions';
+import { buildProxyUrl, createLibCalAvailabilityFormData, getCorsProxyUrl, normalizeSourcePayload, resolveSourceAdapter, WidgetComponentProps, type LibCalGridResponse, type LibCalSlot } from '@firstform/campus-hub-widget-sdk';
 import { ROOM_MAP, roomSortValue, type RoomInfo } from './libraryAvailabilityRooms';
 
 type DisplayMode = 'grid' | 'calendar' | 'cards';
@@ -1239,42 +1228,3 @@ export default function LibraryAvailability({
     </div>
   );
 }
-
-registerWidget({
-  type: 'library-availability',
-  name: 'Library Availability',
-  description: 'Live UNBC LibCal study-room openings',
-  icon: 'calendar',
-  minW: 4,
-  minH: 3,
-  defaultW: 6,
-  defaultH: 4,
-  component: LibraryAvailability,
-  OptionsComponent: LibraryAvailabilityOptions,
-  acceptsSources: [{
-    propName: 'endpoint',
-    types: ['api'],
-    matchSource: (source) =>
-      resolveSourceAdapter({ url: source.url, presetId: source.presetId })?.id === 'libcal-room-availability',
-    applySource: (source) => ({
-      endpoint: source.url,
-      sourceAdapter: 'libcal-room-availability',
-    }),
-  }],
-  defaultProps: {
-    title: 'Library Study Room Availability',
-    mode: 'grid',
-    roomScope: 'all',
-    selectedRoomId: '',
-    endpoint: '',
-    lid: 1637,
-    gid: 2928,
-    pageSize: 99,
-    daysToShow: 3,
-    rotationSeconds: 8,
-    refreshSeconds: 120,
-    openHour: 8,
-    closeHour: 23,
-    useCorsProxy: true,
-  },
-});

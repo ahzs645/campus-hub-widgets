@@ -1,8 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
-import SatelliteViewOptions from './SatelliteViewOptions';
 
 interface SatelliteViewConfig {
   lat?: number;
@@ -268,24 +267,3 @@ export default function SatelliteView({ config, theme }: WidgetComponentProps) {
     </ThemedContainer>
   );
 }
-
-registerWidget({
-  type: 'satellite-view',
-  name: 'Satellite View',
-  description: 'Sentinel-2 satellite imagery of any location',
-  icon: 'globe',
-  minW: 2,
-  minH: 2,
-  defaultW: 3,
-  defaultH: 3,
-  component: SatelliteView,
-  OptionsComponent: SatelliteViewOptions,
-  defaultProps: {
-    lat: 53.9171,
-    lon: -122.7497,
-    zoom: 10,
-    year: '2024',
-    showLabel: true,
-    locationLabel: '',
-  },
-});

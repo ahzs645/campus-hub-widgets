@@ -1,8 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { WidgetComponentProps, registerWidget, Skeleton } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, Skeleton } from '@firstform/campus-hub-widget-sdk';
 import { useFitScale } from '@firstform/campus-hub-widget-sdk';
-import ExchangeRateOptions from './ExchangeRateOptions';
 
 interface ExchangeRateConfig {
   baseCurrency?: string;
@@ -376,23 +375,3 @@ export default function ExchangeRate({ config, theme }: WidgetComponentProps) {
     </div>
   );
 }
-
-// Register the widget
-registerWidget({
-  type: 'exchange-rate',
-  name: 'Exchange Rate',
-  description: 'Live currency exchange rates',
-  icon: 'arrowLeftRight',
-  minW: 2,
-  minH: 1,
-  defaultW: 3,
-  defaultH: 1,
-  component: ExchangeRate,
-  OptionsComponent: ExchangeRateOptions,
-  defaultProps: {
-    baseCurrency: 'USD',
-    currencies: ['EUR', 'GBP', 'JPY', 'INR'],
-    cycleInterval: 10,
-    amount: 1,
-  },
-});

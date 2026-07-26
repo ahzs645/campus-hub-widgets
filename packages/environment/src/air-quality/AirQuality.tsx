@@ -1,9 +1,8 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, buildProxyUrl, fetchJsonWithCache, fetchTextWithCache } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
-import AirQualityOptions from './AirQualityOptions';
 
 interface AirQualityConfig {
   dataSource?: 'waqi' | 'bc-aqhi';
@@ -291,26 +290,3 @@ export default function AirQuality({ config, theme }: WidgetComponentProps) {
     </ThemedContainer>
   );
 }
-
-// Register the widget
-registerWidget({
-  type: 'air-quality',
-  name: 'Air Quality',
-  description: 'Display current air quality index',
-  icon: 'wind',
-  minW: 2,
-  minH: 2,
-  maxW: 6,
-  maxH: 5,
-  defaultW: 3,
-  defaultH: 3,
-  component: AirQuality,
-  OptionsComponent: AirQualityOptions,
-  defaultProps: {
-    dataSource: 'waqi',
-    waqiToken: '',
-    waqiCity: 'prince-george',
-    refreshInterval: 15,
-    useCorsProxy: true,
-  },
-});

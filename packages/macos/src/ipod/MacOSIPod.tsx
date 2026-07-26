@@ -2,12 +2,7 @@
 
 import { Pause, Play, SkipBack, SkipForward } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  registerWidget,
-  useFitScale,
-  type WidgetComponentProps,
-} from '@firstform/campus-hub-widget-sdk';
-import MacOSIPodOptions from './MacOSIPodOptions';
+import { useFitScale, type WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 
 interface IpodConfig {
   title?: string;
@@ -357,27 +352,3 @@ export default function MacOSIPod({ config }: WidgetComponentProps) {
     </div>
   );
 }
-
-registerWidget({
-  type: 'macos-ipod',
-  name: 'macOS iPod',
-  description: 'Aqua-era iPod mini player with cover art and playback controls',
-  icon: 'music',
-  minW: 3,
-  minH: 3,
-  maxW: 6,
-  maxH: 5,
-  defaultW: 4,
-  defaultH: 3,
-  component: MacOSIPod,
-  OptionsComponent: MacOSIPodOptions,
-  tags: ['retro', 'media'],
-  defaultProps: {
-    title: 'Campus Groove',
-    artist: 'Campus Hub',
-    album: 'Aqua Mix',
-    audioUrl: '',
-    coverUrl: '',
-    accentColor: '#70b86c',
-  },
-});

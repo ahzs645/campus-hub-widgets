@@ -1,8 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon } from '@firstform/campus-hub-widget-sdk';
-import SlideshowOptions from './SlideshowOptions';
 
 interface Slide {
   url: string;
@@ -102,25 +101,3 @@ export default function Slideshow({ config, theme }: WidgetComponentProps) {
     </div>
   );
 }
-
-// Register the widget
-registerWidget({
-  type: 'slideshow',
-  name: 'Slideshow',
-  description: 'Rotating image slideshow with captions',
-  icon: 'slideshow',
-  minW: 3,
-  minH: 2,
-  defaultW: 6,
-  defaultH: 4,
-  component: Slideshow,
-  OptionsComponent: SlideshowOptions,
-  acceptsSources: [{ propName: 'slides', types: ['image'], multiple: true }],
-  defaultProps: {
-    slides: [],
-    duration: 5,
-    transition: 'fade',
-    showCaptions: true,
-    showProgress: true,
-  },
-});

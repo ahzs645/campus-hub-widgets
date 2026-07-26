@@ -1,9 +1,9 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, buildProxyUrl, fetchTextWithCache } from '@firstform/campus-hub-widget-sdk';
 import { ThemedContainer } from '@firstform/campus-hub-widget-sdk';
-import GasPricesOptions from './GasPricesOptions';
+import { DEFAULT_URL } from './meta';
 
 interface StationPrice {
   name: string;
@@ -48,9 +48,6 @@ function mixColors(base: string, target: string, weight: number): string {
 
   return `rgb(${mix(baseRgb.r, targetRgb.r)}, ${mix(baseRgb.g, targetRgb.g)}, ${mix(baseRgb.b, targetRgb.b)})`;
 }
-
-const DEFAULT_URL =
-  'https://www.gasbuddy.com/gasprices/british-columbia/prince-george';
 
 const DEMO_STATIONS: StationPrice[] = [
   { name: 'Costco', price: 164.9, address: '2555 Range Rd, Prince George' },
@@ -270,22 +267,3 @@ export default function GasPrices({ config: cfg, theme }: WidgetComponentProps) 
     </ThemedContainer>
   );
 }
-
-registerWidget({
-  type: 'gas-prices',
-  name: 'Gas Prices',
-  description: 'Display average gas prices from GasBuddy for Prince George, BC',
-  icon: 'flame',
-  minW: 2,
-  minH: 3,
-  defaultW: 3,
-  defaultH: 4,
-  component: GasPrices,
-  OptionsComponent: GasPricesOptions,
-  defaultProps: {
-    url: DEFAULT_URL,
-    refreshInterval: 30,
-    useCorsProxy: true,
-    maxStations: 10,
-  },
-});

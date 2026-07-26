@@ -1,11 +1,10 @@
 'use client';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { usePixelDisplay } from 'react-pixel-display';
-import { WidgetComponentProps, registerWidget, DarkContainer } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, DarkContainer } from '@firstform/campus-hub-widget-sdk';
 import { renderTransitDisplay, loadPixollettaFont } from './transit/renderer';
 import { createLiveTripProvider, getScheduledTrips, type Trip } from './transit/gtfsService';
 import { SERVICE_DATES } from './transit/gtfsData';
-import BusConnectionOptions from './BusConnectionOptions';
 
 interface BusConnectionConfig {
   glow?: boolean;
@@ -37,6 +36,29 @@ function parseDateStr(str: string | null): { y: number; m: number; d: number } |
     m: parseInt(str.slice(4, 6)) - 1,
     d: parseInt(str.slice(6, 8)),
   };
+}
+
+/**
+ * The output is quantised to whole LED pixels, and the fastest-moving element
+ * is the headsign scroll at SCROLL_SPEED (10px/s) — so the frame can only
+ * change ~10 times a second. Running the loop at the panel's native 60Hz
+ * produced ~50 byte-identical frames a second, each paying a full per-pixel
+ * colour parse plus a full-canvas ImageData rebuild.
+ */
+const MIN_FRAME_INTERVAL_MS = 1000 / 15;
+
+/**
+ * Even when nothing changed, redraw occasionally so the renderer can re-attach
+ * its canvas if the container was emptied out from under it.
+ */
+const FORCED_REDRAW_INTERVAL_MS = 2000;
+
+function pixelsEqual(next: string[], prev: string[] | null): boolean {
+  if (!prev || prev.length !== next.length) return false;
+  for (let i = 0; i < next.length; i += 1) {
+    if (next[i] !== prev[i]) return false;
+  }
+  return true;
 }
 
 export default function BusConnection({ config, theme }: WidgetComponentProps) {
@@ -132,14 +154,17 @@ export default function BusConnection({ config, theme }: WidgetComponentProps) {
     if (!fontReady || !displaySize) return;
 
     let running = true;
-    let animId: number;
+    let animId = 0;
+    let lastFrameAt = 0;
+    let lastPaintAt = 0;
+    let lastPixels: string[] | null = null;
 
-    const render = () => {
+    const render = (frameTime: number) => {
       if (!running) return;
-      if (!rendererRef.current) {
-        animId = requestAnimationFrame(render);
-        return;
-      }
+      animId = requestAnimationFrame(render);
+      if (!rendererRef.current) return;
+      if (frameTime - lastFrameAt < MIN_FRAME_INTERVAL_MS) return;
+      lastFrameAt = frameTime;
 
       const simNow = simTimeRef.current;
       const now = simNow ? simNow.getTime() : Date.now();
@@ -157,13 +182,19 @@ export default function BusConnection({ config, theme }: WidgetComponentProps) {
         currentTrips, displayW, displayH, now, uptimeMs, null, scrollHeadsigns, departureTimeOnly, entrySpacing
       );
 
+      // Pushing to the renderer is the expensive half: it re-parses every
+      // pixel's colour and rewrites the whole ImageData buffer. Skip it
+      // outright when the frame is identical to the one already on screen.
+      const forced = frameTime - lastPaintAt >= FORCED_REDRAW_INTERVAL_MS;
+      if (!forced && pixelsEqual(pixels, lastPixels)) return;
+
+      lastPixels = pixels;
+      lastPaintAt = frameTime;
       rendererRef.current.setData(pixels);
       rendererRef.current.renderStatic();
-
-      animId = requestAnimationFrame(render);
     };
 
-    render();
+    animId = requestAnimationFrame(render);
     return () => {
       running = false;
       cancelAnimationFrame(animId);
@@ -190,29 +221,5 @@ export default function BusConnection({ config, theme }: WidgetComponentProps) {
   );
 }
 
-registerWidget({
-  type: 'bus-connection',
-  name: 'Bus Connection',
-  description: 'Live bus arrival display for UNBC Exchange',
-  icon: 'bus',
-  minW: 3,
-  minH: 2,
-  defaultW: 6,
-  defaultH: 2,
-  component: BusConnection,
-  OptionsComponent: BusConnectionOptions,
-  defaultProps: {
-    glow: true,
-    scrollHeadsigns: true,
-    departureTimeOnly: false,
-    hideStationPrefix: false,
-    pixelPitch: 6,
-    padding: 8,
-    entrySpacing: 2,
-    proxyUrl: '',
-    simulate: false,
-    simMode: 'weekday',
-    simTime: 540,
-    useCorsProxy: true,
-  },
-});
+// Registration lives in ./meta.ts, which carries the widget's metadata without
+// importing this module or its dependencies.

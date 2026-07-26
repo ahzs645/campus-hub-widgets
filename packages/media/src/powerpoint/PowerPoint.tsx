@@ -1,8 +1,7 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { WidgetComponentProps, registerWidget, useFitScale } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, useFitScale } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon } from '@firstform/campus-hub-widget-sdk';
-import PowerPointOptions from './PowerPointOptions';
 import { buildPowerPointEmbedUrl } from './powerpoint-utils';
 
 interface PowerPointConfig {
@@ -216,23 +215,3 @@ export default function PowerPointWidget({ config, theme }: WidgetComponentProps
     </div>
   );
 }
-
-registerWidget({
-  type: 'powerpoint',
-  name: 'PowerPoint',
-  description: 'Embed Microsoft PowerPoint presentations from Office on the web or public .pptx files',
-  icon: 'slideshow',
-  minW: 4,
-  minH: 3,
-  defaultW: 7,
-  defaultH: 4,
-  component: PowerPointWidget,
-  OptionsComponent: PowerPointOptions,
-  acceptsSources: [{ propName: 'url', types: ['powerpoint'] }],
-  defaultProps: {
-    url: '',
-    refreshInterval: 0,
-    showTitle: false,
-    title: '',
-  },
-});

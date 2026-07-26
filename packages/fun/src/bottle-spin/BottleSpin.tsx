@@ -1,8 +1,7 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { WidgetComponentProps, registerWidget, DarkContainer } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, DarkContainer } from '@firstform/campus-hub-widget-sdk';
 import { useFitScale } from '@firstform/campus-hub-widget-sdk';
-import BottleSpinOptions from './BottleSpinOptions';
 
 interface BottleSpinConfig {
   spinInterval?: number;
@@ -123,19 +122,3 @@ export default function BottleSpin({ config, theme }: WidgetComponentProps) {
     </DarkContainer>
   );
 }
-
-registerWidget({
-  type: 'bottle-spin',
-  name: 'Bottle Spin',
-  description: 'Auto-spinning bottle animation',
-  icon: 'wine',
-  minW: 2,
-  minH: 2,
-  maxW: 4,
-  maxH: 4,
-  defaultW: 2,
-  defaultH: 2,
-  component: BottleSpin,
-  OptionsComponent: BottleSpinOptions,
-  defaultProps: { spinInterval: 30 },
-});

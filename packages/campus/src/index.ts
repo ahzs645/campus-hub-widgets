@@ -1,25 +1,26 @@
-import { registerWidgetLoader } from '@firstform/campus-hub-widget-sdk';
+import { registerWidgetModule } from '@firstform/campus-hub-widget-sdk';
+import cafeteriaMenu from './cafeteria-menu/meta';
+import calendar from './calendar/meta';
+import climbingGym from './climbing-gym/meta';
+import clubSpotlight from './club-spotlight/meta';
+import confessions from './confessions/meta';
+import eventsList from './events-list/meta';
+import googleCalendar from './google-calendar/meta';
+import groupFitness from './group-fitness/meta';
+import jobBoard from './job-board/meta';
+import libraryAvailability from './library-availability/meta';
 
-// Side-effect imports — trigger registerWidget calls
-import './cafeteria-menu/CafeteriaMenu';
-import './club-spotlight/ClubSpotlight';
-import './confessions/Confessions';
-import './group-fitness/GroupFitness';
-import './library-availability/LibraryAvailability';
-import './job-board/JobBoard';
-import './events-list/EventsList';
-import './climbing-gym/ClimbingGym';
-import './google-calendar/GoogleCalendar';
-import './calendar/Calendar';
+// Metadata only — every component stays behind its module's loaders until a
+// board actually places the widget.
+registerWidgetModule(cafeteriaMenu);
+registerWidgetModule(calendar);
+registerWidgetModule(climbingGym);
+registerWidgetModule(clubSpotlight);
+registerWidgetModule(confessions);
+registerWidgetModule(eventsList);
+registerWidgetModule(googleCalendar);
+registerWidgetModule(groupFitness);
+registerWidgetModule(jobBoard);
+registerWidgetModule(libraryAvailability);
 
-// Register lazy loaders for display mode
-registerWidgetLoader('cafeteria-menu', () => import('./cafeteria-menu/CafeteriaMenu'));
-registerWidgetLoader('club-spotlight', () => import('./club-spotlight/ClubSpotlight'));
-registerWidgetLoader('confessions', () => import('./confessions/Confessions'));
-registerWidgetLoader('group-fitness', () => import('./group-fitness/GroupFitness'));
-registerWidgetLoader('library-availability', () => import('./library-availability/LibraryAvailability'));
-registerWidgetLoader('job-board', () => import('./job-board/JobBoard'));
-registerWidgetLoader('events-list', () => import('./events-list/EventsList'));
-registerWidgetLoader('climbing-gym', () => import('./climbing-gym/ClimbingGym'));
-registerWidgetLoader('google-calendar', () => import('./google-calendar/GoogleCalendar'));
-registerWidgetLoader('calendar', () => import('./calendar/Calendar'));
+export { cafeteriaMenu, calendar, climbingGym, clubSpotlight, confessions, eventsList, googleCalendar, groupFitness, jobBoard, libraryAvailability };

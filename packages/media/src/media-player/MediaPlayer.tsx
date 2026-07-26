@@ -1,6 +1,5 @@
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon } from '@firstform/campus-hub-widget-sdk';
-import MediaPlayerOptions from './MediaPlayerOptions';
 
 interface MediaPlayerConfig {
   url?: string;
@@ -186,26 +185,3 @@ export default function MediaPlayer({ config, theme }: WidgetComponentProps) {
     </div>
   );
 }
-
-// Register the widget
-registerWidget({
-  type: 'media-player',
-  name: 'Media Player',
-  description: 'Play video or audio files',
-  icon: 'film',
-  minW: 3,
-  minH: 2,
-  defaultW: 6,
-  defaultH: 4,
-  component: MediaPlayer,
-  OptionsComponent: MediaPlayerOptions,
-  acceptsSources: [{ propName: 'url', types: ['video'] }],
-  defaultProps: {
-    url: '',
-    type: 'video',
-    autoplay: false,
-    muted: true,
-    loop: true,
-    controls: true,
-  },
-});

@@ -1,9 +1,8 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, fetchJsonWithCache, buildProxyUrl } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale } from '@firstform/campus-hub-widget-sdk';
-import AuroraForecastOptions from './AuroraForecastOptions';
 
 interface AuroraConfig {
   refreshInterval?: number;
@@ -315,21 +314,3 @@ export default function AuroraForecast({
     </div>
   );
 }
-
-registerWidget({
-  type: 'aurora-forecast',
-  name: 'Aurora Forecast',
-  description: 'Northern lights visibility forecast from NOAA space weather data',
-  icon: 'sparkles',
-  minW: 2,
-  minH: 2,
-  defaultW: 3,
-  defaultH: 3,
-  component: AuroraForecast,
-  OptionsComponent: AuroraForecastOptions,
-  defaultProps: {
-    refreshInterval: 15,
-    latitude: 54,
-    useCorsProxy: true,
-  },
-});

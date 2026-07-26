@@ -1,23 +1,24 @@
-import { registerWidgetLoader } from '@firstform/campus-hub-widget-sdk';
+import { registerWidgetModule } from '@firstform/campus-hub-widget-sdk';
+import cryptoTracker from './crypto-tracker/meta';
+import exchangeRate from './exchange-rate/meta';
+import homeAssistant from './home-assistant/meta';
+import horoscope from './horoscope/meta';
+import issTracker from './iss-tracker/meta';
+import newsTicker from './news-ticker/meta';
+import rssReader from './rss-reader/meta';
+import stockQuotes from './stock-quotes/meta';
+import teamSchedule from './team-schedule/meta';
 
-// Side-effect imports — trigger registerWidget calls
-import './news-ticker/NewsTicker';
-import './exchange-rate/ExchangeRate';
-import './crypto-tracker/CryptoTracker';
-import './iss-tracker/ISSTracker';
-import './rss-reader/RSSReader';
-import './home-assistant/HomeAssistant';
-import './horoscope/Horoscope';
-import './stock-quotes/StockQuotes';
-import './team-schedule/TeamSchedule';
+// Metadata only — every component stays behind its module's loaders until a
+// board actually places the widget.
+registerWidgetModule(cryptoTracker);
+registerWidgetModule(exchangeRate);
+registerWidgetModule(homeAssistant);
+registerWidgetModule(horoscope);
+registerWidgetModule(issTracker);
+registerWidgetModule(newsTicker);
+registerWidgetModule(rssReader);
+registerWidgetModule(stockQuotes);
+registerWidgetModule(teamSchedule);
 
-// Register lazy loaders for display mode
-registerWidgetLoader('news-ticker', () => import('./news-ticker/NewsTicker'));
-registerWidgetLoader('exchange-rate', () => import('./exchange-rate/ExchangeRate'));
-registerWidgetLoader('crypto-tracker', () => import('./crypto-tracker/CryptoTracker'));
-registerWidgetLoader('iss-tracker', () => import('./iss-tracker/ISSTracker'));
-registerWidgetLoader('rss-reader', () => import('./rss-reader/RSSReader'));
-registerWidgetLoader('home-assistant', () => import('./home-assistant/HomeAssistant'));
-registerWidgetLoader('horoscope', () => import('./horoscope/Horoscope'));
-registerWidgetLoader('stock-quotes', () => import('./stock-quotes/StockQuotes'));
-registerWidgetLoader('team-schedule', () => import('./team-schedule/TeamSchedule'));
+export { cryptoTracker, exchangeRate, homeAssistant, horoscope, issTracker, newsTicker, rssReader, stockQuotes, teamSchedule };

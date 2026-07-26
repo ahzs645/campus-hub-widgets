@@ -1,23 +1,6 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  AppIcon,
-  DEFAULT_GROUP_FITNESS_URL,
-  buildCacheKey,
-  buildProxyUrl,
-  fetchTextWithCache,
-  getTodayWeekday,
-  getCorsProxyUrl,
-  normalizeSourcePayload,
-  registerWidget,
-  resolveSourceAdapter,
-  useAdaptiveFitScale,
-  type GroupFitnessSection,
-  type GroupFitnessViewMode,
-  type ParsedGroupFitnessSchedule,
-  type WidgetComponentProps,
-} from '@firstform/campus-hub-widget-sdk';
-import GroupFitnessOptions from './GroupFitnessOptions';
+import { AppIcon, DEFAULT_GROUP_FITNESS_URL, buildCacheKey, buildProxyUrl, fetchTextWithCache, getTodayWeekday, getCorsProxyUrl, normalizeSourcePayload, resolveSourceAdapter, useAdaptiveFitScale, type GroupFitnessSection, type GroupFitnessViewMode, type ParsedGroupFitnessSchedule, type WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 
 interface GroupFitnessConfig {
   title?: string;
@@ -390,41 +373,3 @@ export default function GroupFitness({
     </div>
   );
 }
-
-registerWidget({
-  type: 'group-fitness',
-  name: 'Group Fitness',
-  description: 'UNBC Northern Sport Centre drop-in fitness schedule by day or by class',
-  icon: 'calendar',
-  minW: 4,
-  minH: 3,
-  maxW: 8,
-  maxH: 6,
-  defaultW: 5,
-  defaultH: 4,
-  component: GroupFitness,
-  OptionsComponent: GroupFitnessOptions,
-  acceptsSources: [{
-    propName: 'scheduleUrl',
-    types: ['api'],
-    matchSource: (source) =>
-      resolveSourceAdapter({ url: source.url, presetId: source.presetId })?.id === 'unbc-group-fitness',
-    applySource: (source) => ({
-      scheduleUrl: source.url,
-      sourceAdapter: 'unbc-group-fitness',
-    }),
-  }],
-  defaultProps: {
-    title: 'Group Fitness',
-    scheduleUrl: '',
-    viewMode: 'day',
-    selectedDay: 'today',
-    selectedClass: '',
-    refreshInterval: 60,
-    showSemester: true,
-    showInstructor: true,
-    showDescription: true,
-    maxRows: 6,
-    useCorsProxy: true,
-  },
-});

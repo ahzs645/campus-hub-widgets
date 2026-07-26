@@ -1,8 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { DISPLAY_WIDGET_COMPONENTS, preloadDisplayWidgetComponent } from '@firstform/campus-hub-widget-sdk';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
-import WidgetStackOptions from './WidgetStackOptions';
+import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 
 export interface ChildWidgetDef {
   id: string;
@@ -385,21 +384,3 @@ export default function WidgetStack({ config, theme }: WidgetComponentProps) {
     </div>
   );
 }
-
-registerWidget({
-  type: 'widget-stack',
-  name: 'Widget Stack',
-  description: 'Cycle through multiple widgets with stack, carousel, or fade animations',
-  icon: 'layers',
-  minW: 2,
-  minH: 2,
-  defaultW: 4,
-  defaultH: 3,
-  component: WidgetStack,
-  OptionsComponent: WidgetStackOptions,
-  defaultProps: {
-    rotationSeconds: 8,
-    animationMode: 'fade',
-    children: [],
-  },
-});

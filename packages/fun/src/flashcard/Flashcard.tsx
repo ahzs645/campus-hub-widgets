@@ -1,8 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { WidgetComponentProps, registerWidget, DarkContainer } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, DarkContainer } from '@firstform/campus-hub-widget-sdk';
 import { useFitScale } from '@firstform/campus-hub-widget-sdk';
-import FlashcardOptions from './FlashcardOptions';
 
 interface FlashcardConfig {
   language?: 'spanish' | 'french' | 'german' | 'japanese';
@@ -375,24 +374,3 @@ export default function Flashcard({ config, theme }: WidgetComponentProps) {
     </DarkContainer>
   );
 }
-
-registerWidget({
-  type: 'flashcard',
-  name: 'Flashcard',
-  description: 'Auto-cycling vocabulary flashcards',
-  icon: 'languages',
-  minW: 2,
-  minH: 2,
-  maxW: 4,
-  maxH: 4,
-  defaultW: 2,
-  defaultH: 2,
-  component: Flashcard,
-  OptionsComponent: FlashcardOptions,
-  defaultProps: {
-    language: 'spanish',
-    mode: 'cycle',
-    flipInterval: 5,
-    cycleInterval: 12,
-  },
-});

@@ -1,8 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon } from '@firstform/campus-hub-widget-sdk';
-import WebOptions from './WebOptions';
 
 interface WebConfig {
   url?: string;
@@ -178,22 +177,3 @@ export default function Web({ config, theme }: WidgetComponentProps) {
     </div>
   );
 }
-
-// Register the widget
-registerWidget({
-  type: 'web',
-  name: 'Web Embed',
-  description: 'Embed external web content',
-  icon: 'globe',
-  minW: 3,
-  minH: 2,
-  defaultW: 6,
-  defaultH: 4,
-  component: Web,
-  OptionsComponent: WebOptions,
-  acceptsSources: [{ propName: 'url', types: ['embed'] }],
-  defaultProps: {
-    url: '',
-    refreshInterval: 0,
-  },
-});

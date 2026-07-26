@@ -1,9 +1,8 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { parseRss } from '@firstform/campus-hub-widget-sdk';
 import { fetchTextWithCache, buildCacheKey } from '@firstform/campus-hub-widget-sdk';
-import PosterFeedOptions from './PosterFeedOptions';
 
 export interface FeedPoster {
   id: string;
@@ -445,26 +444,3 @@ export default function PosterFeed({ config, theme }: WidgetComponentProps) {
     </div>
   );
 }
-
-registerWidget({
-  type: 'poster-feed',
-  name: 'Poster Feed',
-  description: 'RSS feed posters with stack, carousel, or fade animations',
-  icon: 'newspaper',
-  minW: 3,
-  minH: 2,
-  defaultW: 6,
-  defaultH: 4,
-  component: PosterFeed,
-  OptionsComponent: PosterFeedOptions,
-  acceptsSources: [{
-    propName: 'feedUrl',
-    types: ['feed'],
-    requires: { hasImages: true },
-    capabilityHint: 'Feeds whose entries carry images render as posters; text-only feeds have nothing to show.',
-  }],
-  defaultProps: {
-    rotationSeconds: 8,
-    animationMode: 'stack',
-  },
-});

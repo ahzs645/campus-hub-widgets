@@ -1,6 +1,5 @@
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon } from '@firstform/campus-hub-widget-sdk';
-import ImageOptions from './ImageOptions';
 
 interface ImageConfig {
   url?: string;
@@ -38,23 +37,3 @@ export default function ImageWidget({ config, theme }: WidgetComponentProps) {
     </div>
   );
 }
-
-// Register the widget
-registerWidget({
-  type: 'image',
-  name: 'Image',
-  description: 'Display a static image',
-  icon: 'image',
-  minW: 2,
-  minH: 2,
-  defaultW: 4,
-  defaultH: 3,
-  component: ImageWidget,
-  OptionsComponent: ImageOptions,
-  acceptsSources: [{ propName: 'url', types: ['image'] }],
-  defaultProps: {
-    url: '',
-    alt: 'Image',
-    fit: 'cover',
-  },
-});

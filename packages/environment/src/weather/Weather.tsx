@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import {
   buildCacheKey,
   buildProxyUrl,
@@ -12,7 +12,7 @@ import {
 import { useAdaptiveFitScale, ThemedContainer, IconText } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon } from '@firstform/campus-hub-widget-sdk';
 import type { IconName, NormalizedWeatherObservation } from '@firstform/campus-hub-widget-sdk';
-import WeatherOptions from './WeatherOptions';
+import { DISPLAY_MODE_PRESETS, GEOMET_PRINCE_GEORGE_URL } from './meta';
 
 type WeatherIconKey =
   | 'sunny'
@@ -39,10 +39,10 @@ interface WeatherData {
   precip?: number;
 }
 
-type DisplayMode = 'full' | 'temperature-only' | 'wind-only' | 'minimal' | 'custom';
+export type DisplayMode = 'full' | 'temperature-only' | 'wind-only' | 'minimal' | 'custom';
 type WeatherAppearance = 'default' | 'dashboard-macos';
 
-interface DisplayItems {
+export interface DisplayItems {
   location?: boolean;
   icon?: boolean;
   temperature?: boolean;
@@ -70,29 +70,6 @@ interface WeatherConfig {
   useCorsProxy?: boolean;
   appearance?: WeatherAppearance;
 }
-
-const DISPLAY_MODE_PRESETS: Record<Exclude<DisplayMode, 'custom'>, DisplayItems> = {
-  full: {
-    location: true, icon: true, temperature: true, condition: true,
-    humidity: true, wind: true, pressure: true, dewPoint: false,
-    windGust: false, precipitation: false, lastUpdated: true,
-  },
-  'temperature-only': {
-    location: true, icon: true, temperature: true, condition: true,
-    humidity: false, wind: false, pressure: false, dewPoint: false,
-    windGust: false, precipitation: false, lastUpdated: false,
-  },
-  'wind-only': {
-    location: true, icon: false, temperature: false, condition: false,
-    humidity: false, wind: true, pressure: false, dewPoint: false,
-    windGust: true, precipitation: false, lastUpdated: false,
-  },
-  minimal: {
-    location: false, icon: true, temperature: true, condition: false,
-    humidity: false, wind: false, pressure: false, dewPoint: false,
-    windGust: false, precipitation: false, lastUpdated: false,
-  },
-};
 
 const resolveDisplayItems = (config: WeatherConfig | undefined): DisplayItems => {
   const mode = config?.displayMode ?? 'full';
@@ -218,8 +195,6 @@ const mapWeatherIcon = (condition: string): WeatherIconKey => {
   if (key.includes('wind')) return 'windy';
   return 'default';
 };
-
-const GEOMET_PRINCE_GEORGE_URL = 'https://api.weather.gc.ca/collections/citypageweather-realtime/items/bc-79?f=json&lang=en';
 
 
 /** Derive a display condition from normalized sensor observations. */
@@ -678,53 +653,3 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
     </ThemedContainer>
   );
 }
-
-// Register the widget
-registerWidget({
-  type: 'weather',
-  name: 'Weather',
-  description: 'Display current weather conditions',
-  icon: 'weather',
-  minW: 2,
-  minH: 2,
-  maxW: 6,
-  maxH: 5,
-  defaultW: 3,
-  defaultH: 2,
-  component: Weather,
-  OptionsComponent: WeatherOptions,
-  defaultProps: {
-    location: 'Campus',
-    units: 'fahrenheit',
-    showDetails: true,
-    displayMode: 'full',
-    displayItems: DISPLAY_MODE_PRESETS.full,
-    apiKey: '',
-    apiUrl: GEOMET_PRINCE_GEORGE_URL,
-    dataSource: 'openweathermap',
-    refreshInterval: 10,
-    useCorsProxy: true,
-    appearance: 'default',
-  },
-  acceptsSources: [{
-    propName: 'apiUrl',
-    types: ['api'],
-    matchSource: (source) => {
-      const adapter = resolveSourceAdapter({ url: source.url, presetId: source.presetId });
-      return adapter?.id === 'unbc-rooftop-weather'
-        || adapter?.id === 'msc-geomet-weather';
-    },
-    applySource: (source, currentData) => {
-      const candidate = resolveSourceAdapter({ url: source.url, presetId: source.presetId });
-      return {
-        apiUrl: source.url,
-        dataSource: candidate ? 'source' : 'msc-geomet',
-        sourceAdapter: candidate?.id,
-        location: source.name,
-        useCorsProxy: source.url.includes('api.weather.gc.ca')
-          ? false
-          : (currentData.useCorsProxy as boolean | undefined) ?? true,
-      };
-    },
-  }],
-});

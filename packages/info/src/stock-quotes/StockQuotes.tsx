@@ -1,15 +1,7 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  DarkContainer,
-  buildCacheKey,
-  fetchJsonWithCache,
-  registerWidget,
-  type WidgetComponentProps,
-  useFitScale,
-  useLoopingAutoScroll,
-} from '@firstform/campus-hub-widget-sdk';
-import StockQuotesOptions from './StockQuotesOptions';
+import { DarkContainer, buildCacheKey, fetchJsonWithCache, type WidgetComponentProps, useFitScale, useLoopingAutoScroll } from '@firstform/campus-hub-widget-sdk';
+import { DEFAULT_SYMBOLS } from './meta';
 
 interface StockQuotesConfig {
   title?: string;
@@ -39,8 +31,6 @@ interface StocksResponse {
   quotes?: Quote[];
   chart?: ChartPoint[];
 }
-
-const DEFAULT_SYMBOLS = ['AAPL', 'MSFT', 'NVDA', 'SPY'];
 
 const DEMO_QUOTES: Quote[] = [
   { symbol: 'AAPL', name: 'Apple', price: 214.39, change: 2.11, changePercent: 0.99 },
@@ -393,28 +383,3 @@ export default function StockQuotes({ config, theme }: WidgetComponentProps) {
     </DarkContainer>
   );
 }
-
-registerWidget({
-  type: 'stock-quotes',
-  name: 'Stock Quotes',
-  description: 'Track multiple stock symbols with a lead trend chart.',
-  icon: 'arrowLeftRight',
-  minW: 2,
-  minH: 2,
-  maxW: 6,
-  maxH: 5,
-  defaultW: 4,
-  defaultH: 3,
-  component: StockQuotes,
-  OptionsComponent: StockQuotesOptions,
-  defaultProps: {
-    title: 'Stock Quotes',
-    symbols: DEFAULT_SYMBOLS,
-    chartSymbol: 'NVDA',
-    range: '6mo',
-    refreshInterval: 10,
-    showChart: true,
-    showChange: true,
-    showNames: true,
-  },
-});

@@ -1,10 +1,9 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { WidgetComponentProps, registerWidget } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, buildProxyUrl, fetchTextWithCache } from '@firstform/campus-hub-widget-sdk';
 import { useFitScale } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon, FadeOverlay } from '@firstform/campus-hub-widget-sdk';
-import RSSReaderOptions from './RSSReaderOptions';
 
 interface FeedItem {
   title: string;
@@ -300,27 +299,3 @@ export default function RSSReader({ config, theme }: WidgetComponentProps) {
     </div>
   );
 }
-
-registerWidget({
-  type: 'rss-reader',
-  name: 'RSS Reader',
-  description: 'Display RSS or Atom feed content',
-  icon: 'rss',
-  minW: 2,
-  minH: 2,
-  defaultW: 4,
-  defaultH: 4,
-  component: RSSReader,
-  OptionsComponent: RSSReaderOptions,
-  acceptsSources: [{ propName: 'feedUrl', types: ['feed'] }],
-  defaultProps: {
-    feedUrl: '',
-    maxItems: 10,
-    refreshInterval: 15,
-    showDescription: true,
-    showDate: true,
-    scrollSpeed: 40,
-    title: '',
-    useCorsProxy: true,
-  },
-});

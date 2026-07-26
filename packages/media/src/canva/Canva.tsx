@@ -1,8 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { WidgetComponentProps, registerWidget, useFitScale } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, useFitScale } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon } from '@firstform/campus-hub-widget-sdk';
-import CanvaOptions from './CanvaOptions';
 
 interface CanvaConfig {
   url?: string;
@@ -177,21 +176,3 @@ export default function CanvaWidget({ config, theme }: WidgetComponentProps) {
     </div>
   );
 }
-
-registerWidget({
-  type: 'canva',
-  name: 'Canva',
-  description: 'Display Canva designs directly on your screens via smart embed link',
-  icon: 'brandCanva',
-  minW: 3,
-  minH: 2,
-  defaultW: 6,
-  defaultH: 4,
-  component: CanvaWidget,
-  OptionsComponent: CanvaOptions,
-  acceptsSources: [{ propName: 'url', types: ['embed'] }],
-  defaultProps: {
-    url: '',
-    refreshInterval: 0,
-  },
-});

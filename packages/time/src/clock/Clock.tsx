@@ -1,8 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { WidgetComponentProps, registerWidget, Skeleton } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, Skeleton } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale } from '@firstform/campus-hub-widget-sdk';
-import ClockOptions from './ClockOptions';
 
 interface ClockConfig {
   showSeconds?: boolean;
@@ -460,28 +459,3 @@ export default function Clock({ config, theme }: WidgetComponentProps) {
     </div>
   );
 }
-
-// Register the widget
-registerWidget({
-  type: 'clock',
-  name: 'Clock',
-  description: 'Displays current time and date',
-  icon: 'clock',
-  minW: 2,
-  minH: 1,
-  maxW: 8,
-  maxH: 4,
-  defaultW: 3,
-  defaultH: 1,
-  component: Clock,
-  OptionsComponent: ClockOptions,
-  defaultProps: {
-    showSeconds: false,
-    showDate: true,
-    format24h: false,
-    alignment: 'right',
-    verticalAlignment: 'top',
-    style: 'digital',
-    customFormat: '',
-  },
-});

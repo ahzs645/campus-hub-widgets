@@ -1,13 +1,14 @@
-import { registerWidgetLoader } from '@firstform/campus-hub-widget-sdk';
+import { registerWidgetModule } from '@firstform/campus-hub-widget-sdk';
+import qrcode from './qrcode/meta';
+import simpleTable from './simple-table/meta';
+import widgetStack from './widget-stack/meta';
+import wifiShare from './wifi-share/meta';
 
-// Side-effect imports — trigger registerWidget calls
-import './qrcode/QRCode';
-import './widget-stack/WidgetStack';
-import './simple-table/SimpleTable';
-import './wifi-share/WiFiShare';
+// Metadata only — every component stays behind its module's loaders until a
+// board actually places the widget.
+registerWidgetModule(qrcode);
+registerWidgetModule(simpleTable);
+registerWidgetModule(widgetStack);
+registerWidgetModule(wifiShare);
 
-// Register lazy loaders for display mode
-registerWidgetLoader('qrcode', () => import('./qrcode/QRCode'));
-registerWidgetLoader('widget-stack', () => import('./widget-stack/WidgetStack'));
-registerWidgetLoader('simple-table', () => import('./simple-table/SimpleTable'));
-registerWidgetLoader('wifi-share', () => import('./wifi-share/WiFiShare'));
+export { qrcode, simpleTable, widgetStack, wifiShare };
