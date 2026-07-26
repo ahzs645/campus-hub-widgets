@@ -18,7 +18,7 @@
   "dependencies": {
     "fflate": "^0.8.2",
     "gtfs-realtime-bindings": "^1.1.1",
-    "react-pixel-display": "^1.0.0"
+    "react-pixel-display": "git+https://github.com/ahzs645/react-pixel-display.git#17e8e9f6df6efa97d3f591f23e3f2d7613884116"
   },
   "devDependencies": {
     "@types/react": "^19.0.8",
