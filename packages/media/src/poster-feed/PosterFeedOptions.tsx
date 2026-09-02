@@ -92,65 +92,6 @@ export default function PosterFeedOptions({ data, onChange }: WidgetOptionsProps
         </div>
       </div>
 
-      {/* Mode Preview */}
-      <div className="border-t border-[color:var(--ui-item-border)] pt-6">
-        <h4 className="font-semibold text-[var(--ui-text)] mb-4">Mode Preview</h4>
-        <div className="bg-[var(--ui-item-bg)] rounded-xl p-4 aspect-video relative overflow-hidden">
-          {state.animationMode === 'stack' && (
-            <div className="relative h-full flex items-center justify-center">
-              {[4, -2, 7].map((rot, i) => (
-                <div
-                  key={i}
-                  className="absolute rounded-lg overflow-hidden border-2 border-white/20"
-                  style={{
-                    height: '80%',
-                    aspectRatio: '8.5/11',
-                    transform: `rotate(${rot}deg)`,
-                    zIndex: i === 0 ? 3 : 3 - i,
-                    opacity: i === 0 ? 1 : 0.5,
-                    backgroundColor: 'var(--ui-panel-bg)',
-                    border: i === 0 ? '2px solid var(--color-accent)' : '2px solid rgba(255,255,255,0.12)',
-                  }}
-                >
-                  <div className="w-full h-full bg-gradient-to-br from-[var(--color-accent)]/20 to-[var(--color-primary)]/30" />
-                </div>
-              ))}
-              <div className="absolute bottom-1 right-2 text-[10px] text-white/40">1/4</div>
-            </div>
-          )}
-          {state.animationMode === 'carousel' && (
-            <div className="flex items-center justify-center h-full gap-2" style={{ perspective: '500px' }}>
-              {[-1, 0, 1].map((offset) => (
-                <div
-                  key={offset}
-                  className="rounded-lg overflow-hidden"
-                  style={{
-                    height: offset === 0 ? '85%' : '60%',
-                    aspectRatio: '8.5/11',
-                    transform: `translateZ(${offset === 0 ? '20px' : '-30px'}) rotateY(${offset * -10}deg)`,
-                    opacity: offset === 0 ? 1 : 0.35,
-                    backgroundColor: 'var(--ui-panel-bg)',
-                    border: offset === 0 ? '2px solid var(--color-accent)' : '1px solid rgba(255,255,255,0.1)',
-                  }}
-                >
-                  <div className="w-full h-full bg-gradient-to-br from-[var(--color-accent)]/20 to-[var(--color-primary)]/30" />
-                </div>
-              ))}
-            </div>
-          )}
-          {state.animationMode === 'fade' && (
-            <div className="h-full relative flex items-center justify-center">
-              <div
-                className="h-3/4 rounded-lg bg-gradient-to-br from-[var(--color-accent)]/20 to-[var(--color-primary)]/30"
-                style={{ aspectRatio: '8.5/11' }}
-              />
-              <div className="absolute top-0 left-0 right-0 h-1 bg-black/30 rounded-t-lg">
-                <div className="h-full w-1/3 bg-[var(--color-accent)] rounded-tl-lg" />
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 }

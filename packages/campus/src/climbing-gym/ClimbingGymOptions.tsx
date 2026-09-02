@@ -1,7 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { FormInput, FormSelect, FormSwitch } from '@firstform/campus-hub-widget-sdk';
-import { AppIcon } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
 interface ClimbingGymData {
@@ -125,46 +124,6 @@ export default function ClimbingGymOptions({ data, onChange }: WidgetOptionsProp
         />
       </div>
 
-      {/* Preview */}
-      <div className="border-t border-[color:var(--ui-item-border)] pt-6">
-        <h4 className="font-semibold text-[var(--ui-text)] mb-4">Preview</h4>
-        <div className="bg-[var(--ui-item-bg)] rounded-xl p-4">
-          <div className="text-xs text-[var(--color-accent)] mb-1">
-            {state.gymName}
-          </div>
-          <div className="flex items-center gap-3">
-            <AppIcon name="mountain" className="w-8 h-8 text-white/80" />
-            <div>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-2xl font-bold" style={{ color: '#22c55e' }}>12</span>
-                <span className="text-sm text-white/50">/ 30</span>
-              </div>
-              <div className="text-xs text-white/70">Current Climber Count</div>
-            </div>
-          </div>
-          {state.showCapacityBar && (
-            <div className="mt-2">
-              <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
-                <div
-                  className="h-full rounded-full"
-                  style={{ width: '40%', backgroundColor: '#22c55e' }}
-                />
-              </div>
-              <div className="flex justify-between mt-0.5 text-[10px] text-white/40">
-                <span>40% full</span>
-                <span>Not busy</span>
-              </div>
-            </div>
-          )}
-          {state.showHours && (
-            <div className="mt-2 flex items-center gap-1.5 text-[11px]">
-              <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500" />
-              <span className="font-medium text-green-500">Open</span>
-              <span className="text-white/40">Closes at 10:00 PM</span>
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 }

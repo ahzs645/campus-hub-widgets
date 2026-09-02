@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { FormInput, FormSwitch, OptionsPanel, OptionsSection, OptionsPreview } from '@firstform/campus-hub-widget-sdk';
+import { FormInput, FormSwitch, OptionsPanel, OptionsSection } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
 const DEFAULT_API_URL = 'https://overtheedge.unbc.ca/wp-json/wp/v2/organization?per_page=100&_embed=wp:featuredmedia&org_status=181,183,182';
@@ -133,29 +133,6 @@ export default function ClubSpotlightOptions({ data, onChange }: WidgetOptionsPr
         )}
       </OptionsSection>
 
-      {/* Preview */}
-      <OptionsPreview>
-          <div className="text-xs font-semibold tracking-wide uppercase mb-3" style={{ color: 'var(--color-accent)' }}>
-            Club Spotlight
-          </div>
-          <div
-            className="w-20 h-20 rounded-full border-2 mb-3 bg-gradient-to-br from-[var(--color-accent)]/20 to-[var(--color-primary)]/30"
-            style={{ borderColor: 'var(--color-accent)' }}
-          />
-          <div className="text-sm font-bold text-[var(--ui-text)]">Example Club Name</div>
-          <div className="flex gap-1 mt-2">
-            {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                className="h-1 rounded-full"
-                style={{
-                  width: i === 0 ? 16 : 6,
-                  backgroundColor: i === 0 ? 'var(--color-accent)' : 'rgba(255,255,255,0.3)',
-                }}
-              />
-            ))}
-          </div>
-      </OptionsPreview>
     </OptionsPanel>
   );
 }

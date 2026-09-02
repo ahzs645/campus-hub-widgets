@@ -169,33 +169,6 @@ export default function SatelliteViewOptions({ data, onChange }: WidgetOptionsPr
         </div>
       </div>
 
-      {/* Preview tile */}
-      <div className="border-t border-[color:var(--ui-item-border)] pt-6">
-        <h4 className="font-semibold text-[var(--ui-text)] mb-4 text-center">
-          Sample Tile
-        </h4>
-        <div className="bg-[var(--ui-item-bg)] rounded-xl p-3 flex flex-col items-center gap-2">
-          <img
-            src={(() => {
-              const n = Math.pow(2, Math.min(8, state.zoom));
-              const x = Math.floor(((state.lon + 180) / 360) * n);
-              const latRad = (state.lat * Math.PI) / 180;
-              const y = Math.floor(
-                ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n
-              );
-              const layer = state.year === '2016' ? 's2cloudless' : `s2cloudless-${state.year}`;
-              return `https://a.tiles.maps.eox.at/wmts/1.0.0/${layer}_3857/default/GoogleMapsCompatible/${Math.min(8, state.zoom)}/${y}/${x}.jpg`;
-            })()}
-            alt="Satellite preview"
-            className="w-48 h-48 rounded-lg object-cover"
-            style={{ imageRendering: 'auto' }}
-          />
-          <div className="text-xs text-[var(--ui-text-muted)]">
-            {state.lat.toFixed(4)}, {state.lon.toFixed(4)} &bull; Zoom{' '}
-            {Math.min(8, state.zoom)}
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

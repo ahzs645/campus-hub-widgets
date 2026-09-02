@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { FormInput, FormSelect, FormSwitch, OptionsPanel, OptionsSection, OptionsPreview, describeCapabilities } from '@firstform/campus-hub-widget-sdk';
+import { FormInput, FormSelect, FormSwitch, OptionsPanel, OptionsSection, describeCapabilities } from '@firstform/campus-hub-widget-sdk';
 import { buildProxyUrl } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
@@ -355,41 +355,6 @@ export default function EventsListOptions({ data, onChange, linkedSource }: Widg
         )}
       </OptionsSection>
 
-      {/* Preview */}
-      <OptionsPreview>
-          <div className="flex items-center gap-2 text-[var(--color-accent)] mb-3">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <span className="font-bold">{state.title}</span>
-            {state.displayMode !== 'scroll' && (
-              <span className="text-white/40 text-xs ml-auto">
-                {state.displayMode === 'ticker' ? 'auto-cycles' : 'auto-fit pages'}
-              </span>
-            )}
-          </div>
-          <div className="space-y-2">
-            {['Club Fair', 'Guest Lecture', 'Open Mic Night']
-              .slice(0, state.displayMode === 'ticker' ? 1 : Math.min(3, state.maxItems))
-              .map((event, i) => (
-                <div key={i} className="p-2 rounded-lg bg-white/10 border-l-2 border-[var(--color-accent)]">
-                  <div className="text-white text-sm font-medium">{event}</div>
-                  <div className="text-white/60 text-xs">Mar {10 + i} • 11:00 AM</div>
-                </div>
-              ))}
-          </div>
-          {state.displayMode !== 'scroll' && (
-            <div className="flex items-center justify-center gap-1.5 mt-3">
-              {Array.from({ length: state.displayMode === 'ticker' ? 3 : 2 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="w-1.5 h-1.5 rounded-full"
-                  style={{ backgroundColor: i === 0 ? 'var(--color-accent)' : 'rgba(255,255,255,0.2)' }}
-                />
-              ))}
-            </div>
-          )}
-      </OptionsPreview>
     </OptionsPanel>
   );
 }
