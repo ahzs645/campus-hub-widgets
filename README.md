@@ -48,6 +48,14 @@ packages/<category>/src/<widget>/
 it free of heavy imports is what keeps them out of the entry bundle. Across
 this repo that is the difference between a 1.67 MB and an 81 kB entry chunk.
 
+`packages/shared` (`@firstform/campus-hub-widgets-shared`) is the one
+workspace member that is not a widget package: it declares no
+`campusHub.widgets` entry, so discovery skips it. It holds UI pieces several
+widget packages import, such as `SourceUnavailable`, the state a widget shows
+when its *configured* source fails and it has no last-good data. Widgets only
+ever show their built-in demo data when no source is configured, and always
+with a "Demo" badge.
+
 ## Development
 
 ```bash

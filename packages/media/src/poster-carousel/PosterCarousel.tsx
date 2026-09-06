@@ -2,12 +2,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import {
+  fetchJsonWithCache,
   fetchTextWithCache,
   buildCacheKey,
   buildProxyUrl,
   normalizeSourcePayload,
   resolveSourceAdapter,
 } from '@firstform/campus-hub-widget-sdk';
+import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
 
 export interface Poster {
   id: string | number;
@@ -83,49 +85,81 @@ export default function PosterCarousel({ config, theme }: WidgetComponentProps) 
   const showProgressBar = carouselConfig?.showProgressBar ?? true;
   const showSequenceIndicator = carouselConfig?.showSequenceIndicator ?? true;
 
-  const [posters, setPosters] = useState<Poster[]>(carouselConfig?.posters ?? DEFAULT_POSTERS);
+  const manualPosters = carouselConfig?.posters;
+  // 'default' with no manually configured posters is the unconfigured demo state.
+  const isDemo = dataSource === 'default' && !(manualPosters && manualPosters.length > 0);
+  // Identifies the configured remote source a poster list belongs to, so a
+  // config change never shows another source's posters while refetching.
+  const sourceKey = dataSource === 'api'
+    ? `api:${apiUrl ?? ''}`
+    : dataSource === 'source'
+      ? `source:${sourceAdapter?.id ?? ''}:${sourceUrl ?? ''}`
+      : null;
+
+  // Last-good posters from the configured remote source. A configured source
+  // starts empty (loading), never with the sample posters.
+  const [live, setLive] = useState<{ key: string; posters: Poster[] } | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Reset to defaults when using default source
+  // Restart the rotation (and drop a previous source's error) when the
+  // configured source changes.
   useEffect(() => {
-    if (dataSource !== 'default') return;
-    setPosters(carouselConfig?.posters ?? DEFAULT_POSTERS);
     setCurrentIndex(0);
     setProgress(0);
     setIsTransitioning(false);
     setError(null);
-  }, [dataSource, carouselConfig?.posters]);
+  }, [dataSource, manualPosters, sourceKey]);
 
-  // Fetch posters from JSON API
+  // Fetch posters from a JSON API through the shared proxy/cache helper.
   useEffect(() => {
-    if (dataSource !== 'api' || !apiUrl) return;
+    if (dataSource !== 'api') return;
+    if (!apiUrl) {
+      setError('No API URL configured');
+      return;
+    }
+    const key = `api:${apiUrl}`;
 
     const fetchPosters = async () => {
       try {
-        const response = await fetch(apiUrl);
-        const data = await response.json();
-        const normalizedPosters = normalizePosters(data);
-        if (normalizedPosters.length > 0) {
-          setPosters(normalizedPosters);
+        const fetchUrl = useCorsProxy ? buildProxyUrl(apiUrl) : apiUrl;
+        // fetchJsonWithCache rejects non-2xx responses before parsing JSON.
+        const { data } = await fetchJsonWithCache<unknown>(fetchUrl, {
+          cacheKey: buildCacheKey('poster-carousel', apiUrl),
+          ttlMs: refreshInterval * 60 * 1000,
+          allowStale: true,
+        });
+        const nextPosters = normalizePosters(data);
+        if (nextPosters.length > 0) {
+          setLive({ key, posters: nextPosters });
+          setCurrentIndex(0);
+          setProgress(0);
           setError(null);
+        } else {
+          // Keep last-good posters; never fall back to the sample posters.
+          setError('No posters found in API response');
         }
       } catch (err) {
         console.error('Failed to fetch posters:', err);
-        setError('Failed to load posters from API');
+        setError(err instanceof Error ? err.message : 'Failed to load posters from API');
       }
     };
 
     fetchPosters();
-    const interval = setInterval(fetchPosters, 60000);
+    const interval = setInterval(fetchPosters, refreshInterval * 60 * 1000);
     return () => clearInterval(interval);
-  }, [dataSource, apiUrl]);
+  }, [dataSource, apiUrl, refreshInterval, useCorsProxy]);
 
   // Fetch provider-specific sources through the shared source adapter layer.
   useEffect(() => {
-    if (dataSource !== 'source' || !sourceAdapter || !sourceUrl) return;
+    if (dataSource !== 'source') return;
+    if (!sourceAdapter || !sourceUrl) {
+      setError('No matching source adapter for the configured URL');
+      return;
+    }
+    const key = `source:${sourceAdapter.id}:${sourceUrl}`;
 
     const fetchSource = async () => {
       try {
@@ -143,16 +177,17 @@ export default function PosterCarousel({ config, theme }: WidgetComponentProps) 
         });
         const nextPosters = normalizePosters(normalized?.items ?? []);
         if (nextPosters.length > 0) {
-          setPosters(nextPosters);
+          setLive({ key, posters: nextPosters });
           setCurrentIndex(0);
           setProgress(0);
           setError(null);
         } else {
+          // Keep last-good posters; never fall back to the sample posters.
           setError('No poster items found in source');
         }
       } catch (err) {
         console.error('Failed to fetch adapted source:', err);
-        setError('Failed to load source');
+        setError(err instanceof Error ? err.message : 'Failed to load source');
       }
     };
 
@@ -160,6 +195,14 @@ export default function PosterCarousel({ config, theme }: WidgetComponentProps) 
     const interval = setInterval(fetchSource, refreshInterval * 60 * 1000);
     return () => clearInterval(interval);
   }, [dataSource, sourceAdapter, sourceUrl, maxStories, refreshInterval, useCorsProxy, imageQuality]);
+
+  // demo → sample posters (badged); manual → operator-configured posters;
+  // live → last-good posters from the configured source; unavailable → the
+  // configured source failed with nothing good to show.
+  const posters: Poster[] = dataSource === 'default'
+    ? (manualPosters && manualPosters.length > 0 ? manualPosters : DEFAULT_POSTERS)
+    : live?.key === sourceKey ? live.posters : [];
+  const isUnavailable = dataSource !== 'default' && posters.length === 0 && error !== null;
 
   const nextSlide = useCallback(() => {
     setIsTransitioning(true);
@@ -188,7 +231,8 @@ export default function PosterCarousel({ config, theme }: WidgetComponentProps) 
     };
   }, [posters.length, rotationSeconds, nextSlide]);
 
-  const current = posters[currentIndex];
+  const safeIndex = posters.length > 0 ? currentIndex % posters.length : 0;
+  const current = posters[safeIndex];
 
   if (!current) {
     return (
@@ -196,9 +240,12 @@ export default function PosterCarousel({ config, theme }: WidgetComponentProps) 
         className="h-full rounded-2xl flex items-center justify-center flex-col gap-2"
         style={{ backgroundColor: `${theme.primary}40` }}
       >
-        <span className="text-white/50">{error ?? 'No posters available'}</span>
-        {dataSource === 'source' && error && (
-          <span className="text-white/30 text-sm">Check CORS proxy settings</span>
+        {isUnavailable ? (
+          <SourceUnavailable label="Posters" detail={error} />
+        ) : (
+          <span className="text-white/50">
+            {dataSource === 'default' ? 'No posters available' : 'Loading posters…'}
+          </span>
         )}
       </div>
     );
@@ -265,9 +312,9 @@ export default function PosterCarousel({ config, theme }: WidgetComponentProps) 
               }}
               className="w-3 h-3 rounded-full transition-all duration-300 hover:scale-125"
               style={{
-                backgroundColor: idx === currentIndex ? theme.accent : 'rgba(255,255,255,0.4)',
-                transform: idx === currentIndex ? 'scale(1.2)' : 'scale(1)',
-                boxShadow: idx === currentIndex ? `0 0 20px ${theme.accent}` : 'none',
+                backgroundColor: idx === safeIndex ? theme.accent : 'rgba(255,255,255,0.4)',
+                transform: idx === safeIndex ? 'scale(1.2)' : 'scale(1)',
+                boxShadow: idx === safeIndex ? `0 0 20px ${theme.accent}` : 'none',
               }}
             />
           ))}
@@ -303,6 +350,27 @@ export default function PosterCarousel({ config, theme }: WidgetComponentProps) 
           style={{ backgroundColor: `${theme.primary}99` }}
         >
           {sourceLabel}
+        </div>
+      )}
+
+      {/* Sample posters shown only while no source is configured. */}
+      {isDemo && (
+        <div
+          className="absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-semibold text-white/70 backdrop-blur-sm"
+          style={{ backgroundColor: `${theme.primary}99` }}
+        >
+          Demo
+        </div>
+      )}
+
+      {/* Refresh failed but last-good posters are still shown. */}
+      {dataSource !== 'default' && error && (
+        <div
+          className="absolute top-3 right-3 max-w-[60%] truncate px-3 py-1 rounded-full text-xs font-medium text-red-200 backdrop-blur-sm"
+          style={{ backgroundColor: `${theme.primary}99` }}
+          title={error}
+        >
+          Update failed – showing last loaded posters
         </div>
       )}
     </div>

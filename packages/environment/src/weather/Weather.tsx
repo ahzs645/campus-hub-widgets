@@ -12,6 +12,7 @@ import {
 import { useAdaptiveFitScale, ThemedContainer, IconText } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon } from '@firstform/campus-hub-widget-sdk';
 import type { IconName, NormalizedWeatherObservation } from '@firstform/campus-hub-widget-sdk';
+import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
 import { DISPLAY_MODE_PRESETS, GEOMET_PRINCE_GEORGE_URL } from './meta';
 
 type WeatherIconKey =
@@ -281,17 +282,29 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
   const refreshInterval = weatherConfig?.refreshInterval ?? 10; // minutes
   const useCorsProxy = weatherConfig?.useCorsProxy ?? true;
 
-  const [weather, setWeather] = useState<WeatherData>({
-    ...MOCK_WEATHER,
-    location,
-  });
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
   const refreshMs = refreshInterval * 60 * 1000;
 
+  // The default provider with no API key is "not configured": show the sample
+  // reading with a Demo badge rather than silently presenting fake weather.
+  const isDemo = dataSource === 'openweathermap' && !apiKey;
+  // Identifies the configured source (and display units) a reading belongs to,
+  // so a config change never shows another source's data while refetching.
+  const sourceKey = dataSource === 'source'
+    ? `source:${sourceAdapter?.id ?? ''}:${sourceUrl ?? ''}:${units}`
+    : dataSource === 'msc-geomet'
+      ? `geomet:${apiUrl}:${units}`
+      : `owm:${location}:${units}`;
+
+  // Last-good live reading, keyed by the source it came from. A configured
+  // source starts empty (loading), never with the sample reading.
+  const [live, setLive] = useState<{ key: string; weather: WeatherData; updatedAt: Date | null } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
   const fetchAdaptedSource = useCallback(async () => {
-    if (!sourceAdapter || !sourceUrl) return;
+    if (!sourceAdapter || !sourceUrl) {
+      setError('No weather source adapter matches the configured URL');
+      return;
+    }
     try {
       setError(null);
       const fetchUrl = useCorsProxy ? buildProxyUrl(sourceUrl) : sourceUrl;
@@ -306,8 +319,11 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
       });
       const observation = normalized?.data as NormalizedWeatherObservation | null | undefined;
       if (observation?.kind === 'weather-observation') {
-        setWeather(weatherFromObservation(observation, units, location));
-        setLastUpdated(new Date(observation.observedAt));
+        setLive({
+          key: sourceKey,
+          weather: weatherFromObservation(observation, units, location),
+          updatedAt: new Date(observation.observedAt),
+        });
       } else {
         setError('Failed to parse weather data');
       }
@@ -315,7 +331,7 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);
     }
-  }, [location, refreshMs, sourceAdapter, sourceUrl, units, useCorsProxy]);
+  }, [location, refreshMs, sourceAdapter, sourceKey, sourceUrl, units, useCorsProxy]);
 
   const fetchGeoMet = useCallback(async () => {
     try {
@@ -332,8 +348,11 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
       });
       const observation = normalized?.data as NormalizedWeatherObservation | null | undefined;
       if (observation) {
-        setWeather(weatherFromObservation(observation, units, location));
-        setLastUpdated(observation.observedAt ? new Date(observation.observedAt) : new Date());
+        setLive({
+          key: sourceKey,
+          weather: weatherFromObservation(observation, units, location),
+          updatedAt: observation.observedAt ? new Date(observation.observedAt) : new Date(),
+        });
       } else {
         setError('Failed to parse GeoMet weather data');
       }
@@ -341,18 +360,17 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);
     }
-  }, [apiUrl, location, refreshMs, units, useCorsProxy]);
+  }, [apiUrl, location, refreshMs, sourceKey, units, useCorsProxy]);
 
   // OpenWeatherMap data source
   const fetchOWM = useCallback(async () => {
     if (!apiKey) {
-      const temp = units === 'celsius'
-        ? Math.round((MOCK_WEATHER.temp - 32) * 5 / 9)
-        : MOCK_WEATHER.temp;
-      setWeather({ ...MOCK_WEATHER, temp, location });
+      // Not configured: demo mode, rendered from MOCK_WEATHER with a badge.
+      setError(null);
       return;
     }
     try {
+      setError(null);
       const unitParam = units === 'celsius' ? 'metric' : 'imperial';
       const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(
         location
@@ -362,24 +380,34 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
         ttlMs: refreshMs,
       });
 
+      const temp = data?.main?.temp;
+      if (typeof temp !== 'number') {
+        // Never fill gaps with the sample reading; treat this as a failed refresh.
+        setError('Unexpected response from OpenWeatherMap');
+        return;
+      }
       const condition = data?.weather?.[0]?.main ?? 'Clear';
       const description = data?.weather?.[0]?.description ?? condition;
-      const windSpeed = typeof data?.wind?.speed === 'number' ? data.wind.speed : MOCK_WEATHER.wind;
+      const windSpeed = typeof data?.wind?.speed === 'number' ? data.wind.speed : 0;
       const windMph = units === 'celsius' ? Math.round(windSpeed * 2.23694) : Math.round(windSpeed);
 
-      setWeather({
-        temp: Math.round(data?.main?.temp ?? MOCK_WEATHER.temp),
-        condition: description,
-        icon: mapWeatherIcon(condition),
-        humidity: Math.round(data?.main?.humidity ?? MOCK_WEATHER.humidity),
-        wind: windMph,
-        location,
+      setLive({
+        key: sourceKey,
+        weather: {
+          temp: Math.round(temp),
+          condition: description,
+          icon: mapWeatherIcon(condition),
+          humidity: Math.round(data?.main?.humidity ?? 0),
+          wind: windMph,
+          location,
+        },
+        updatedAt: new Date(),
       });
-      setLastUpdated(new Date());
-    } catch (error) {
-      console.error('Failed to fetch weather:', error);
+    } catch (err) {
+      console.error('Failed to fetch weather:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch weather');
     }
-  }, [apiKey, location, units, refreshMs]);
+  }, [apiKey, location, sourceKey, units, refreshMs]);
 
   useEffect(() => {
     let isMounted = true;
@@ -402,7 +430,20 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
     };
   }, [dataSource, fetchAdaptedSource, fetchGeoMet, fetchOWM, refreshMs]);
 
-  const displayTemp = weather.temp;
+  // demo → sample reading (badged); live → last-good reading from this source;
+  // unavailable → the configured source failed with nothing good to show.
+  const current = live?.key === sourceKey ? live : null;
+  const weather: WeatherData | null = isDemo
+    ? {
+        ...MOCK_WEATHER,
+        temp: units === 'celsius' ? Math.round((MOCK_WEATHER.temp - 32) * 5 / 9) : MOCK_WEATHER.temp,
+        location,
+      }
+    : current?.weather ?? null;
+  const lastUpdated = current?.updatedAt ?? null;
+  const isUnavailable = !isDemo && weather === null && error !== null;
+
+  const displayTemp = weather?.temp ?? 0;
   const tempUnit = units === 'celsius' ? '°C' : '°F';
   const windUnit = units === 'celsius' ? 'm/s' : 'mph';
 
@@ -418,7 +459,7 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
       const hour = sourceDate.getHours();
       return hour >= 6 && hour < 19;
     })();
-    const gradient = getDashboardWeatherGradient(weather.icon, isDay);
+    const gradient = getDashboardWeatherGradient(weather?.icon ?? 'default', isDay);
     const tempValue = Math.round(displayTemp);
     const textShadow = '0 1px 3px rgba(0,0,0,0.4)';
 
@@ -437,6 +478,19 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
           className="relative z-[1] flex flex-1 items-center px-3 py-3"
           style={{ background: gradient }}
         >
+          {!weather ? (
+            isUnavailable ? (
+              <SourceUnavailable compact label="Weather" detail={error} />
+            ) : (
+              <div
+                className="flex-1 text-center"
+                style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', textShadow }}
+              >
+                Loading…
+              </div>
+            )
+          ) : (
+          <>
           <div className="flex min-w-0 flex-1 flex-col justify-center">
             <div
               className="font-medium"
@@ -491,6 +545,8 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
               {tempValue}°
             </span>
           </div>
+          </>
+          )}
         </div>
 
         <div
@@ -504,8 +560,16 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
             fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
           }}
         >
-          <span>{show.humidity ? `Humidity ${weather.humidity}%` : weather.condition}</span>
-          <span>{lastUpdated ? lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : location}</span>
+          <span className="truncate">
+            {weather
+              ? (show.humidity ? `Humidity ${weather.humidity}%` : weather.condition)
+              : error ?? location}
+          </span>
+          {isDemo ? (
+            <span className="rounded-full px-2" style={{ backgroundColor: 'rgba(255,255,255,0.12)' }}>Demo</span>
+          ) : (
+            <span>{lastUpdated ? lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : location}</span>
+          )}
         </div>
 
         <div
@@ -535,6 +599,24 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
     );
   }
 
+  if (!weather) {
+    return (
+      <ThemedContainer
+        ref={containerRef}
+        theme={theme}
+        color="primary"
+        opacity="20"
+        className="flex items-center justify-center"
+      >
+        {isUnavailable ? (
+          <SourceUnavailable label="Weather" detail={error} />
+        ) : (
+          <div className="text-sm text-white/50">Loading weather…</div>
+        )}
+      </ThemedContainer>
+    );
+  }
+
   return (
     <ThemedContainer
       ref={containerRef}
@@ -552,10 +634,17 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
         }}
         className={`flex flex-col ${isLandscape ? 'justify-center' : 'items-center justify-center'} p-6`}
       >
-        {/* Location */}
-        {show.location && (
-          <div className={`text-lg font-medium opacity-70 mb-1 ${!isLandscape ? 'text-center' : ''}`} style={{ color: theme.accent }}>
-            {weather.location}
+        {/* Location + demo badge */}
+        {(show.location || isDemo) && (
+          <div className={`mb-1 flex items-center gap-2 ${!isLandscape ? 'justify-center' : ''}`}>
+            {show.location && (
+              <span className="text-lg font-medium opacity-70" style={{ color: theme.accent }}>
+                {weather.location}
+              </span>
+            )}
+            {isDemo && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/50">Demo</span>
+            )}
           </div>
         )}
 
@@ -636,15 +725,15 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
           </div>
         )}
 
-        {/* Error */}
+        {/* Refresh failed but the last-good reading is still shown */}
         {error && (
           <div className="mt-2 text-sm text-red-400 truncate">
             {error}
           </div>
         )}
 
-        {/* Last updated */}
-        {show.lastUpdated && lastUpdated && !error && (
+        {/* Last updated (doubles as the stale indicator after a failed refresh) */}
+        {show.lastUpdated && lastUpdated && (
           <div className={`mt-2 text-sm text-white/40 ${!isLandscape ? 'text-center' : ''}`}>
             Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </div>

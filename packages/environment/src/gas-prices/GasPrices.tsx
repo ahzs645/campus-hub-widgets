@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, buildProxyUrl, fetchTextWithCache } from '@firstform/campus-hub-widget-sdk';
 import { ThemedContainer } from '@firstform/campus-hub-widget-sdk';
+import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
 import { DEFAULT_URL } from './meta';
 
 interface StationPrice {
@@ -95,10 +96,12 @@ function parseGasPrices(html: string): StationPrice[] {
 
 export default function GasPrices({ config: cfg, theme }: WidgetComponentProps) {
   const gasConfig = (cfg ?? {}) as GasPricesConfig;
-  const [stations, setStations] = useState<StationPrice[]>(DEMO_STATIONS);
+  // Last-good live prices, keyed by the URL they were scraped from. A
+  // configured source starts empty (loading), never with the demo prices.
+  const [live, setLive] = useState<{ key: string; stations: StationPrice[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [loading, setLoading] = useState(false);
 
   const galleryDemo = gasConfig.galleryDemo ?? false;
   const url = gasConfig.url?.trim() || DEFAULT_URL;
@@ -109,36 +112,34 @@ export default function GasPrices({ config: cfg, theme }: WidgetComponentProps) 
 
   const fetchPrices = useCallback(async () => {
     if (galleryDemo) {
-      setStations(DEMO_STATIONS.slice(0, effectiveMaxStations));
       setError(null);
+      setWarning(null);
       setLastUpdated(null);
-      setLoading(false);
       return;
     }
 
     try {
-      setLoading(true);
       setError(null);
       const fetchUrl = useCorsProxy ? buildProxyUrl(url) : url;
-      const { text } = await fetchTextWithCache(fetchUrl, {
+      const { text, stale } = await fetchTextWithCache(fetchUrl, {
         cacheKey: buildCacheKey('gas-prices', url),
         ttlMs: refreshInterval * 60 * 1000,
       });
       const parsed = parseGasPrices(text);
       if (parsed.length === 0) {
-        setStations((current) => (current.length > 0 ? current : DEMO_STATIONS.slice(0, effectiveMaxStations)));
-        setError(null);
-        setLastUpdated(null);
+        // The page loaded but no stations were recognised (layout change?).
+        // Keep last-good prices if we have them; never show the demo prices.
+        setError('No station prices found on the page');
       } else {
-        setStations(parsed.slice(0, effectiveMaxStations));
-        setLastUpdated(new Date());
+        setLive({ key: url, stations: parsed.slice(0, effectiveMaxStations) });
+        // A stale cache hit means the live fetch failed: keep the old timestamp.
+        if (!stale) setLastUpdated(new Date());
+        setWarning(stale ? 'Showing cached prices' : null);
       }
     } catch (e) {
       console.warn('Failed to fetch gas prices:', e);
-      setStations((current) => (current.length > 0 ? current : DEMO_STATIONS.slice(0, effectiveMaxStations)));
-      setError(null);
-    } finally {
-      setLoading(false);
+      // Keep last-good live prices; the error is surfaced in the UI.
+      setError(e instanceof Error ? e.message : 'Failed to fetch gas prices');
     }
   }, [effectiveMaxStations, galleryDemo, url, useCorsProxy, refreshInterval]);
 
@@ -147,6 +148,15 @@ export default function GasPrices({ config: cfg, theme }: WidgetComponentProps) 
     const id = setInterval(fetchPrices, refreshInterval * 60 * 1000);
     return () => clearInterval(id);
   }, [fetchPrices, refreshInterval]);
+
+  // demo → sample prices (badged); live → last-good prices from this URL;
+  // unavailable → the configured source failed with nothing good to show.
+  const hasLiveData = live?.key === url;
+  const stations: StationPrice[] = galleryDemo
+    ? DEMO_STATIONS.slice(0, effectiveMaxStations)
+    : hasLiveData ? live.stations : [];
+  const isUnavailable = !galleryDemo && !hasLiveData && error !== null;
+  const isLoading = !galleryDemo && !hasLiveData && error === null;
 
   const avgPrice =
     stations.length > 0
@@ -190,16 +200,34 @@ export default function GasPrices({ config: cfg, theme }: WidgetComponentProps) 
           <h2 className="text-base font-bold leading-tight" style={{ color: headlineColor }}>Gas Prices</h2>
           <p className="text-xs" style={{ color: tertiaryText }}>Prince George, BC</p>
         </div>
+        {galleryDemo && (
+          <span
+            className="ml-auto rounded-full px-2 py-0.5 text-xs"
+            style={{ backgroundColor: rowBg, color: tertiaryText }}
+          >
+            Demo
+          </span>
+        )}
       </div>
 
-      {loading && !stations.length && (
+      {isLoading && (
         <div className="flex-1 flex items-center justify-center text-sm" style={{ color: tertiaryText }}>
           Loading...
         </div>
       )}
 
-      {error && !stations.length && (
-        <div className="text-sm" style={{ color: theme.accent }}>{error}</div>
+      {isUnavailable && (
+        <div className="flex-1 min-h-0">
+          <SourceUnavailable label="Gas prices" detail={error} />
+        </div>
+      )}
+
+      {/* Refresh failed (or served from cache) but last-good prices are still shown */}
+      {stations.length > 0 && error && (
+        <div className="text-xs truncate" style={{ color: theme.accent }}>{error}</div>
+      )}
+      {stations.length > 0 && !error && warning && (
+        <div className="text-xs truncate" style={{ color: tertiaryText }}>{warning}</div>
       )}
 
       {stations.length > 0 && (

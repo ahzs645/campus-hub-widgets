@@ -4,6 +4,7 @@ import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, buildProxyUrl, fetchTextWithCache } from '@firstform/campus-hub-widget-sdk';
 import { useFitScale } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon, FadeOverlay } from '@firstform/campus-hub-widget-sdk';
+import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
 
 interface FeedItem {
   title: string;
@@ -91,8 +92,10 @@ export default function RSSReader({ config, theme }: WidgetComponentProps) {
   const scrollSpeed = rssConfig?.scrollSpeed ?? 40;
   const customTitle = rssConfig?.title?.trim() || '';
   const useCorsProxy = rssConfig?.useCorsProxy ?? true;
-  const [items, setItems] = useState<FeedItem[]>(DEMO_ITEMS);
-  const [feedTitle, setFeedTitle] = useState(customTitle || 'Campus News');
+  const isDemo = !feedUrl;
+  // Last-good live feed, keyed by the URL it came from. A configured feed
+  // starts empty (loading), never with the demo items.
+  const [live, setLive] = useState<{ key: string; title: string; items: FeedItem[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [scrollMetrics, setScrollMetrics] = useState({ viewportHeight: 0, contentHeight: 0 });
 
@@ -101,9 +104,8 @@ export default function RSSReader({ config, theme }: WidgetComponentProps) {
   const contentRef = useRef<HTMLDivElement>(null);
 
   const fetchFeed = useCallback(async () => {
-    if (!feedUrl) {
-      setItems(DEMO_ITEMS);
-      setFeedTitle(customTitle || 'Campus News');
+    if (isDemo) {
+      setError(null);
       return;
     }
     try {
@@ -118,12 +120,12 @@ export default function RSSReader({ config, theme }: WidgetComponentProps) {
         setError('No items found in feed');
         return;
       }
-      setItems(parsed.items.slice(0, maxItems));
-      setFeedTitle(customTitle || parsed.title);
+      setLive({ key: feedUrl, title: parsed.title, items: parsed.items.slice(0, maxItems) });
     } catch (err) {
+      // Keep last-good live items; never fall back to the demo items.
       setError(err instanceof Error ? err.message : 'Failed to load feed');
     }
-  }, [feedUrl, refreshInterval, maxItems, customTitle, useCorsProxy]);
+  }, [feedUrl, isDemo, refreshInterval, maxItems, useCorsProxy]);
 
   useEffect(() => {
     fetchFeed();
@@ -132,6 +134,14 @@ export default function RSSReader({ config, theme }: WidgetComponentProps) {
       return () => clearInterval(interval);
     }
   }, [fetchFeed, feedUrl, refreshInterval]);
+
+  // demo → sample items (badged); live → last-good items from this feed;
+  // unavailable → the configured feed failed with nothing good to show.
+  const current = !isDemo && live?.key === feedUrl ? live : null;
+  const items: FeedItem[] = isDemo ? DEMO_ITEMS : current?.items ?? [];
+  const feedTitle = customTitle || (isDemo ? 'Campus News' : current?.title ?? 'RSS Feed');
+  const isUnavailable = !isDemo && current === null && error !== null;
+  const isLoading = !isDemo && current === null && error === null;
 
   useEffect(() => {
     const measure = () => {
@@ -256,7 +266,7 @@ export default function RSSReader({ config, theme }: WidgetComponentProps) {
         >
           <span style={{ color: theme.accent }}><AppIcon name="rss" size={iconSize} /></span>
           <span className="font-semibold text-white truncate" style={{ fontSize: titleSize }}>{feedTitle}</span>
-          {!feedUrl && (
+          {isDemo && (
             <span
               className="rounded-full ml-auto"
               style={{
@@ -271,15 +281,25 @@ export default function RSSReader({ config, theme }: WidgetComponentProps) {
           )}
         </div>
 
-        {/* Error */}
-        {error && (
-          <div className="shrink-0" style={{ padding: `${itemPadY}px ${padX}px`, fontSize: descriptionSize, color: theme.accent }}>
+        {/* Refresh failed but last-good items are still shown */}
+        {error && !isUnavailable && (
+          <div className="shrink-0 truncate" style={{ padding: `${itemPadY}px ${padX}px`, fontSize: descriptionSize, color: theme.accent }}>
             {error}
           </div>
         )}
 
         {/* Items */}
         <div ref={viewportRef} className="flex-1 overflow-hidden relative">
+          {isUnavailable ? (
+            <SourceUnavailable label="Feed" detail={error} />
+          ) : isLoading ? (
+            <div
+              className="flex h-full items-center justify-center"
+              style={{ fontSize: descriptionSize, color: 'rgba(255,255,255,0.5)' }}
+            >
+              Loading feed…
+            </div>
+          ) : (
           <div
             data-layout-diagnostic-ignore="true"
             className={shouldLoop ? 'will-change-transform' : ''}
@@ -291,6 +311,7 @@ export default function RSSReader({ config, theme }: WidgetComponentProps) {
             {renderItems('primary')}
             {shouldLoop && renderItems('loop', true)}
           </div>
+          )}
 
           {/* Fade edges */}
           {shouldLoop && <FadeOverlay theme={theme} />}
