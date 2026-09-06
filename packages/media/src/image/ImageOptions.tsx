@@ -5,7 +5,6 @@ import {
   FormSelect,
   useWidgetOptionsSurface,
 } from '@firstform/campus-hub-widget-sdk';
-import { AppIcon } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
 interface ImageData {
@@ -156,29 +155,6 @@ export default function ImageOptions({ data, onChange }: WidgetOptionsProps) {
         />
       </div>
 
-      {surface !== 'gallery' && (
-        <div className="border-t border-[color:var(--ui-item-border)] pt-6">
-          <h4 className="font-semibold text-[var(--ui-text)] mb-4">Preview</h4>
-          <div className="bg-[var(--ui-item-bg)] rounded-xl aspect-video flex items-center justify-center overflow-hidden">
-            {state.url ? (
-              <img
-                src={state.url}
-                alt={state.alt}
-                className="max-w-full max-h-full"
-                style={{ objectFit: state.fit }}
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                }}
-              />
-            ) : (
-              <div className="text-center">
-                <AppIcon name="image" className="w-9 h-9 opacity-50 mx-auto text-white/70" />
-                <div className="text-white/50 text-sm mt-2">No image URL</div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

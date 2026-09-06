@@ -183,47 +183,6 @@ export default function PosterCarouselOptions({ data, onChange }: WidgetOptionsP
         </>
       )}
 
-      {/* Preview */}
-      <div className="border-t border-[color:var(--ui-item-border)] pt-6">
-        <h4 className="font-semibold text-[var(--ui-text)] mb-4">Preview</h4>
-        <div className="bg-[var(--ui-item-bg)] rounded-xl p-4 aspect-video relative overflow-hidden">
-          <img
-            src="https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&h=600&fit=crop"
-            alt="Sample poster"
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-          {state.showText && (
-            <>
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-              <div className="absolute bottom-4 left-4">
-                <div className="text-2xl font-bold text-white">
-                  {isSource ? `Latest ${sourceLabel} item` : 'Sample Event'}
-                </div>
-                <div className="text-sm text-white/80">
-                  {isSource ? 'Source date' : 'March 15-17 | Main Quad'}
-                </div>
-              </div>
-            </>
-          )}
-          {state.showProgressBar && (
-            <div className="absolute top-2 left-2 right-2 h-1 bg-black/30 rounded">
-              <div className="h-full w-1/3 bg-[var(--color-accent)] rounded" />
-            </div>
-          )}
-          {state.showSequenceIndicator && (
-            <div className="absolute bottom-3 right-3 flex gap-1">
-              <span className="h-2 w-2 rounded-full bg-[var(--color-accent)]" />
-              <span className="h-2 w-2 rounded-full bg-white/50" />
-              <span className="h-2 w-2 rounded-full bg-white/50" />
-            </div>
-          )}
-          {isSource && (
-            <div className="absolute top-4 left-4 px-2 py-0.5 rounded-full text-[10px] font-semibold text-white/90 bg-black/40 backdrop-blur-sm">
-              {sourceLabel}
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 }

@@ -5,7 +5,6 @@ import {
   FormInput,
   FormSwitch,
   OptionsPanel,
-  OptionsPreview,
   OptionsSection,
   type WidgetOptionsProps,
 } from '@firstform/campus-hub-widget-sdk';
@@ -75,12 +74,12 @@ export default function MacOSClockOptions({
           onChange={handleChange}
         />
       </OptionsSection>
-      <OptionsPreview title="Notes">
+      <OptionsSection title="Notes" divider>
         <div className="text-center text-sm text-[var(--ui-text-muted)]">
           Use any IANA time zone. If no label is provided, the city name is
           inferred from the zone.
         </div>
-      </OptionsPreview>
+      </OptionsSection>
     </OptionsPanel>
   );
 }

@@ -112,31 +112,6 @@ export default function AirQualityOptions({ data, onChange }: WidgetOptionsProps
         />
       </div>
 
-      {/* Preview */}
-      <div className="border-t border-[color:var(--ui-item-border)] pt-6">
-        <h4 className="font-semibold text-[var(--ui-text)] mb-4 text-center">Preview</h4>
-        <div className="bg-[var(--ui-item-bg)] rounded-xl p-4">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-green-500">
-              <span className="text-xl font-bold text-green-950">42</span>
-            </div>
-            <div>
-              <div className="text-lg font-bold text-[var(--ui-text)]">Good</div>
-              <div className="text-xs text-[var(--ui-text-muted)]">
-                {isWaqi ? 'AQI Scale' : 'AQHI Scale'} {isWaqi ? '• PM25' : ''}
-              </div>
-            </div>
-          </div>
-          <div className="mt-3 h-1.5 rounded-full overflow-hidden flex">
-            <div className="flex-1 bg-green-500" />
-            <div className="flex-1 bg-yellow-400" />
-            <div className="flex-1 bg-orange-500" />
-            <div className="flex-1 bg-red-500" />
-            <div className="flex-1 bg-purple-700" />
-            <div className="flex-1 bg-rose-900" />
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

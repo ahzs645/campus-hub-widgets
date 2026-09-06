@@ -6,7 +6,6 @@ import {
   FormSwitch,
   OptionsPanel,
   OptionsSection,
-  OptionsPreview,
 } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
@@ -256,62 +255,6 @@ export default function JobBoardOptions({ data, onChange }: WidgetOptionsProps) 
         </div>
       </OptionsSection>
 
-      {/* Preview */}
-      <OptionsPreview>
-        <div className="flex items-center gap-2 text-[var(--color-accent)] mb-3">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-            />
-          </svg>
-          <span className="font-bold">{state.label}</span>
-          {state.displayMode !== 'scroll' && (
-            <span className="text-white/40 text-xs ml-auto">
-              {state.displayMode === 'ticker' ? 'auto-cycles' : 'auto-fit pages'}
-            </span>
-          )}
-        </div>
-        <div className="space-y-2">
-          {[
-            { title: 'Library Circulation Desk', type: 'Work Study', color: '#7c3aed', dept: 'Library' },
-            { title: 'Research Assistant', type: 'Part Time', color: '#0891b2', dept: 'Biology' },
-            { title: 'Student Ambassador', type: 'Volunteer', color: '#d97706', dept: 'Student Affairs' },
-          ]
-            .slice(0, state.displayMode === 'ticker' ? 1 : Math.min(3, state.maxItems))
-            .map((job, i) => (
-              <div
-                key={i}
-                className="p-2 rounded-lg bg-white/10 border-l-2"
-                style={{ borderLeftColor: job.color }}
-              >
-                <div className="text-white text-sm font-medium">{job.title}</div>
-                <div className="flex items-center gap-2 mt-1">
-                  <span
-                    className="px-1.5 py-0.5 rounded-full text-[10px] font-bold uppercase text-white"
-                    style={{ backgroundColor: job.color }}
-                  >
-                    {job.type}
-                  </span>
-                  <span className="text-white/60 text-xs">{job.dept}</span>
-                </div>
-              </div>
-            ))}
-        </div>
-        {state.displayMode !== 'scroll' && (
-          <div className="flex items-center justify-center gap-1.5 mt-3">
-            {Array.from({ length: state.displayMode === 'ticker' ? 3 : 2 }).map((_, i) => (
-              <div
-                key={i}
-                className="w-1.5 h-1.5 rounded-full"
-                style={{ backgroundColor: i === 0 ? 'var(--color-accent)' : 'rgba(255,255,255,0.2)' }}
-              />
-            ))}
-          </div>
-        )}
-      </OptionsPreview>
     </OptionsPanel>
   );
 }

@@ -158,48 +158,6 @@ export default function GroundwaterLevelOptions({ data, onChange }: WidgetOption
         />
       </div>
 
-      {/* Preview */}
-      <div className="border-t border-[color:var(--ui-item-border)] pt-6">
-        <h4 className="font-semibold text-[var(--ui-text)] mb-4 text-center">
-          Preview
-        </h4>
-        <div className="bg-[var(--ui-item-bg)] rounded-xl p-4">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-blue-500/20">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#3b82f6"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="w-8 h-8"
-              >
-                <path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z" />
-              </svg>
-            </div>
-            <div>
-              <div className="text-lg font-bold text-[var(--ui-text)]">
-                5.234 <span className="text-sm font-normal text-[var(--ui-text-muted)]">m</span>
-              </div>
-              <div className="text-xs text-[var(--ui-text-muted)]">
-                {state.locationId} &bull; {state.displayMode === 'history' ? '7-Day History' : 'Current Level'}
-              </div>
-            </div>
-          </div>
-          {state.displayMode === 'history' && (
-            <div className="mt-3 h-8 rounded bg-blue-500/10 flex items-end px-1 gap-[2px]">
-              {[40, 45, 42, 48, 55, 52, 60, 58, 62, 65, 63, 68].map((h, i) => (
-                <div
-                  key={i}
-                  className="flex-1 bg-blue-500/40 rounded-t"
-                  style={{ height: `${h}%` }}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 }

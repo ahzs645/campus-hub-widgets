@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { AppIcon, ThemedContainer, buildCacheKey, buildProxyUrl, fetchTextWithCache, normalizeSourcePayload, resolveSourceAdapter, useAdaptiveFitScale, type NormalizedOccupancy, type WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
+import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
 
 interface OccupancyData {
   count: number;
@@ -103,17 +104,18 @@ export default function ClimbingGym({ config, theme }: WidgetComponentProps) {
   const galleryDemo = cfg?.galleryDemo ?? false;
   const forceOpen = cfg?.forceOpen ?? false;
 
-  const [data, setData] = useState<OccupancyData | null>(DEMO_OCCUPANCY);
+  const isDemo = !portalUrl || galleryDemo;
+
+  // Last-good live occupancy, keyed by the portal it came from. A configured
+  // portal starts empty (loading), never with the demo count.
+  const [live, setLive] = useState<{ key: string; data: OccupancyData } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [lastFetched, setLastFetched] = useState<Date | null>(null);
 
   const refreshMs = refreshInterval * 60 * 1000;
 
   const fetchOccupancy = useCallback(async () => {
-    if (!portalUrl || galleryDemo) {
-      setData(DEMO_OCCUPANCY);
+    if (isDemo) {
       setError(null);
-      setLastFetched(null);
       return;
     }
     try {
@@ -130,24 +132,25 @@ export default function ClimbingGym({ config, theme }: WidgetComponentProps) {
       });
       const occupancy = normalized?.data as NormalizedOccupancy | null | undefined;
       if (occupancy?.kind === 'occupancy') {
-        setData({
-          count: occupancy.count,
-          capacity: occupancy.capacity,
-          subLabel: occupancy.label,
-          lastUpdate: occupancy.observedAt ?? '',
+        setLive({
+          key: portalUrl,
+          data: {
+            count: occupancy.count,
+            capacity: occupancy.capacity,
+            subLabel: occupancy.label,
+            lastUpdate: occupancy.observedAt ?? '',
+          },
         });
-        setLastFetched(new Date());
         setError(null);
       } else {
-        setData((current) => current ?? DEMO_OCCUPANCY);
-        setError(null);
+        // Keep last-good live data; never substitute the demo count.
+        setError('Could not read an occupancy count from the portal');
       }
     } catch (err) {
       console.warn('Failed to load climbing gym occupancy:', err);
-      setData((current) => current ?? DEMO_OCCUPANCY);
-      setError(null);
+      setError(err instanceof Error ? err.message : 'Failed to load occupancy');
     }
-  }, [cfg?.sourceAdapter, portalUrl, galleryDemo, refreshMs, useCorsProxy]);
+  }, [cfg?.sourceAdapter, portalUrl, isDemo, refreshMs, useCorsProxy]);
 
   useEffect(() => {
     let isMounted = true;
@@ -169,6 +172,14 @@ export default function ClimbingGym({ config, theme }: WidgetComponentProps) {
     const tick = setInterval(() => setOpenStatus(getOpenStatus()), 30_000);
     return () => clearInterval(tick);
   }, []);
+
+  // demo → sample count (badged); live → last-good count from this portal;
+  // unavailable → the configured portal failed with nothing good to show.
+  const data: OccupancyData | null = isDemo
+    ? DEMO_OCCUPANCY
+    : live?.key === portalUrl ? live.data : null;
+  const isUnavailable = !isDemo && data === null && error !== null;
+  const isLoading = !isDemo && data === null && error === null;
 
   const count = data?.count ?? 0;
   const capacity = data?.capacity ?? 0;
@@ -202,11 +213,20 @@ export default function ClimbingGym({ config, theme }: WidgetComponentProps) {
         className={`flex h-full w-full flex-col ${isLandscape ? 'justify-center' : 'items-center justify-center'} p-4`}
       >
         {/* Gym name */}
-        <div className={`text-xl font-medium opacity-70 mb-1.5 ${!isLandscape ? 'text-center' : ''}`} style={{ color: theme.accent }}>
-          {gymName}
+        <div className={`mb-1.5 flex items-center gap-2 ${!isLandscape ? 'justify-center' : ''}`}>
+          <span className="text-xl font-medium opacity-70" style={{ color: theme.accent }}>{gymName}</span>
+          {isDemo && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/50">Demo</span>
+          )}
         </div>
 
-        {isOpen ? (
+        {isOpen && isUnavailable ? (
+          <div className="flex-1 min-h-0 w-full">
+            <SourceUnavailable label="Climber count" detail={error} />
+          </div>
+        ) : isOpen && isLoading ? (
+          <div className="flex-1 flex items-center justify-center text-sm text-white/50">Loading…</div>
+        ) : isOpen ? (
           <>
             {/* Main count display */}
             <div className={`flex w-full ${isLandscape ? 'items-center gap-5' : 'flex-col items-center gap-2'}`}>
@@ -255,13 +275,13 @@ export default function ClimbingGym({ config, theme }: WidgetComponentProps) {
               </div>
             )}
 
-            {/* Error */}
-            {error && !data && (
+            {/* Refresh failed but the last-good count is still shown */}
+            {error && (
               <div className="mt-2 text-sm text-red-400 truncate">{error}</div>
             )}
 
-            {/* Last updated */}
-            {data?.lastUpdate && !error && (
+            {/* Observation time (doubles as the stale indicator after a failed refresh) */}
+            {data?.lastUpdate && (
               <div className="mt-2 text-sm text-white/40">{data.lastUpdate}</div>
             )}
           </>

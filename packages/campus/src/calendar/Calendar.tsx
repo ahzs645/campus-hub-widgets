@@ -4,6 +4,7 @@ import { WidgetComponentProps, useLoopingAutoScroll } from '@firstform/campus-hu
 import { AppIcon, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, buildProxyUrl, fetchTextWithCache } from '@firstform/campus-hub-widget-sdk';
 import { parseICal } from '@firstform/campus-hub-widget-sdk';
+import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
 
 interface CalendarEvent {
   title: string;
@@ -99,12 +100,15 @@ export default function CalendarWidget({ config, theme }: WidgetComponentProps) 
   const useCorsProxy = c?.useCorsProxy ?? true;
   const galleryDemo = c?.galleryDemo ?? false;
 
-  const [events, setEvents] = useState<CalendarEvent[]>(DEMO_EVENTS);
+  const isDemo = !calendarUrl || galleryDemo;
+
+  // Last-good live events, keyed by the source they came from, so a config
+  // change never shows another source's events (or demo events) while refetching.
+  const [live, setLive] = useState<{ key: string; events: CalendarEvent[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const fetchEvents = useCallback(async () => {
-    if (!calendarUrl || galleryDemo) {
-      setEvents(DEMO_EVENTS);
+    if (isDemo) {
       setError(null);
       return;
     }
@@ -136,14 +140,15 @@ export default function CalendarWidget({ config, theme }: WidgetComponentProps) 
         .sort((a, b) => a.start.getTime() - b.start.getTime())
         .slice(0, maxEvents);
 
-      setEvents(mapped);
+      setLive({ key: calendarUrl, events: mapped });
       setError(null);
     } catch (err) {
       console.warn('Failed to load calendar:', err);
-      setEvents((current) => current);
-      setError(null);
+      // Keep any last-good live events; never substitute demo events for a
+      // configured source. The error is surfaced in the UI.
+      setError(err instanceof Error ? err.message : 'Failed to load calendar');
     }
-  }, [calendarUrl, galleryDemo, sourceFormat, refreshInterval, daysAhead, maxEvents, useCorsProxy]);
+  }, [calendarUrl, isDemo, sourceFormat, refreshInterval, daysAhead, maxEvents, useCorsProxy]);
 
   useEffect(() => {
     fetchEvents();
@@ -158,9 +163,17 @@ export default function CalendarWidget({ config, theme }: WidgetComponentProps) 
     return () => clearInterval(interval);
   }, []);
 
+  // demo → sample events (badged); live → last-good events from this source;
+  // unavailable → the configured source failed with nothing good to show.
+  const events: CalendarEvent[] | null = isDemo
+    ? DEMO_EVENTS
+    : live?.key === calendarUrl ? live.events : null;
+  const isUnavailable = !isDemo && events === null && error !== null;
+  const isLoading = !isDemo && events === null && error === null;
+
   // Group by date
   const grouped = new Map<string, CalendarEvent[]>();
-  for (const event of events) {
+  for (const event of events ?? []) {
     const key = event.start.toDateString();
     if (!grouped.has(key)) grouped.set(key, []);
     grouped.get(key)!.push(event);
@@ -183,12 +196,15 @@ export default function CalendarWidget({ config, theme }: WidgetComponentProps) 
         <div className="flex items-center gap-3 px-5 py-4 shrink-0" style={{ borderBottom: `1px solid ${theme.accent}20` }}>
           <span style={{ color: theme.accent }}><AppIcon name="calendarRange" className="w-5 h-5" /></span>
           <span className="text-lg font-semibold text-white truncate">{customTitle || 'Calendar'}</span>
-          {(!calendarUrl || galleryDemo) && (
+          {isDemo && (
             <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/50 ml-auto">Demo</span>
           )}
         </div>
 
-        {error && events.length === 0 && <div className="px-5 py-3 text-sm text-red-400 shrink-0">{error}</div>}
+        {/* Refresh failed but last-good events are still shown */}
+        {error && events && events.length > 0 && (
+          <div className="px-5 py-3 text-sm text-red-400 shrink-0 truncate">{error}</div>
+        )}
 
         {/* Events */}
         <div
@@ -197,7 +213,13 @@ export default function CalendarWidget({ config, theme }: WidgetComponentProps) 
           className="flex-1 overflow-y-auto overscroll-none px-5 py-3 scrollbar-hide"
           style={{ maskImage: 'linear-gradient(to bottom, black calc(100% - 18px), transparent)' }}
         >
-          {events.length === 0 ? (
+          {isUnavailable ? (
+            <SourceUnavailable label="Calendar" detail={error} />
+          ) : isLoading ? (
+            <div className="flex h-full items-center justify-center text-center text-sm font-medium text-white/60">
+              Loading events…
+            </div>
+          ) : events && events.length === 0 ? (
             <div className="flex h-full items-center justify-center text-center text-sm font-medium text-white/60">
               No events available
             </div>

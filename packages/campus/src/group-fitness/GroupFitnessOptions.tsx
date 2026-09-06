@@ -6,9 +6,7 @@ import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 import {
   DEFAULT_GROUP_FITNESS_URL,
   WEEKDAY_NAMES,
-  getTodayWeekday,
   parseGroupFitnessSchedule,
-  type GroupFitnessSection,
   type GroupFitnessViewMode,
   type ParsedGroupFitnessSchedule,
 } from '@firstform/campus-hub-widget-sdk';
@@ -40,23 +38,6 @@ const getInitialState = (data: Record<string, unknown>): GroupFitnessOptionsData
   maxRows: (data.maxRows as number) ?? 6,
   useCorsProxy: (data.useCorsProxy as boolean) ?? true,
 });
-
-const resolvePreviewSection = (
-  schedule: ParsedGroupFitnessSchedule | null,
-  viewMode: GroupFitnessViewMode,
-  selectedDay: string,
-  selectedClass: string,
-): GroupFitnessSection | null => {
-  if (!schedule) return null;
-
-  if (viewMode === 'class') {
-    if (!selectedClass) return schedule.byClass[0] ?? null;
-    return schedule.byClass.find((section) => section.title === selectedClass) ?? schedule.byClass[0] ?? null;
-  }
-
-  const resolvedDay = selectedDay === 'today' ? getTodayWeekday() : selectedDay;
-  return schedule.byDay.find((section) => section.title === resolvedDay) ?? schedule.byDay[0] ?? null;
-};
 
 export default function GroupFitnessOptions({ data, onChange }: WidgetOptionsProps) {
   const [state, setState] = useState<GroupFitnessOptionsData>(getInitialState(data));
@@ -143,13 +124,6 @@ export default function GroupFitnessOptions({ data, onChange }: WidgetOptionsPro
   if (state.selectedClass && !availableClasses.includes(state.selectedClass)) {
     classOptions.push({ value: state.selectedClass, label: `${state.selectedClass} (current)` });
   }
-
-  const previewSection = resolvePreviewSection(
-    scheduleInfo,
-    state.viewMode,
-    state.selectedDay,
-    state.selectedClass,
-  );
 
   return (
     <div className="space-y-6">
@@ -248,6 +222,16 @@ export default function GroupFitnessOptions({ data, onChange }: WidgetOptionsPro
           onChange={handleChange}
         />
 
+        {/* Says why the day and class pickers below are empty or stale. */}
+        {(loading || loadError || scheduleInfo) && (
+          <div className="text-xs text-[var(--ui-text-muted)]">
+            {loading
+              ? 'Loading schedule...'
+              : loadError ||
+                `Parsed ${scheduleInfo!.byDay.length} days and ${scheduleInfo!.byClass.length} classes.`}
+          </div>
+        )}
+
         <FormSelect
           label="Refresh Every"
           name="refreshInterval"
@@ -275,56 +259,6 @@ export default function GroupFitnessOptions({ data, onChange }: WidgetOptionsPro
         </div>
       </div>
 
-      <div className="border-t border-[color:var(--ui-item-border)] pt-6">
-        <h4 className="mb-4 font-semibold text-[var(--ui-text)]">Preview</h4>
-
-        <div className="rounded-xl bg-[var(--ui-item-bg)] p-4">
-          {scheduleInfo ? (
-            <>
-              <div className="text-xs uppercase tracking-[0.16em] text-[var(--color-accent)]">
-                {scheduleInfo.semesterLabel}
-              </div>
-              {scheduleInfo.semesterDates && (
-                <div className="mt-1 text-xs text-[var(--ui-text-muted)]">{scheduleInfo.semesterDates}</div>
-              )}
-
-              <div className="mt-3 text-lg font-semibold text-[var(--ui-text)]">
-                {previewSection?.title ?? 'No section selected'}
-              </div>
-
-              <div className="mt-3 space-y-2 text-sm text-[var(--ui-text-muted)]">
-                {(previewSection?.rows ?? []).slice(0, 3).map((row, index) => (
-                  <div key={`${previewSection?.title}-${index}`} className="rounded-lg bg-black/10 px-3 py-2">
-                    <div className="font-medium text-[var(--ui-text)]">
-                      {state.viewMode === 'class' ? row.day || 'TBA' : row.className || 'TBA'}
-                    </div>
-                    <div className="mt-0.5">
-                      {[row.time, row.location, row.instructor].filter(Boolean).join(' | ')}
-                    </div>
-                    {row.note && <div className="mt-0.5 italic">{row.note}</div>}
-                  </div>
-                ))}
-              </div>
-
-              {previewSection?.rows.length === 0 && previewSection?.description && (
-                <div className="mt-3 text-sm leading-relaxed text-[var(--ui-text-muted)]">
-                  {previewSection.description}
-                </div>
-              )}
-
-              <div className="mt-4 text-xs text-[var(--ui-text-muted)]">
-                Parsed {scheduleInfo.byDay.length} days and {scheduleInfo.byClass.length} classes.
-              </div>
-            </>
-          ) : (
-            <div className="text-sm text-[var(--ui-text-muted)]">
-              {loading
-                ? 'Loading schedule preview...'
-                : loadError || 'Schedule details will appear here once the page loads.'}
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 }

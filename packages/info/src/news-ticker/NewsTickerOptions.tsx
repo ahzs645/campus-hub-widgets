@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { FormInput, FormSelect, FormSwitch, OptionsPanel, OptionsSection, OptionsPreview, describeCapabilities } from '@firstform/campus-hub-widget-sdk';
+import { FormInput, FormSelect, FormSwitch, OptionsPanel, OptionsSection, describeCapabilities } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
 interface NewsTickerData {
@@ -427,44 +427,6 @@ export default function NewsTickerOptions({ data, onChange, linkedSource }: Widg
         />
       </OptionsSection>
 
-      {/* Preview */}
-      <OptionsPreview>
-          <div className="flex items-center">
-            <div className="bg-[var(--color-primary)] text-[var(--color-accent)] px-4 py-2 font-bold text-sm uppercase tracking-wider flex items-center gap-2 flex-shrink-0">
-              <span className="animate-pulse">●</span>
-              {state.label}
-            </div>
-            {isEvents ? (
-              <div className="px-4 py-2 flex items-center gap-3 overflow-hidden">
-                <span className="px-2 py-0.5 rounded text-xs font-bold bg-[var(--color-primary)] text-[var(--color-accent)] whitespace-nowrap">
-                  11:00 AM
-                </span>
-                <span
-                  className="w-2 h-2 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: EVENT_DOT_COLORS[0] }}
-                />
-                <span className="text-[var(--color-primary)] font-medium text-sm whitespace-nowrap">
-                  Club Fair
-                </span>
-                <span className="text-[var(--color-primary)] opacity-40">&bull;</span>
-                <span className="px-2 py-0.5 rounded text-xs font-bold bg-[var(--color-primary)] text-[var(--color-accent)] whitespace-nowrap">
-                  2:00 PM
-                </span>
-                <span
-                  className="w-2 h-2 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: EVENT_DOT_COLORS[1] }}
-                />
-                <span className="text-[var(--color-primary)] font-medium text-sm whitespace-nowrap">
-                  Guest Lecture
-                </span>
-              </div>
-            ) : (
-              <div className="px-4 py-2 text-[var(--color-primary)] font-medium text-sm whitespace-nowrap overflow-hidden">
-                Library closes at 10PM tonight &bull; Rain expected this afternoon &bull; Basketball finals Saturday
-              </div>
-            )}
-          </div>
-      </OptionsPreview>
     </OptionsPanel>
   );
 }
