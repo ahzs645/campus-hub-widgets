@@ -170,33 +170,6 @@ export default function SlideshowOptions({ data, onChange }: WidgetOptionsProps)
         />
       </div>
 
-      {surface !== 'gallery' && (
-        <div className="border-t border-[color:var(--ui-item-border)] pt-6">
-          <h4 className="font-semibold text-[var(--ui-text)] mb-4">Preview</h4>
-          <div className="bg-[var(--ui-item-bg)] rounded-xl aspect-video flex items-center justify-center overflow-hidden">
-            {state.slides.length > 0 && state.slides[0].url ? (
-              <div className="relative w-full h-full">
-                <img
-                  src={state.slides[0].url}
-                  alt="Preview"
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
-                <div className="absolute bottom-2 left-2 text-white text-xs bg-black/50 px-2 py-1 rounded">
-                  {state.slides.length} slide{state.slides.length !== 1 ? 's' : ''}
-                </div>
-              </div>
-            ) : (
-              <div className="text-center">
-                <AppIcon name="slideshow" className="w-9 h-9 opacity-50 mx-auto text-white/70" />
-                <div className="text-white/50 text-sm mt-2">No slides configured</div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

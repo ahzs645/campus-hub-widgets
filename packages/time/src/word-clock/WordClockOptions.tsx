@@ -43,17 +43,6 @@ export default function WordClockOptions({ data, onChange }: WidgetOptionsProps)
         </div>
       </div>
 
-      {/* Preview */}
-      <div className="border-t border-[color:var(--ui-item-border)] pt-6">
-        <h4 className="font-semibold text-[var(--ui-text)] mb-4">How It Works</h4>
-        <div className="bg-[var(--ui-item-bg)] rounded-xl p-4 text-sm text-[var(--ui-text-muted)] space-y-2">
-          <p>The word clock displays time using illuminated words on a letter grid.</p>
-          <p className="font-mono text-xs tracking-widest text-center py-2" style={{ color: 'var(--color-accent)' }}>
-            IT IS QUARTER PAST NINE
-          </p>
-          <p>Words light up to spell out the current time in natural language, like &ldquo;IT IS TWENTY FIVE TO THREE&rdquo;.</p>
-        </div>
-      </div>
     </div>
   );
 }

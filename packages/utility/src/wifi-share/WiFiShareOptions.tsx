@@ -1,8 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import QRCodeLib from 'qrcode';
 import { FormInput, FormSelect, FormSwitch } from '@firstform/campus-hub-widget-sdk';
-import { AppIcon } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
 interface WiFiShareData {
@@ -38,7 +36,6 @@ export default function WiFiShareOptions({ data, onChange }: WidgetOptionsProps)
     qrBgColor: (data?.qrBgColor as string) ?? '',
   });
 
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const resolvedBgColor = resolveColor(state.bgColor, '#2563eb');
   const resolvedTextColor = resolveColor(state.textColor, '#ffffff');
   const resolvedQrFgColor = resolveColor(state.qrFgColor, '#000000');
@@ -61,23 +58,6 @@ export default function WiFiShareOptions({ data, onChange }: WidgetOptionsProps)
       });
     }
   }, [data]);
-
-  useEffect(() => {
-    if (!state.ssid) {
-      setPreviewUrl(null);
-      return;
-    }
-
-    const wifiStr = `WIFI:T:${state.encryption};S:${state.ssid};P:${state.password};H:${state.hidden ? 'true' : 'false'};;`;
-    QRCodeLib.toDataURL(wifiStr, {
-      errorCorrectionLevel: 'M',
-      color: { dark: resolvedQrFgColor, light: resolvedQrBgColor },
-      margin: 2,
-      width: 256,
-    })
-      .then(setPreviewUrl)
-      .catch(() => setPreviewUrl(null));
-  }, [state.ssid, state.password, state.encryption, state.hidden, resolvedQrFgColor, resolvedQrBgColor]);
 
   const handleChange = (name: string, value: string | number | boolean) => {
     const newState = { ...state, [name]: value };
@@ -245,45 +225,6 @@ export default function WiFiShareOptions({ data, onChange }: WidgetOptionsProps)
               </button>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Preview */}
-      <div className="border-t border-[color:var(--ui-item-border)] pt-6">
-        <h4 className="font-semibold text-[var(--ui-text)] mb-4">Preview</h4>
-        <div
-          className="rounded-xl flex flex-col items-center justify-center overflow-hidden p-6"
-          style={{ backgroundColor: resolvedBgColor, aspectRatio: '3/4' }}
-        >
-          {state.ssid ? (
-            <>
-              {state.message && (
-                <p className="text-sm font-bold mb-3 text-center" style={{ color: resolvedTextColor }}>
-                  {state.message}
-                </p>
-              )}
-              {previewUrl && (
-                <img src={previewUrl} alt="WiFi QR Preview" className="rounded max-w-[70%]" />
-              )}
-              <div className="mt-3 text-center space-y-0.5">
-                {state.showNetworkName && (
-                  <p className="text-xs" style={{ color: resolvedTextColor }}>
-                    Network name : {state.ssid}
-                  </p>
-                )}
-                {state.showPassword && state.password && (
-                  <p className="text-xs" style={{ color: resolvedTextColor }}>
-                    Password : {state.password}
-                  </p>
-                )}
-              </div>
-            </>
-          ) : (
-            <div className="text-center">
-              <AppIcon name="wifi" className="w-9 h-9 opacity-50 mx-auto text-white/70" />
-              <div className="text-white/50 text-sm mt-2">Enter network details</div>
-            </div>
-          )}
         </div>
       </div>
     </div>

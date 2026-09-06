@@ -1,8 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import QRCodeLib from 'qrcode';
 import { FormInput, FormSelect } from '@firstform/campus-hub-widget-sdk';
-import { AppIcon } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
 interface QRCodeData {
@@ -26,7 +24,6 @@ export default function QRCodeOptions({ data, onChange }: WidgetOptionsProps) {
     errorCorrection: (data?.errorCorrection as 'L' | 'M' | 'Q' | 'H') ?? 'M',
   });
 
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const resolvedFgColor = resolveColor(state.fgColor, '#000000');
   const resolvedBgColor = resolveColor(state.bgColor, '#ffffff');
 
@@ -41,22 +38,6 @@ export default function QRCodeOptions({ data, onChange }: WidgetOptionsProps) {
       });
     }
   }, [data]);
-
-  useEffect(() => {
-    if (!state.text) {
-      setPreviewUrl(null);
-      return;
-    }
-
-    QRCodeLib.toDataURL(state.text, {
-      errorCorrectionLevel: state.errorCorrection,
-      color: { dark: resolvedFgColor, light: resolvedBgColor },
-      margin: 2,
-      width: 256,
-    })
-      .then(setPreviewUrl)
-      .catch(() => setPreviewUrl(null));
-  }, [state.text, resolvedFgColor, resolvedBgColor, state.errorCorrection]);
 
   const handleChange = (name: string, value: string | number | boolean) => {
     const newState = { ...state, [name]: value };
@@ -155,31 +136,6 @@ export default function QRCodeOptions({ data, onChange }: WidgetOptionsProps) {
         </div>
       </div>
 
-      {/* Preview */}
-      <div className="border-t border-[color:var(--ui-item-border)] pt-6">
-        <h4 className="font-semibold text-[var(--ui-text)] mb-4">Preview</h4>
-        <div className="bg-[var(--ui-item-bg)] rounded-xl aspect-square flex flex-col items-center justify-center overflow-hidden p-4">
-          {previewUrl ? (
-            <>
-              <img
-                src={previewUrl}
-                alt="QR Code Preview"
-                className="max-w-full max-h-full rounded"
-              />
-              {state.label && (
-                <span className="mt-2 text-xs text-[var(--ui-text-muted)] truncate max-w-full">
-                  {state.label}
-                </span>
-              )}
-            </>
-          ) : (
-            <div className="text-center">
-              <AppIcon name="qrCode" className="w-9 h-9 opacity-50 mx-auto text-white/70" />
-              <div className="text-white/50 text-sm mt-2">Enter text or URL</div>
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 }

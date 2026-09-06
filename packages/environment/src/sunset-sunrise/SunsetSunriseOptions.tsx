@@ -6,7 +6,6 @@ import {
   FormSwitch,
   OptionsPanel,
   OptionsSection,
-  OptionsPreview,
 } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
@@ -160,31 +159,6 @@ export default function SunsetSunriseOptions({ data, onChange }: WidgetOptionsPr
         />
       </OptionsSection>
 
-      {/* Preview */}
-      <OptionsPreview>
-        <div className="text-xs text-[var(--color-accent)] mb-1">{state.locationName}</div>
-        <div className="flex items-center gap-4">
-          <div className="flex flex-col items-center">
-            <AppIcon name="sunrise" className="w-6 h-6 text-amber-400" />
-            <span className="text-lg font-bold text-white mt-0.5">
-              {state.timeFormat === '12h' ? '6:45 AM' : '06:45'}
-            </span>
-            <span className="text-xs text-white/50">Sunrise</span>
-          </div>
-          <div className="flex flex-col items-center">
-            <AppIcon name="sunset" className="w-6 h-6 text-orange-400" />
-            <span className="text-lg font-bold text-white mt-0.5">
-              {state.timeFormat === '12h' ? '7:20 PM' : '19:20'}
-            </span>
-            <span className="text-xs text-white/50">Sunset</span>
-          </div>
-        </div>
-        {state.showDetails && (
-          <div className="mt-2 text-xs text-white/50">
-            12h 35m daylight
-          </div>
-        )}
-      </OptionsPreview>
     </OptionsPanel>
   );
 }
