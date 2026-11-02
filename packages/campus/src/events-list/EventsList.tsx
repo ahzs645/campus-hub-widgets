@@ -1,7 +1,8 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
-import { useEvents, useTransitionSettled, type CalendarEvent } from '@firstform/campus-hub-widget-sdk';
+import { useEventsState, useTransitionSettled, type CalendarEvent } from '@firstform/campus-hub-widget-sdk';
+import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
 import {
   ThemedCard,
   Badge,
@@ -57,16 +58,29 @@ export default function EventsList({ config, theme }: WidgetComponentProps) {
   const useCorsProxy = eventsConfig?.useCorsProxy ?? true;
   const galleryPreview = eventsConfig?.galleryPreview ?? false;
 
-  const events = useEvents({
+  // Events supplied in the config are the user's own data, not samples.
+  const manualEvents = eventsConfig?.events && eventsConfig.events.length > 0
+    ? eventsConfig.events
+    : undefined;
+
+  const {
+    events,
+    isDemo: usingDefaults,
+    loading,
+    error,
+  } = useEventsState({
     apiUrl,
     sourceType,
     cacheTtlSeconds,
     maxItems,
     pollIntervalMs: 30_000,
-    defaultEvents: eventsConfig?.events ?? DEFAULT_EVENTS,
+    defaultEvents: manualEvents ?? DEFAULT_EVENTS,
     selectedCategories,
     useCorsProxy,
   });
+  const isDemo = usingDefaults && !manualEvents;
+  const isUnavailable = !!apiUrl && !!error && events.length === 0;
+  const refreshFailed = !!apiUrl && !!error && events.length > 0;
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(3);
@@ -211,17 +225,42 @@ export default function EventsList({ config, theme }: WidgetComponentProps) {
           </svg>
         }
         trailing={
-          displayMode !== 'scroll' && totalEvents > 1 ? (
-            <span className="text-sm font-normal opacity-60 whitespace-nowrap">
-              {displayMode === 'ticker'
-                ? `${currentIndex + 1} / ${totalEvents}`
-                : `Page ${currentPage + 1} / ${totalPages}`}
+          isDemo || refreshFailed || (displayMode !== 'scroll' && totalEvents > 1) ? (
+            <span className="flex items-center gap-2 whitespace-nowrap">
+              {isDemo && (
+                <span
+                  className="px-2.5 py-0.5 rounded-full text-xs font-semibold text-white/70"
+                  style={{ backgroundColor: `${theme.primary}99` }}
+                >
+                  Demo
+                </span>
+              )}
+              {refreshFailed && (
+                <span className="text-xs font-normal text-white/50" title={error ?? undefined}>
+                  Refresh failed
+                </span>
+              )}
+              {displayMode !== 'scroll' && totalEvents > 1 && (
+                <span className="text-sm font-normal opacity-60">
+                  {displayMode === 'ticker'
+                    ? `${currentIndex + 1} / ${totalEvents}`
+                    : `Page ${currentPage + 1} / ${totalPages}`}
+                </span>
+              )}
             </span>
           ) : undefined
         }
       />
 
-      {totalEvents === 0 && renderEmptyState()}
+      {isUnavailable && <SourceUnavailable label="Events" detail={error} />}
+
+      {!isUnavailable && loading && totalEvents === 0 && (
+        <div className="flex flex-1 items-center justify-center text-center text-lg font-medium text-white/50">
+          Loading events…
+        </div>
+      )}
+
+      {!isUnavailable && !loading && totalEvents === 0 && renderEmptyState()}
 
       {/* Scroll mode – original scrollable list */}
       {totalEvents > 0 && displayMode === 'scroll' && (

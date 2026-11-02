@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useEvents, useFitScale, type WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
+import { useEventsState, useFitScale, type WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 
 interface CalendarConfig {
   title?: string;
@@ -69,14 +69,26 @@ export default function MacOSCalendar({ config }: WidgetComponentProps) {
   gridStart.setDate(monthStart.getDate() - monthStart.getDay());
 
   const title = calendarConfig.title?.trim() ?? '';
-  // No feed configured: useEvents returns the sample events below.
-  const isDemo = !calendarConfig.apiUrl?.trim();
-  const events = useEvents({
+  // Sample events only while no feed is configured. A configured feed starts
+  // empty and keeps its last-good events if a refresh fails.
+  const { events, isDemo, loading, error } = useEventsState({
     apiUrl: calendarConfig.apiUrl?.trim() || undefined,
     sourceType: calendarConfig.sourceType ?? 'ical',
     maxItems: calendarConfig.maxItems ?? 6,
     defaultEvents: DEMO_EVENTS,
   });
+  // The date grid is always real, so a failed feed is reported in the status
+  // pill/footer (no event dots are drawn) rather than replacing the calendar.
+  const eventsLabel = `${events.length} event${events.length === 1 ? '' : 's'}`;
+  const feedStatus = isDemo
+    ? 'Demo'
+    : error && events.length === 0
+      ? 'Feed unavailable'
+      : loading
+        ? 'Loading…'
+        : error
+          ? `${eventsLabel} · refresh failed`
+          : eventsLabel;
 
   const eventDates = useMemo(() => {
     return events
@@ -213,7 +225,7 @@ export default function MacOSCalendar({ config }: WidgetComponentProps) {
                 textTransform: 'uppercase',
               }}
             >
-              {isDemo ? 'Demo' : `${events.length} event${events.length === 1 ? '' : 's'}`}
+              {isDemo || (error && events.length === 0) || loading ? feedStatus : eventsLabel}
             </span>
           </div>
         </div>
@@ -376,8 +388,7 @@ export default function MacOSCalendar({ config }: WidgetComponentProps) {
           >
             {[
               title,
-              isDemo ? 'Demo' : null,
-              `${events.length} event${events.length === 1 ? '' : 's'}`,
+              feedStatus,
             ]
               .filter(Boolean)
               .join(' · ')}

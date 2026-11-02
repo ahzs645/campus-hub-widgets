@@ -12,10 +12,25 @@ interface HAEntityState {
   last_updated?: string;
 }
 
+const SIGNALING_TOKEN_STORAGE_KEY = 'campus-hub:signaling-token';
+
+function readDisplaySignalingToken(): string {
+  if (typeof window === 'undefined') return '';
+  const fromQuery = new URLSearchParams(window.location.search).get('signalingToken');
+  if (fromQuery) return fromQuery;
+  try {
+    return window.localStorage.getItem(SIGNALING_TOKEN_STORAGE_KEY) || '';
+  } catch {
+    return '';
+  }
+}
+
 interface HAWidgetConfig {
   mode?: 'signaling' | 'http';
   signalUrl?: string;
   displayId?: string;
+  /** Shared secret of the signaling server (sent as the handshake auth token). */
+  signalToken?: string;
   httpUrl?: string;
   pollIntervalSeconds?: number;
   entityIds?: string[];
@@ -347,6 +362,9 @@ function HomeAssistantWidget({ config, theme }: WidgetComponentProps) {
   // Read signal URL from widget config, falling back to URL params
   const signalUrl = cfg?.signalUrl || (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('signal') : null) || '';
   const displayId = cfg?.displayId || (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('displayId') : null) || '';
+  // Same fallbacks as the display page: ?signalingToken= once, then the copy
+  // it remembers in localStorage.
+  const signalToken = cfg?.signalToken?.trim() || readDisplaySignalingToken();
   const httpUrl = resolveHttpStateUrl(cfg?.httpUrl || '');
   const pollIntervalMs = Math.max(5, Number(cfg?.pollIntervalSeconds) || 30) * 1000;
   const entityIds = cfg?.entityIds || [];
@@ -387,6 +405,7 @@ function HomeAssistantWidget({ config, theme }: WidgetComponentProps) {
       // package that imports the SDK.
       const created = await createSignalingClient(signalUrl, 'display', displayId, {
         name: displayId,
+        authToken: signalToken || undefined,
       });
       if (cancelled) {
         created.disconnect();
@@ -428,7 +447,7 @@ function HomeAssistantWidget({ config, theme }: WidgetComponentProps) {
       client?.disconnect();
       clientRef.current = null;
     };
-  }, [mode, signalUrl, displayId, entityIds.join(','), handleState]);
+  }, [mode, signalUrl, displayId, signalToken, entityIds.join(','), handleState]);
 
   useEffect(() => {
     if (mode !== 'http') return;

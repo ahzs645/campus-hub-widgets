@@ -10,6 +10,7 @@ export default function HomeAssistantOptions({ data, onChange }: WidgetOptionsPr
   const mode = (data.mode as 'signaling' | 'http') === 'http' ? 'http' : 'signaling';
   const signalUrl = (data.signalUrl as string) || '';
   const displayId = (data.displayId as string) || '';
+  const signalToken = (data.signalToken as string) || '';
   const httpUrl = (data.httpUrl as string) || '';
   const pollIntervalSeconds = Number(data.pollIntervalSeconds as number) || 30;
   const entityIds = (data.entityIds as string[]) || [];
@@ -92,6 +93,22 @@ export default function HomeAssistantOptions({ data, onChange }: WidgetOptionsPr
               className="w-full px-3 py-2 bg-black/30 border border-white/10 rounded-lg text-sm text-white placeholder:text-white/20 outline-none focus:border-white/30"
             />
             <p className="text-[10px] text-white/30">Leave empty to use the display&apos;s ?displayId= URL param</p>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-white/60">Signaling Token</label>
+            <input
+              type="password"
+              autoComplete="off"
+              value={signalToken}
+              onChange={(e) => update({ signalToken: e.target.value })}
+              placeholder="Shared secret"
+              className="w-full px-3 py-2 bg-black/30 border border-white/10 rounded-lg text-sm text-white placeholder:text-white/20 outline-none focus:border-white/30"
+            />
+            <p className="text-[10px] text-white/30">
+              The signaling server&apos;s shared secret. It is saved in this layout&apos;s config, so prefer leaving it empty:
+              the widget then uses the display&apos;s ?signalingToken= URL param (remembered on the device).
+            </p>
           </div>
         </>
       ) : (
