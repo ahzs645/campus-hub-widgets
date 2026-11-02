@@ -3,13 +3,19 @@ import { useState, useEffect, useCallback } from 'react';
 import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, buildProxyUrl, fetchJsonWithCache, getCorsProxyUrl } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
+import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
+import { withFetchTimeout } from '../fetch-timeout';
 
 interface GroundwaterConfig {
   locationId?: string;
   datasetId?: string;
+  /** Legacy key written by older options UIs; read only when datasetId is unset. */
+  dataSet?: string;
   displayMode?: 'current' | 'history';
   refreshInterval?: number;
   useCorsProxy?: boolean;
+  /** Gallery preview: show the labelled sample reading instead of fetching. */
+  galleryDemo?: boolean;
 }
 
 /** Response shape from the WebPortal DatasetGrid endpoint. */
@@ -34,16 +40,20 @@ const KNOWN_DATASETS: Record<string, number> = {
   OW378: 11130,
 };
 
-const MOCK_DATA: GwData = {
-  locationId: 'OW378',
-  dataSetLabel: 'Groundwater Level (SGWL)',
-  currentLevel: 35.105,
-  unit: 'm',
-  timestamp: new Date().toISOString(),
-  history: Array.from({ length: 24 }, (_, i) => ({
-    time: new Date(Date.now() - (23 - i) * 3600000).toISOString(),
-    value: 35.0 + Math.sin(i / 4) * 0.3 + Math.random() * 0.05,
-  })),
+/** Sample reading for the gallery preview, timed relative to now. */
+const buildMockData = (locationId: string): GwData => {
+  const now = Date.now();
+  return {
+    locationId,
+    dataSetLabel: 'Groundwater Level (SGWL)',
+    currentLevel: 35.105,
+    unit: 'm',
+    timestamp: new Date(now).toISOString(),
+    history: Array.from({ length: 24 }, (_, i) => ({
+      time: new Date(now - (23 - i) * 3600000).toISOString(),
+      value: 35.0 + Math.sin(i / 4) * 0.3 + ((i * 7) % 5) * 0.01,
+    })),
+  };
 };
 
 /**
@@ -122,20 +132,33 @@ export default function GroundwaterLevel({
 }: WidgetComponentProps) {
   const cfg = config as GroundwaterConfig | undefined;
   const locationId = cfg?.locationId?.trim() || 'OW378';
-  const datasetId = cfg?.datasetId?.trim() || '';
+  const datasetId = String(cfg?.datasetId ?? cfg?.dataSet ?? '').trim();
   const displayMode = cfg?.displayMode ?? 'current';
   const refreshInterval = cfg?.refreshInterval ?? 30;
   const useCorsProxy = cfg?.useCorsProxy ?? true;
 
-  const [data, setData] = useState<GwData>(MOCK_DATA);
+  // The AQUARIUS portal is public, so the widget is always "live"; sample data
+  // is only for the gallery preview, and always badged.
+  const isDemo = cfg?.galleryDemo ?? false;
+  // Identifies the well/dataset a reading came from, so a config change never
+  // shows another well's data while refetching.
+  const sourceKey = `${locationId.toUpperCase()}:${datasetId}`;
+
+  // Last-good live reading, keyed by source. Starts empty (loading), never
+  // with the sample reading.
+  const [live, setLive] = useState<{ key: string; data: GwData; updatedAt: Date } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const refreshMs = refreshInterval * 60 * 1000;
 
   const fetchData = useCallback(async () => {
+    if (isDemo) {
+      setError(null);
+      return;
+    }
     if (!useCorsProxy || !getCorsProxyUrl()) {
-      setData({ ...MOCK_DATA, locationId });
+      // The portal sends no CORS headers, so it cannot be read without the proxy.
+      setError('A CORS proxy is required to load groundwater data');
       return;
     }
 
@@ -147,8 +170,10 @@ export default function GroundwaterLevel({
         ? Number(datasetId)
         : KNOWN_DATASETS[locationId.toUpperCase()];
 
-      if (!numericId) {
-        setError(`Unknown well ${locationId} — set a dataset ID in config`);
+      if (!numericId || !Number.isInteger(numericId) || numericId <= 0) {
+        setError(datasetId
+          ? `Dataset ID must be a number (got "${datasetId}")`
+          : `No built-in dataset for well ${locationId} — set its dataset ID`);
         return;
       }
 
@@ -162,7 +187,7 @@ export default function GroundwaterLevel({
 
       const { data: latestResp } = await fetchJsonWithCache<DatasetGridResponse>(
         buildProxyUrl(latestUrl),
-        { cacheKey: buildCacheKey('gw-latest', `${numericId}`), ttlMs: refreshMs },
+        { cacheKey: buildCacheKey('gw-latest', `${numericId}`), ttlMs: refreshMs, fetchInit: withFetchTimeout() },
       );
 
       const latestRow = latestResp?.Data?.[0];
@@ -175,7 +200,7 @@ export default function GroundwaterLevel({
 
       const { data: histResp } = await fetchJsonWithCache<DatasetGridResponse>(
         buildProxyUrl(histUrl),
-        { cacheKey: buildCacheKey('gw-hist', `${numericId}`), ttlMs: refreshMs },
+        { cacheKey: buildCacheKey('gw-hist', `${numericId}`), ttlMs: refreshMs, fetchInit: withFetchTimeout() },
       );
 
       const history = (histResp?.Data ?? [])
@@ -183,19 +208,22 @@ export default function GroundwaterLevel({
         .map((r) => ({ time: r.TimeStamp, value: r.Value }))
         .reverse(); // oldest first for sparkline
 
-      setData({
-        locationId,
-        dataSetLabel: 'Groundwater Level (SGWL)',
-        currentLevel: latestRow?.Value ?? null,
-        unit: 'm',
-        timestamp: latestRow?.TimeStamp ?? null,
-        history,
+      setLive({
+        key: sourceKey,
+        updatedAt: new Date(),
+        data: {
+          locationId,
+          dataSetLabel: 'Groundwater Level (SGWL)',
+          currentLevel: latestRow?.Value ?? null,
+          unit: 'm',
+          timestamp: latestRow?.TimeStamp ?? null,
+          history,
+        },
       });
-      setLastUpdated(new Date());
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [locationId, datasetId, refreshMs, useCorsProxy]);
+  }, [locationId, datasetId, isDemo, refreshMs, sourceKey, useCorsProxy]);
 
   useEffect(() => {
     let isMounted = true;
@@ -215,6 +243,23 @@ export default function GroundwaterLevel({
     landscape: { w: 340, h: 280 },
     portrait: { w: 240, h: 380 },
   });
+
+  const data: GwData | null = isDemo
+    ? buildMockData(locationId)
+    : live?.key === sourceKey ? live.data : null;
+  const lastUpdated = !isDemo && live?.key === sourceKey ? live.updatedAt : null;
+
+  if (!data) {
+    return (
+      <ThemedContainer ref={containerRef} theme={theme} color="primary" opacity="20" className="flex items-center justify-center">
+        {error ? (
+          <SourceUnavailable label="Groundwater level" detail={error} />
+        ) : (
+          <div className="text-sm text-white/50">Loading groundwater level…</div>
+        )}
+      </ThemedContainer>
+    );
+  }
 
   const levelDisplay =
     data.currentLevel != null ? data.currentLevel.toFixed(3) : '—';
@@ -246,11 +291,13 @@ export default function GroundwaterLevel({
         className={`flex flex-col p-6 ${!isLandscape ? 'items-center' : ''}`}
       >
         {/* Header */}
-        <div
-          className={`text-sm font-medium opacity-70 mb-1 ${!isLandscape ? 'text-center' : ''}`}
-          style={{ color: theme.accent }}
-        >
-          {data.locationId} &mdash; Groundwater
+        <div className={`flex items-center gap-2 text-sm font-medium mb-1 ${!isLandscape ? 'justify-center' : ''}`}>
+          <span className="opacity-70 truncate" style={{ color: theme.accent }}>
+            {data.locationId} &mdash; Groundwater
+          </span>
+          {isDemo && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/50">Demo</span>
+          )}
         </div>
 
         {/* Main level display */}

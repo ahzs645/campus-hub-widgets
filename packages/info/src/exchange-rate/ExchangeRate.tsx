@@ -14,6 +14,14 @@ const DESIGN_W = 300;
 const DESIGN_H = 90;
 const REFRESH_INTERVAL_MS = 60 * 60 * 1000; // 60 minutes
 
+const FETCH_TIMEOUT_MS = 15_000;
+
+function timeoutSignal(ms: number): AbortSignal | undefined {
+  return typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+    ? AbortSignal.timeout(ms)
+    : undefined;
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
@@ -65,7 +73,8 @@ export default function ExchangeRate({ config, theme }: WidgetComponentProps) {
   const fetchRates = useCallback(async () => {
     try {
       const res = await fetch(
-        `https://api.exchangerate-api.com/v4/latest/${baseCurrency}`
+        `https://api.exchangerate-api.com/v4/latest/${encodeURIComponent(baseCurrency)}`,
+        { signal: timeoutSignal(FETCH_TIMEOUT_MS) },
       );
       if (!res.ok) throw new Error('Failed to fetch');
       const data = await res.json();
@@ -87,16 +96,20 @@ export default function ExchangeRate({ config, theme }: WidgetComponentProps) {
   useEffect(() => {
     if (currencies.length <= 1) return;
 
+    let fadeTimer: ReturnType<typeof setTimeout> | undefined;
     const timer = setInterval(() => {
       setVisible(false);
 
-      setTimeout(() => {
+      fadeTimer = setTimeout(() => {
         setCurrentIndex((prev) => (prev + 1) % currencies.length);
         setVisible(true);
       }, 300);
     }, cycleInterval * 1000);
 
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+      if (fadeTimer) clearTimeout(fadeTimer);
+    };
   }, [currencies.length, cycleInterval]);
 
   // Reset index when currencies change

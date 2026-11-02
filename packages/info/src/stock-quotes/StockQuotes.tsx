@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { DarkContainer, buildCacheKey, fetchJsonWithCache, type WidgetComponentProps, useFitScale, useLoopingAutoScroll } from '@firstform/campus-hub-widget-sdk';
+import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
 import { DEFAULT_SYMBOLS } from './meta';
 
 interface StockQuotesConfig {
@@ -47,8 +48,6 @@ const buildDemoChart = (): ChartPoint[] => {
     close,
   }));
 };
-
-const DEMO_CHART = buildDemoChart();
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
   const normalized = hex.trim().replace('#', '');
@@ -159,20 +158,25 @@ export default function StockQuotes({ config, theme }: WidgetComponentProps) {
   const showNames = stockConfig?.showNames ?? true;
 
   const { containerRef, scale } = useFitScale(420, 320);
-  const [quotes, setQuotes] = useState<Quote[]>(DEMO_QUOTES);
-  const [chart, setChart] = useState<ChartPoint[]>(DEMO_CHART);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
+  // Demo only when no usable symbol is configured; the quotes then come
+  // from sample data with a visible badge. Configured symbols never fall
+  // back to sample prices.
+  const isDemo = symbols.length === 0;
+  const symbolsKey = symbols.join(',');
   const chartSymbol =
     stockConfig?.chartSymbol?.trim().toUpperCase() ||
     symbols[0] ||
     DEMO_QUOTES[0].symbol;
+  const requestKey = `${symbolsKey}|${chartSymbol}|${range}`;
+
+  // Last-good live data keyed by the request it came from, so a config
+  // change never shows another request's prices while refetching.
+  const [live, setLive] = useState<{ key: string; quotes: Quote[]; chart: ChartPoint[] } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(!isDemo);
 
   const fetchStocks = useCallback(async () => {
-    if (symbols.length === 0) {
-      setQuotes(DEMO_QUOTES);
-      setChart(DEMO_CHART);
+    if (isDemo) {
       setError(null);
       setLoading(false);
       return;
@@ -181,7 +185,7 @@ export default function StockQuotes({ config, theme }: WidgetComponentProps) {
     try {
       setLoading(true);
       const params = new URLSearchParams({
-        symbols: symbols.join(','),
+        symbols: symbolsKey,
         chart: chartSymbol,
         range,
       });
@@ -195,17 +199,19 @@ export default function StockQuotes({ config, theme }: WidgetComponentProps) {
         throw new Error('No quote data returned');
       }
 
-      setQuotes(data.quotes);
-      setChart(data.chart && data.chart.length > 1 ? data.chart : DEMO_CHART);
+      setLive({
+        key: requestKey,
+        quotes: data.quotes,
+        chart: data.chart && data.chart.length > 1 ? data.chart : [],
+      });
       setError(null);
     } catch (fetchError) {
-      setQuotes(DEMO_QUOTES);
-      setChart(DEMO_CHART);
+      // Keep last-good quotes; never substitute sample prices.
       setError(fetchError instanceof Error ? fetchError.message : 'Unable to load quotes');
     } finally {
       setLoading(false);
     }
-  }, [chartSymbol, range, refreshInterval, symbols]);
+  }, [chartSymbol, isDemo, range, refreshInterval, requestKey, symbolsKey]);
 
   useEffect(() => {
     fetchStocks();
@@ -213,8 +219,19 @@ export default function StockQuotes({ config, theme }: WidgetComponentProps) {
     return () => window.clearInterval(interval);
   }, [fetchStocks, refreshInterval]);
 
-  const leadQuote = useMemo(
-    () => quotes.find((quote) => quote.symbol === chartSymbol) ?? quotes[0] ?? DEMO_QUOTES[0],
+  const current = !isDemo && live?.key === requestKey ? live : null;
+  const quotes: Quote[] = isDemo ? DEMO_QUOTES : current?.quotes ?? [];
+  const chart = useMemo<ChartPoint[]>(
+    () => (isDemo ? buildDemoChart() : current?.chart ?? []),
+    [isDemo, current],
+  );
+  const isUnavailable = !isDemo && current === null && error !== null;
+  const isLoading = !isDemo && current === null && error === null;
+
+  const leadQuote = useMemo<Quote>(
+    () =>
+      quotes.find((quote) => quote.symbol === chartSymbol) ??
+      quotes[0] ?? { symbol: chartSymbol, name: '', price: 0, change: 0, changePercent: 0 },
     [chartSymbol, quotes],
   );
   const quotesRef = useLoopingAutoScroll<HTMLDivElement>([
@@ -272,10 +289,19 @@ export default function StockQuotes({ config, theme }: WidgetComponentProps) {
                 fontWeight: 700,
               }}
             >
-              {rangeLabel(range)}
+              {isDemo ? 'Demo' : rangeLabel(range)}
             </div>
           </div>
 
+          {isUnavailable ? (
+            <div className="min-h-0 flex-1">
+              <SourceUnavailable label="Stock quotes" detail={error} />
+            </div>
+          ) : isLoading ? (
+            <div className="flex min-h-0 flex-1 items-center justify-center" style={{ fontSize: 12, color: subtleColor }}>
+              Loading quotes…
+            </div>
+          ) : (
           <div className="flex min-h-0 flex-1 gap-3 overflow-hidden">
             <div
               className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-[20px]"
@@ -374,8 +400,10 @@ export default function StockQuotes({ config, theme }: WidgetComponentProps) {
             </div>
           </div>
 
+          )}
+
           <div className="mt-3 flex shrink-0 items-center justify-between gap-2" style={{ fontSize: 11, color: subtleColor }}>
-            <span className="min-w-0 truncate">{loading ? 'Refreshing quotes...' : error ? `Fallback data • ${error}` : 'Live price snapshot'}</span>
+            <span className="min-w-0 truncate">{isDemo ? 'Sample prices' : loading ? 'Refreshing quotes...' : error ? `Refresh failed • ${error}` : 'Live price snapshot'}</span>
             <span className="shrink-0">Updates every {refreshInterval}m</span>
           </div>
         </div>

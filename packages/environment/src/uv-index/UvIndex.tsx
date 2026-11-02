@@ -3,6 +3,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, buildProxyUrl, fetchJsonWithCache, fetchTextWithCache, getCorsProxyUrl } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
+import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
+import { withFetchTimeout } from '../fetch-timeout';
 import { DEFAULT_CITY, DEFAULT_LATITUDE, DEFAULT_LONGITUDE, DEFAULT_REFRESH_MINUTES, DEFAULT_WEATHER_NETWORK_URL } from './meta';
 
 interface UvIndexConfig {
@@ -309,10 +311,25 @@ export default function UvIndex({ config, theme }: WidgetComponentProps) {
   const weatherNetworkUrl = cfg?.weatherNetworkUrl?.trim() || DEFAULT_WEATHER_NETWORK_URL;
   const refreshInterval = clampRefreshInterval(cfg?.refreshInterval);
 
-  const [data, setData] = useState<UvData>(MOCK_DATA);
+  // OpenUV without a key / WAQI without a token is "not configured": sample
+  // reading with a Demo badge. The Weather Network page needs no credentials.
+  const isDemo = (dataSource === 'openuv' && !openUvApiKey) || (dataSource === 'waqi' && !waqiToken);
+  const demoLocation = dataSource === 'waqi'
+    ? waqiCity
+    : locationMode === 'city' ? city : formatCoordinateLocation(latitude, longitude);
+  // Identifies the source a reading came from, so a config change never shows
+  // another location's data while refetching.
+  const sourceKey = dataSource === 'waqi'
+    ? `waqi:${waqiCity}`
+    : dataSource === 'weather-network'
+      ? `weather-network:${weatherNetworkUrl}`
+      : locationMode === 'city' ? `openuv:city:${city}` : `openuv:coords:${latitude},${longitude}`;
+
+  // Last-good live reading, keyed by source. A configured source starts empty
+  // (loading), never with the sample reading.
+  const [live, setLive] = useState<{ key: string; data: UvData; observedAt: Date } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const refreshMs = refreshInterval * 60 * 1000;
 
@@ -326,6 +343,7 @@ export default function UvIndex({ config, theme }: WidgetComponentProps) {
     const { data: resp } = await fetchJsonWithCache<OpenMeteoGeocodingResponse>(url, {
       cacheKey: buildCacheKey('uv-geocode', city.toLowerCase()),
       ttlMs: GEOCODING_TTL_MS,
+      fetchInit: withFetchTimeout(),
     });
     const match = pickBestGeocodingResult(resp.results, query, qualifiers);
     if (!match || typeof match.latitude !== 'number' || typeof match.longitude !== 'number') {
@@ -349,25 +367,25 @@ export default function UvIndex({ config, theme }: WidgetComponentProps) {
   }, [latitude, locationMode, longitude, resolveCityLocation]);
 
   const fetchOpenUv = useCallback(async () => {
-    const location = await resolveUvLocation();
-
     if (!openUvApiKey) {
+      // Not configured: demo mode, rendered from MOCK_DATA with a badge.
       setError(null);
       setWarning('Add an OpenUV API key to show live UV data');
-      setLastUpdated(null);
-      setData({ ...MOCK_DATA, location: location.label });
       return;
     }
     try {
       setError(null);
       setWarning(null);
+      // Inside the try: a geocoding failure is a source failure, not an
+      // unhandled rejection that leaves the widget without feedback.
+      const location = await resolveUvLocation();
       const url = `https://api.openuv.io/api/v1/uv?lat=${location.latitude}&lng=${location.longitude}`;
       const { data: resp, stale } = await fetchJsonWithCache<OpenUvResponse>(url, {
         cacheKey: buildCacheKey('uv-openuv', `${location.latitude},${location.longitude}`),
         ttlMs: refreshMs,
-        fetchInit: {
+        fetchInit: withFetchTimeout({
           headers: { 'x-access-token': openUvApiKey },
-        },
+        }),
       });
 
       if (!resp?.result) {
@@ -382,20 +400,22 @@ export default function UvIndex({ config, theme }: WidgetComponentProps) {
         ? new Date(resp.result.uv_max_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         : undefined;
 
-      setData({ value: uv, ...level, maxUv, maxUvTime, location: location.label });
-      setLastUpdated(parseSourceDate(resp.result.uv_time) ?? new Date());
+      setLive({
+        key: sourceKey,
+        data: { value: uv, ...level, maxUv, maxUvTime, location: location.label },
+        observedAt: parseSourceDate(resp.result.uv_time) ?? new Date(),
+      });
       setWarning(stale ? 'Showing cached UV data' : null);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [openUvApiKey, refreshMs, resolveUvLocation]);
+  }, [openUvApiKey, refreshMs, resolveUvLocation, sourceKey]);
 
   const fetchWaqiUv = useCallback(async () => {
     if (!waqiToken) {
+      // Not configured: demo mode, rendered from MOCK_DATA with a badge.
       setError(null);
       setWarning('Add a WAQI token to show live UV data');
-      setLastUpdated(null);
-      setData({ ...MOCK_DATA, location: waqiCity });
       return;
     }
     try {
@@ -405,6 +425,7 @@ export default function UvIndex({ config, theme }: WidgetComponentProps) {
       const { data: resp, stale } = await fetchJsonWithCache<WaqiUvResponse>(url, {
         cacheKey: buildCacheKey('uv-waqi', waqiCity),
         ttlMs: refreshMs,
+        fetchInit: withFetchTimeout(),
       });
 
       if (resp?.status !== 'ok' || !resp.data?.iaqi) {
@@ -421,18 +442,20 @@ export default function UvIndex({ config, theme }: WidgetComponentProps) {
 
       const uv = Math.round(uvVal * 10) / 10;
       const level = uvLevel(uv);
-      setData({ value: uv, ...level, location: resp.data.city?.name ?? waqiCity });
-      setLastUpdated(
-        parseSourceDate(resp.data.time?.iso) ??
-        parseSourceDate(resp.data.time?.s) ??
-        parseSourceDate(resp.data.time?.v) ??
-        new Date(),
-      );
+      setLive({
+        key: sourceKey,
+        data: { value: uv, ...level, location: resp.data.city?.name ?? waqiCity },
+        observedAt:
+          parseSourceDate(resp.data.time?.iso) ??
+          parseSourceDate(resp.data.time?.s) ??
+          parseSourceDate(resp.data.time?.v) ??
+          new Date(),
+      });
       setWarning(stale ? 'Showing cached UV data' : null);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [waqiToken, waqiCity, refreshMs]);
+  }, [waqiToken, waqiCity, refreshMs, sourceKey]);
 
   const fetchWeatherNetworkUv = useCallback(async () => {
     try {
@@ -449,6 +472,7 @@ export default function UvIndex({ config, theme }: WidgetComponentProps) {
       const { text, stale } = await fetchTextWithCache(fetchUrl, {
         cacheKey: buildCacheKey('uv-weather-network', targetUrl),
         ttlMs: refreshMs,
+        fetchInit: withFetchTimeout(),
       });
       const parsed = parseWeatherNetworkUv(text);
       if (!parsed) {
@@ -456,13 +480,12 @@ export default function UvIndex({ config, theme }: WidgetComponentProps) {
         return;
       }
 
-      setData(parsed.data);
-      setLastUpdated(parsed.observedAt ?? new Date());
+      setLive({ key: sourceKey, data: parsed.data, observedAt: parsed.observedAt ?? new Date() });
       setWarning(stale ? 'Showing cached UV data' : null);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [refreshMs, weatherNetworkUrl]);
+  }, [refreshMs, sourceKey, weatherNetworkUrl]);
 
   useEffect(() => {
     let isMounted = true;
@@ -489,6 +512,26 @@ export default function UvIndex({ config, theme }: WidgetComponentProps) {
     portrait: { w: 240, h: 360 },
   });
 
+  // demo → sample reading (badged); live → last-good reading from this source;
+  // unavailable → the configured source failed with nothing good to show.
+  const hasLiveData = live?.key === sourceKey;
+  const data: UvData | null = isDemo
+    ? { ...MOCK_DATA, location: demoLocation }
+    : hasLiveData ? live.data : null;
+  const lastUpdated = !isDemo && hasLiveData ? live.observedAt : null;
+
+  if (!data) {
+    return (
+      <ThemedContainer ref={containerRef} theme={theme} color="primary" opacity="20" className="flex items-center justify-center">
+        {error ? (
+          <SourceUnavailable label="UV index" detail={error} />
+        ) : (
+          <div className="text-sm text-white/50">Loading UV index…</div>
+        )}
+      </ThemedContainer>
+    );
+  }
+
   // Position marker on UV scale (0-14 range)
   const markerPercent = Math.min(100, (data.value / 14) * 100);
 
@@ -511,8 +554,11 @@ export default function UvIndex({ config, theme }: WidgetComponentProps) {
       >
         {/* Header */}
         <div className={`mb-3 w-full min-w-0 ${!isLandscape ? 'text-center' : ''}`}>
-          <div className="text-sm font-medium opacity-70" style={{ color: theme.accent }}>
-            UV Index
+          <div className={`flex items-center gap-2 text-sm font-medium ${!isLandscape ? 'justify-center' : ''}`}>
+            <span className="opacity-70" style={{ color: theme.accent }}>UV Index</span>
+            {isDemo && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/50">Demo</span>
+            )}
           </div>
           {data.location && (
             <div className="mt-1 w-full min-w-0 max-w-full truncate text-sm text-white/45">

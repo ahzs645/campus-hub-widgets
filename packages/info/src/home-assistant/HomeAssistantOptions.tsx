@@ -10,6 +10,7 @@ export default function HomeAssistantOptions({ data, onChange }: WidgetOptionsPr
   const mode = (data.mode as 'signaling' | 'http') === 'http' ? 'http' : 'signaling';
   const signalUrl = (data.signalUrl as string) || '';
   const displayId = (data.displayId as string) || '';
+  const signalToken = (data.signalToken as string) || '';
   const httpUrl = (data.httpUrl as string) || '';
   const pollIntervalSeconds = Number(data.pollIntervalSeconds as number) || 30;
   const entityIds = (data.entityIds as string[]) || [];
@@ -19,12 +20,22 @@ export default function HomeAssistantOptions({ data, onChange }: WidgetOptionsPr
     onChange({ ...data, ...patch });
   };
 
+  const layout = (['auto', 'list', 'grid', 'single'] as const).includes(data.layout as never)
+    ? (data.layout as string)
+    : 'auto';
+
+  // Accept one ID or several separated by commas/whitespace, as the
+  // placeholder suggests.
   const addEntity = () => {
-    const id = newEntityId.trim();
-    if (id && !entityIds.includes(id)) {
-      update({ entityIds: [...entityIds, id] });
-      setNewEntityId('');
+    const ids = newEntityId
+      .split(/[\s,]+/)
+      .map((id) => id.trim())
+      .filter(Boolean);
+    const additions = ids.filter((id, index) => !entityIds.includes(id) && ids.indexOf(id) === index);
+    if (additions.length > 0) {
+      update({ entityIds: [...entityIds, ...additions] });
     }
+    if (ids.length > 0) setNewEntityId('');
   };
 
   const removeEntity = (id: string) => {
@@ -83,6 +94,22 @@ export default function HomeAssistantOptions({ data, onChange }: WidgetOptionsPr
             />
             <p className="text-[10px] text-white/30">Leave empty to use the display&apos;s ?displayId= URL param</p>
           </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-white/60">Signaling Token</label>
+            <input
+              type="password"
+              autoComplete="off"
+              value={signalToken}
+              onChange={(e) => update({ signalToken: e.target.value })}
+              placeholder="Shared secret"
+              className="w-full px-3 py-2 bg-black/30 border border-white/10 rounded-lg text-sm text-white placeholder:text-white/20 outline-none focus:border-white/30"
+            />
+            <p className="text-[10px] text-white/30">
+              The signaling server&apos;s shared secret. It is saved in this layout&apos;s config, so prefer leaving it empty:
+              the widget then uses the display&apos;s ?signalingToken= URL param (remembered on the device).
+            </p>
+          </div>
         </>
       ) : (
         <>
@@ -116,6 +143,20 @@ export default function HomeAssistantOptions({ data, onChange }: WidgetOptionsPr
       )}
 
       <div className="space-y-1.5">
+        <label className="text-xs font-medium text-white/60">Layout</label>
+        <select
+          value={layout}
+          onChange={(e) => update({ layout: e.target.value })}
+          className="w-full px-3 py-2 bg-black/30 border border-white/10 rounded-lg text-sm text-white outline-none focus:border-white/30"
+        >
+          <option value="auto">Auto (fill for one entity, list for more)</option>
+          <option value="list">List</option>
+          <option value="grid">Grid (two columns)</option>
+          <option value="single">Single (first entity only)</option>
+        </select>
+      </div>
+
+      <div className="space-y-1.5">
         <label className="text-xs font-medium text-white/60">Entity IDs</label>
         <div className="flex gap-2">
           <input
@@ -127,6 +168,7 @@ export default function HomeAssistantOptions({ data, onChange }: WidgetOptionsPr
             className="flex-1 px-3 py-2 bg-black/30 border border-white/10 rounded-lg text-sm text-white placeholder:text-white/20 outline-none focus:border-white/30 font-mono"
           />
           <button
+            type="button"
             onClick={addEntity}
             className="px-3 py-2 bg-white/10 border border-white/10 rounded-lg text-sm text-white/70 hover:bg-white/15"
           >
@@ -142,6 +184,7 @@ export default function HomeAssistantOptions({ data, onChange }: WidgetOptionsPr
               >
                 <span className="text-xs font-mono text-white/60">{id}</span>
                 <button
+                  type="button"
                   onClick={() => removeEntity(id)}
                   className="text-xs text-red-400/60 hover:text-red-400"
                 >

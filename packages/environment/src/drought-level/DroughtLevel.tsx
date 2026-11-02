@@ -3,12 +3,16 @@ import { useState, useEffect, useCallback } from 'react';
 import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, buildProxyUrl, fetchJsonWithCache, getCorsProxyUrl } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
+import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
+import { withFetchTimeout } from '../fetch-timeout';
 
 interface DroughtLevelConfig {
   basin?: string;
   displayMode?: 'single' | 'overview';
   refreshInterval?: number;
   useCorsProxy?: boolean;
+  /** Gallery preview: show the labelled sample basins instead of fetching. */
+  galleryDemo?: boolean;
 }
 
 interface DroughtFeature {
@@ -66,13 +70,17 @@ const DROUGHT_COLORS = [
   { level: 5, color: '#991b1b' },
 ];
 
-const MOCK_DATA: BasinData[] = [
-  { basinName: 'Okanagan', droughtLevel: 3, dateModified: new Date().toISOString(), comments: null },
-  { basinName: 'Nicola', droughtLevel: 2, dateModified: new Date().toISOString(), comments: null },
-  { basinName: 'Lower Mainland', droughtLevel: 1, dateModified: new Date().toISOString(), comments: null },
-  { basinName: 'Quesnel', droughtLevel: 0, dateModified: new Date().toISOString(), comments: null },
-  { basinName: 'South Thompson', droughtLevel: 4, dateModified: new Date().toISOString(), comments: null },
-];
+/** Sample basins for the gallery preview, dated today. */
+const buildMockData = (): BasinData[] => {
+  const today = new Date().toISOString();
+  return [
+    { basinName: 'Okanagan', droughtLevel: 3, dateModified: today, comments: null },
+    { basinName: 'Nicola', droughtLevel: 2, dateModified: today, comments: null },
+    { basinName: 'Lower Mainland', droughtLevel: 1, dateModified: today, comments: null },
+    { basinName: 'Quesnel', droughtLevel: 0, dateModified: today, comments: null },
+    { basinName: 'South Thompson', droughtLevel: 4, dateModified: today, comments: null },
+  ];
+};
 
 export default function DroughtLevel({
   config,
@@ -84,15 +92,23 @@ export default function DroughtLevel({
   const refreshInterval = cfg?.refreshInterval ?? 60;
   const useCorsProxy = cfg?.useCorsProxy ?? true;
 
-  const [basins, setBasins] = useState<BasinData[]>(MOCK_DATA);
+  // The provincial feature service is public, so the widget is always "live";
+  // sample data is only for the gallery preview, and always badged.
+  const isDemo = cfg?.galleryDemo ?? false;
+
+  // Last-good live basins. Starts empty (loading), never with sample data.
+  const [live, setLive] = useState<{ basins: BasinData[]; updatedAt: Date } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const refreshMs = refreshInterval * 60 * 1000;
 
   const fetchData = useCallback(async () => {
+    if (isDemo) {
+      setError(null);
+      return;
+    }
     if (!useCorsProxy || !getCorsProxyUrl()) {
-      setBasins(MOCK_DATA);
+      setError('A CORS proxy is required to load BC drought data');
       return;
     }
     try {
@@ -109,6 +125,7 @@ export default function DroughtLevel({
       const { data: resp } = await fetchJsonWithCache<ArcGISResponse>(fetchUrl, {
         cacheKey: buildCacheKey('drought-level', 'all-basins'),
         ttlMs: refreshMs,
+        fetchInit: withFetchTimeout(),
       });
 
       const features = resp?.features ?? [];
@@ -127,12 +144,11 @@ export default function DroughtLevel({
       }));
 
       parsed.sort((a, b) => a.basinName.localeCompare(b.basinName));
-      setBasins(parsed);
-      setLastUpdated(new Date());
+      setLive({ basins: parsed, updatedAt: new Date() });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [refreshMs, useCorsProxy]);
+  }, [isDemo, refreshMs, useCorsProxy]);
 
   useEffect(() => {
     let isMounted = true;
@@ -152,6 +168,10 @@ export default function DroughtLevel({
     landscape: { w: 340, h: 280 },
     portrait: { w: 260, h: 400 },
   });
+
+  const basins: BasinData[] = isDemo ? buildMockData() : live?.basins ?? [];
+  const lastUpdated = isDemo ? null : live?.updatedAt ?? null;
+  const hasData = isDemo || live !== null;
 
   // Find selected basin or highest drought level basin for single mode
   const selected = selectedBasin
@@ -376,19 +396,29 @@ export default function DroughtLevel({
         className={`flex flex-col p-6 ${!isLandscape ? 'items-center' : ''}`}
       >
         {/* Header */}
-        <div
-          className={`text-sm font-medium opacity-70 mb-1 ${!isLandscape ? 'text-center' : ''}`}
-          style={{ color: theme.accent }}
-        >
-          {displayMode === 'single' && selected
-            ? `${selected.basinName} \u2014 Drought Level`
-            : 'BC Drought Levels'}
+        <div className={`flex items-center gap-2 text-sm font-medium mb-1 ${!isLandscape ? 'justify-center' : ''}`}>
+          <span className="opacity-70 truncate" style={{ color: theme.accent }}>
+            {displayMode === 'single' && selected
+              ? `${selected.basinName} \u2014 Drought Level`
+              : 'BC Drought Levels'}
+          </span>
+          {isDemo && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/50">Demo</span>
+          )}
         </div>
 
-        {displayMode === 'single' ? renderSingle() : renderOverview()}
+        {!hasData ? (
+          error ? (
+            <div className="flex-1 min-h-0">
+              <SourceUnavailable label="Drought levels" detail={error} />
+            </div>
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-sm text-white/50">Loading drought levels…</div>
+          )
+        ) : displayMode === 'single' ? renderSingle() : renderOverview()}
 
         {/* Error */}
-        {error && (
+        {hasData && error && (
           <div className="mt-2 text-sm text-red-400 truncate">{error}</div>
         )}
 

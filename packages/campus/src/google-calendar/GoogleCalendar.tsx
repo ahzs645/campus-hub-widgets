@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { WidgetComponentProps, useLoopingAutoScroll } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, fetchJsonWithCache } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
+import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
 
 interface CalendarEvent {
   title: string;
@@ -42,6 +43,18 @@ const DEMO_EVENTS: CalendarEvent[] = [
   { title: 'Spring Break', start: new Date(Date.now() + 86400000 * 3), end: new Date(Date.now() + 86400000 * 10), allDay: true, location: undefined },
 ];
 
+/**
+ * Google returns all-day events as date-only strings ('YYYY-MM-DD'). `new Date()`
+ * would read those as UTC midnight, i.e. the previous day west of UTC, so they
+ * are parsed as local calendar dates instead. (All-day end dates are exclusive.)
+ */
+function parseGoogleDate(value: { dateTime?: string; date?: string } | undefined): Date {
+  if (value?.dateTime) return new Date(value.dateTime);
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value?.date ?? '');
+  if (match) return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  return new Date(value?.date ?? '');
+}
+
 function formatTime(date: Date): string {
   return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
@@ -78,34 +91,38 @@ export default function GoogleCalendar({ config, theme }: WidgetComponentProps) 
   const daysAhead = calConfig?.daysAhead ?? 7;
   const customTitle = calConfig?.title?.trim() || '';
 
-  const [events, setEvents] = useState<CalendarEvent[]>(DEMO_EVENTS);
-  const [calTitle, setCalTitle] = useState(customTitle || 'Campus Calendar');
+  // Both a calendar ID and an API key are needed to fetch; until then the
+  // widget is in (badged) demo mode.
+  const isDemo = !calendarId || !apiKey;
+  const sourceKey = `${calendarId}|${apiKey}|${daysAhead}|${maxEvents}`;
+
+  // Last-good live events, keyed by the source they came from. A configured
+  // calendar starts empty (loading), never with the demo events.
+  const [live, setLive] = useState<{ key: string; events: CalendarEvent[]; summary?: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const fetchEvents = useCallback(async () => {
-    if (!calendarId || !apiKey) {
-      setEvents(DEMO_EVENTS);
-      setCalTitle(customTitle || 'Campus Calendar');
+    if (isDemo) {
+      setError(null);
       return;
     }
     try {
-      setError(null);
       const now = new Date();
       const timeMin = now.toISOString();
       const futureDate = new Date(now);
       futureDate.setDate(futureDate.getDate() + daysAhead);
       const timeMax = futureDate.toISOString();
 
-      const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?key=${apiKey}&timeMin=${timeMin}&timeMax=${timeMax}&maxResults=${maxEvents}&singleEvents=true&orderBy=startTime`;
+      const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?key=${encodeURIComponent(apiKey)}&timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}&maxResults=${maxEvents}&singleEvents=true&orderBy=startTime`;
       const { data } = await fetchJsonWithCache<GoogleCalendarResponse>(url, {
-        cacheKey: buildCacheKey('gcal', `${calendarId}:${daysAhead}`),
+        cacheKey: buildCacheKey('gcal', `${calendarId}:${daysAhead}:${maxEvents}`),
         ttlMs: refreshInterval * 60 * 1000,
       });
 
       const parsed: CalendarEvent[] = (data?.items ?? []).map((item) => {
         const allDay = !item.start?.dateTime;
-        const start = new Date(item.start?.dateTime ?? item.start?.date ?? '');
-        const end = new Date(item.end?.dateTime ?? item.end?.date ?? '');
+        const start = parseGoogleDate(item.start);
+        const end = parseGoogleDate(item.end);
         return {
           title: item.summary ?? 'Untitled Event',
           start,
@@ -115,12 +132,13 @@ export default function GoogleCalendar({ config, theme }: WidgetComponentProps) 
         };
       });
 
-      setEvents(parsed);
-      setCalTitle(customTitle || data?.summary || 'Calendar');
+      setLive({ key: sourceKey, events: parsed, summary: data?.summary });
+      setError(null);
     } catch (err) {
+      // Keep any last-good live events; never substitute the demo events.
       setError(err instanceof Error ? err.message : 'Failed to load calendar');
     }
-  }, [calendarId, apiKey, maxEvents, refreshInterval, daysAhead, customTitle]);
+  }, [isDemo, calendarId, apiKey, maxEvents, refreshInterval, daysAhead, sourceKey]);
 
   useEffect(() => {
     fetchEvents();
@@ -135,9 +153,17 @@ export default function GoogleCalendar({ config, theme }: WidgetComponentProps) 
     return () => clearInterval(interval);
   }, []);
 
+  // demo → sample events (badged); live → last-good events from this calendar;
+  // unavailable → the configured calendar failed with nothing good to show.
+  const liveForSource = !isDemo && live?.key === sourceKey ? live : null;
+  const events: CalendarEvent[] | null = isDemo ? DEMO_EVENTS : liveForSource?.events ?? null;
+  const calTitle = customTitle || (isDemo ? 'Campus Calendar' : liveForSource?.summary || 'Calendar');
+  const isUnavailable = !isDemo && events === null && error !== null;
+  const isLoading = !isDemo && events === null && error === null;
+
   // Group events by date
   const grouped = new Map<string, CalendarEvent[]>();
-  for (const event of events) {
+  for (const event of events ?? []) {
     const key = event.start.toDateString();
     if (!grouped.has(key)) grouped.set(key, []);
     grouped.get(key)!.push(event);
@@ -160,13 +186,14 @@ export default function GoogleCalendar({ config, theme }: WidgetComponentProps) 
         <div className="flex items-center gap-3 px-5 py-4 shrink-0" style={{ borderBottom: `1px solid ${theme.accent}20` }}>
           <span style={{ color: theme.accent }}><AppIcon name="calendarRange" className="w-5 h-5" /></span>
           <span className="text-lg font-semibold text-white truncate">{calTitle}</span>
-          {!calendarId && (
+          {isDemo && (
             <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/50 ml-auto">Demo</span>
           )}
         </div>
 
-        {error && (
-          <div className="px-5 py-3 text-sm text-red-400 shrink-0">{error}</div>
+        {/* Refresh failed but last-good events are still shown */}
+        {error && events !== null && (
+          <div className="px-5 py-3 text-sm text-red-400 shrink-0 truncate">{error}</div>
         )}
 
         {/* Events */}
@@ -176,7 +203,13 @@ export default function GoogleCalendar({ config, theme }: WidgetComponentProps) 
           className="flex-1 overflow-y-auto overscroll-none px-5 py-3 scrollbar-hide"
           style={{ maskImage: 'linear-gradient(to bottom, black calc(100% - 18px), transparent)' }}
         >
-          {events.length === 0 ? (
+          {isUnavailable ? (
+            <SourceUnavailable label="Calendar" detail={error} />
+          ) : isLoading ? (
+            <div className="flex h-full items-center justify-center text-center text-sm font-medium text-white/60">
+              Loading events…
+            </div>
+          ) : events && events.length === 0 ? (
             <div className="flex h-full items-center justify-center text-center text-sm font-medium text-white/60">
               No events available
             </div>

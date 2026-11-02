@@ -12,6 +12,9 @@
   "files": [
     "src"
   ],
+  "dependencies": {
+    "@firstform/campus-hub-widgets-shared": "^0.1.0"
+  },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
     "lucide-react": ">=0.400.0",

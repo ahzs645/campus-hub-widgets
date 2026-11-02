@@ -3,11 +3,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, buildProxyUrl, fetchTextWithCache, getCorsProxyUrl } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
+import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
+import { withFetchTimeout } from '../fetch-timeout';
 
 interface FireHazardConfig {
   fireCentre?: string;
   refreshInterval?: number;
   useCorsProxy?: boolean;
+  /** Gallery preview: show the labelled sample reading instead of fetching. */
+  galleryDemo?: boolean;
 }
 
 interface DangerData {
@@ -166,15 +170,25 @@ export default function FireHazard({
   const refreshInterval = cfg?.refreshInterval ?? 30;
   const useCorsProxy = cfg?.useCorsProxy ?? true;
 
-  const [data, setData] = useState<DangerData>(MOCK_DATA);
+  // The BC Wildfire page is public, so the widget is always "live"; sample
+  // data is only for the gallery preview, and always badged.
+  const isDemo = cfg?.galleryDemo ?? false;
+
+  // Last-good live reading, keyed by fire centre. Starts empty (loading),
+  // never with the sample reading.
+  const [live, setLive] = useState<{ key: string; data: DangerData; updatedAt: Date } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const refreshMs = refreshInterval * 60 * 1000;
 
   const fetchData = useCallback(async () => {
+    if (isDemo) {
+      setError(null);
+      return;
+    }
     if (!useCorsProxy || !getCorsProxyUrl()) {
-      setData({ ...MOCK_DATA, fireCentre });
+      // The page sends no CORS headers, so it cannot be read without the proxy.
+      setError('A CORS proxy is required to load BC Wildfire data');
       return;
     }
     try {
@@ -184,18 +198,18 @@ export default function FireHazard({
       const { text } = await fetchTextWithCache(fetchUrl, {
         cacheKey: buildCacheKey('fire-hazard', fireCentre),
         ttlMs: refreshMs,
+        fetchInit: withFetchTimeout(),
       });
       const parsed = parseDangerHtml(text, fireCentre);
       if (parsed) {
-        setData(parsed);
-        setLastUpdated(new Date());
+        setLive({ key: fireCentre, data: parsed, updatedAt: new Date() });
       } else {
         setError('Failed to parse fire danger data');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [fireCentre, refreshMs, useCorsProxy]);
+  }, [fireCentre, isDemo, refreshMs, useCorsProxy]);
 
   useEffect(() => {
     let isMounted = true;
@@ -215,6 +229,23 @@ export default function FireHazard({
     landscape: { w: 340, h: 280 },
     portrait: { w: 240, h: 380 },
   });
+
+  const data: DangerData | null = isDemo
+    ? { ...MOCK_DATA, fireCentre }
+    : live?.key === fireCentre ? live.data : null;
+  const lastUpdated = !isDemo && live?.key === fireCentre ? live.updatedAt : null;
+
+  if (!data) {
+    return (
+      <ThemedContainer ref={containerRef} theme={theme} color="primary" opacity="20" className="flex items-center justify-center">
+        {error ? (
+          <SourceUnavailable label="Fire danger" detail={error} />
+        ) : (
+          <div className="text-sm text-white/50">Loading fire danger…</div>
+        )}
+      </ThemedContainer>
+    );
+  }
 
   // Flame icon paths (inline SVG for the main display)
   const flameIcon = (
@@ -255,11 +286,13 @@ export default function FireHazard({
         className={`flex flex-col p-6 ${!isLandscape ? 'items-center' : ''}`}
       >
         {/* Header */}
-        <div
-          className={`text-sm font-medium opacity-70 mb-1 ${!isLandscape ? 'text-center' : ''}`}
-          style={{ color: theme.accent }}
-        >
-          {centreShort} &mdash; Fire Danger
+        <div className={`flex items-center gap-2 text-sm font-medium mb-1 ${!isLandscape ? 'justify-center' : ''}`}>
+          <span className="opacity-70 truncate" style={{ color: theme.accent }}>
+            {centreShort} &mdash; Fire Danger
+          </span>
+          {isDemo && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/50">Demo</span>
+          )}
         </div>
 
         {/* Main danger display */}

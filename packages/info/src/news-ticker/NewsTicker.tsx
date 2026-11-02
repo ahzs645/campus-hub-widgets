@@ -3,7 +3,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, fetchJsonWithCache, fetchTextWithCache } from '@firstform/campus-hub-widget-sdk';
 import { parseRss } from '@firstform/campus-hub-widget-sdk';
-import { useEvents, buildProxyUrl, type CalendarEvent } from '@firstform/campus-hub-widget-sdk';
+import { useEventsState, buildProxyUrl, type CalendarEvent } from '@firstform/campus-hub-widget-sdk';
+import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
 import { PulsingDot } from '@firstform/campus-hub-widget-sdk';
 
 interface TickerItem {
@@ -481,8 +482,14 @@ export default function NewsTicker({ config, theme }: WidgetComponentProps) {
   ]);
 
   // Events data via shared hook
-  const events = useEvents({
-    apiUrl: dataSource === 'events' ? tickerConfig?.eventApiUrl : undefined,
+  const eventApiUrl = dataSource === 'events' ? tickerConfig?.eventApiUrl?.trim() || undefined : undefined;
+  const {
+    events,
+    isDemo: eventsDemo,
+    loading: eventsLoading,
+    error: eventsError,
+  } = useEventsState({
+    apiUrl: eventApiUrl,
     sourceType: tickerConfig?.eventSourceType ?? 'json',
     cacheTtlSeconds: tickerConfig?.eventCacheTtlSeconds ?? 300,
     maxItems: tickerConfig?.eventMaxItems ?? 10,
@@ -491,6 +498,12 @@ export default function NewsTicker({ config, theme }: WidgetComponentProps) {
   });
 
   const isEventsMode = dataSource === 'events';
+  // Events mode: sample events only while no feed is configured (badged);
+  // a configured feed that fails with nothing to show is reported, not faked.
+  const showEventsDemo = isEventsMode && eventsDemo;
+  const eventsUnavailable = isEventsMode && !!eventApiUrl && !!eventsError && events.length === 0;
+  const eventsPending = isEventsMode && eventsLoading && events.length === 0;
+  const showEventsStatus = eventsUnavailable || eventsPending;
 
   // Uniformly scale the ticker to fill its row height (designed at 70px),
   // then apply user scale from widget options.
@@ -611,17 +624,39 @@ export default function NewsTicker({ config, theme }: WidgetComponentProps) {
         </div>
 
         {/* Scrolling Content */}
-        <div
-          data-layout-diagnostic-ignore="true"
-          className="absolute inset-0 flex whitespace-nowrap animate-ticker will-change-transform"
-          style={{
-            animationDuration: `${speed}s`,
-          }}
-          onAnimationIteration={applyPendingItemsAtLoop}
-        >
-          {isEventsMode ? renderEventSegment('primary') : renderAnnouncementSegment('primary')}
-          {isEventsMode ? renderEventSegment('duplicate') : renderAnnouncementSegment('duplicate')}
-        </div>
+        {showEventsStatus ? (
+          <div className="absolute inset-0 flex items-center pl-48">
+            {eventsUnavailable ? (
+              <SourceUnavailable label="Events" compact />
+            ) : (
+              <span className="font-semibold text-xl opacity-60" style={{ color: theme.primary }}>
+                Loading events…
+              </span>
+            )}
+          </div>
+        ) : (
+          <div
+            data-layout-diagnostic-ignore="true"
+            className="absolute inset-0 flex whitespace-nowrap animate-ticker will-change-transform"
+            style={{
+              animationDuration: `${speed}s`,
+            }}
+            onAnimationIteration={applyPendingItemsAtLoop}
+          >
+            {isEventsMode ? renderEventSegment('primary') : renderAnnouncementSegment('primary')}
+            {isEventsMode ? renderEventSegment('duplicate') : renderAnnouncementSegment('duplicate')}
+          </div>
+        )}
+
+        {/* Sample events shown only while no events feed is configured. */}
+        {showEventsDemo && (
+          <div
+            className="absolute right-3 top-1/2 -translate-y-1/2 z-10 px-3 py-1 rounded-full text-xs font-semibold"
+            style={{ backgroundColor: theme.primary, color: theme.accent }}
+          >
+            Demo
+          </div>
+        )}
       </div>
     </div>
   );

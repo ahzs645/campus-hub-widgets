@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { WidgetComponentProps, PillIndicator, normalizeSourcePayload, resolveSourceAdapter, type ConfessionItem } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, buildProxyUrl, fetchJsonWithCache, fetchTextWithCache } from '@firstform/campus-hub-widget-sdk';
+import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
 
 interface ConfessionsConfig {
   apiUrl?: string;
@@ -44,10 +45,14 @@ export default function Confessions({ config, theme }: WidgetComponentProps) {
   const useCorsProxy = confConfig?.useCorsProxy ?? false;
   const showByline = confConfig?.showByline ?? true;
 
-  const [items, setItems] = useState<ConfessionItem[]>(DEMO_CONFESSIONS);
+  const isDemo = !apiUrl && !pageUrl;
+  const sourceKey = `${apiUrl}|${pageUrl}|${sourceAdapterId}|${maxItems}|${useCorsProxy ? 'proxy' : 'direct'}`;
+
+  // Last-good live confessions, keyed by the source they came from. A
+  // configured source starts empty (loading), never with the demo posts.
+  const [live, setLive] = useState<{ key: string; items: ConfessionItem[] } | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
   const [textSizePx, setTextSizePx] = useState<number>(28);
   const [isCompact, setIsCompact] = useState(false);
   const frameRef = useRef<HTMLDivElement>(null);
@@ -55,75 +60,97 @@ export default function Confessions({ config, theme }: WidgetComponentProps) {
   const textRef = useRef<HTMLParagraphElement>(null);
 
   const fetchConfessions = useCallback(async (forceFresh = false) => {
-    if (!useCorsProxy || (!apiUrl && !pageUrl)) return; // stay on demo data
-
-    setError(null);
-    setLoading(true);
+    if (isDemo) {
+      setError(null);
+      return;
+    }
 
     const ttlMs = cacheTtlSeconds * 1000;
     const cacheBustToken = forceFresh ? Date.now() : null;
+    let lastError: unknown = null;
+    let fetchedEmpty = false;
 
-    try {
-      const pageApiUrlBase = useCorsProxy ? buildProxyUrl(apiUrl) : apiUrl;
-      const pageApiUrl = cacheBustToken ? appendCacheBust(pageApiUrlBase, cacheBustToken) : pageApiUrlBase;
-      const { data } = await fetchJsonWithCache<unknown>(
-        pageApiUrl,
-        {
+    if (apiUrl) {
+      try {
+        const pageApiUrlBase = useCorsProxy ? buildProxyUrl(apiUrl) : apiUrl;
+        const pageApiUrl = cacheBustToken ? appendCacheBust(pageApiUrlBase, cacheBustToken) : pageApiUrlBase;
+        const { data } = await fetchJsonWithCache<unknown>(
+          pageApiUrl,
+          {
+            cacheKey: buildCacheKey(
+              cacheBustToken ? 'confessions-api-fresh' : 'confessions-api',
+              cacheBustToken ? `${apiUrl}:${cacheBustToken}` : apiUrl,
+            ),
+            ttlMs,
+          },
+        );
+
+        const normalized = normalizeSourcePayload({
+          adapterId: sourceAdapterId,
+          url: apiUrl,
+          payload: data,
+          options: { maxItems },
+        });
+        const parsed = (normalized?.data ?? []) as ConfessionItem[];
+
+        if (parsed.length > 0) {
+          setLive({ key: sourceKey, items: parsed });
+          setActiveIndex(0);
+          setError(null);
+          return;
+        }
+        fetchedEmpty = true;
+      } catch (err) {
+        lastError = err;
+        // Fall back to the page HTML below, if configured.
+      }
+    }
+
+    if (pageUrl) {
+      try {
+        const pageHtmlUrlBase = useCorsProxy ? buildProxyUrl(pageUrl) : pageUrl;
+        const pageHtmlUrl = cacheBustToken ? appendCacheBust(pageHtmlUrlBase, cacheBustToken) : pageHtmlUrlBase;
+        const { text } = await fetchTextWithCache(pageHtmlUrl, {
           cacheKey: buildCacheKey(
-            cacheBustToken ? 'confessions-api-fresh' : 'confessions-api',
-            cacheBustToken ? `${apiUrl}:${cacheBustToken}` : apiUrl,
+            cacheBustToken ? 'confessions-page-fresh' : 'confessions-page',
+            cacheBustToken ? `${pageUrl}:${cacheBustToken}` : pageUrl,
           ),
           ttlMs,
-        },
-      );
-
-      const normalized = normalizeSourcePayload({
-        adapterId: sourceAdapterId,
-        url: apiUrl,
-        payload: data,
-        options: { maxItems },
-      });
-      const parsed = (normalized?.data ?? []) as ConfessionItem[];
-
-      if (parsed.length > 0) {
-        setItems(parsed);
-
+        });
+        const normalized = normalizeSourcePayload({
+          adapterId: sourceAdapterId,
+          url: pageUrl,
+          rawText: text,
+          options: { maxItems },
+        });
+        const parsed = (normalized?.data ?? []) as ConfessionItem[];
+        setLive({ key: sourceKey, items: parsed });
         setActiveIndex(0);
-        setLoading(false);
+        setError(null);
         return;
+      } catch (err) {
+        lastError = err;
       }
-    } catch {
-      // Fallback handled below.
     }
 
-    try {
-      const pageHtmlUrlBase = useCorsProxy ? buildProxyUrl(pageUrl) : pageUrl;
-      const pageHtmlUrl = cacheBustToken ? appendCacheBust(pageHtmlUrlBase, cacheBustToken) : pageHtmlUrlBase;
-      const { text } = await fetchTextWithCache(pageHtmlUrl, {
-        cacheKey: buildCacheKey(
-          cacheBustToken ? 'confessions-page-fresh' : 'confessions-page',
-          cacheBustToken ? `${pageUrl}:${cacheBustToken}` : pageUrl,
-        ),
-        ttlMs,
-      });
-      const normalized = normalizeSourcePayload({
-        adapterId: sourceAdapterId,
-        url: pageUrl,
-        rawText: text,
-        options: { maxItems },
-      });
-      const parsed = (normalized?.data ?? []) as ConfessionItem[];
-      if (parsed.length > 0) {
-        setItems(parsed);
-
-        setActiveIndex(0);
-      }
-    } catch {
-      // Stay on demo data
-    } finally {
-      setLoading(false);
+    if (fetchedEmpty && !lastError) {
+      // The source answered but has nothing to show right now.
+      setLive({ key: sourceKey, items: [] });
+      setError(null);
+      return;
     }
-  }, [apiUrl, pageUrl, maxItems, cacheTtlSeconds, sourceAdapterId, useCorsProxy]);
+
+    // Keep any last-good live confessions; never substitute the demo posts.
+    console.warn('Failed to load confessions:', lastError);
+    setError(lastError instanceof Error ? lastError.message : 'Failed to load confessions');
+  }, [apiUrl, pageUrl, isDemo, maxItems, cacheTtlSeconds, sourceAdapterId, sourceKey, useCorsProxy]);
+
+  // demo → sample posts (badged); live → last-good posts from this source;
+  // unavailable → the configured source failed with nothing good to show.
+  const liveItems = !isDemo && live?.key === sourceKey ? live.items : null;
+  const items: ConfessionItem[] = isDemo ? DEMO_CONFESSIONS : liveItems ?? [];
+  const isUnavailable = !isDemo && liveItems === null && error !== null;
+  const isLoading = !isDemo && liveItems === null && error === null;
 
   useEffect(() => {
     fetchConfessions(false);
@@ -213,7 +240,7 @@ export default function Confessions({ config, theme }: WidgetComponentProps) {
     return () => observer.disconnect();
   }, [current?.id, current?.text, isCompact]);
 
-  if (loading && items.length === 0) {
+  if (isLoading) {
     return (
       <div className="h-full w-full flex items-center justify-center p-6" style={{ backgroundColor: `${theme.primary}20` }}>
         <div className="text-center">
@@ -224,13 +251,10 @@ export default function Confessions({ config, theme }: WidgetComponentProps) {
     );
   }
 
-  if (error && !current) {
+  if (isUnavailable) {
     return (
-      <div className="h-full w-full flex items-center justify-center p-6 text-center" style={{ backgroundColor: `${theme.primary}22` }}>
-        <div>
-          <div className="text-white/85 text-lg font-semibold">Confessions unavailable</div>
-          <div className="text-white/60 text-sm mt-1">{error}</div>
-        </div>
+      <div className="h-full w-full" style={{ backgroundColor: `${theme.primary}22` }}>
+        <SourceUnavailable label="Confessions" detail={error} />
       </div>
     );
   }
@@ -249,11 +273,19 @@ export default function Confessions({ config, theme }: WidgetComponentProps) {
           className={`${isCompact ? 'px-4 py-2' : 'px-5 py-3'} border-b`}
           style={{ borderColor: `${theme.accent}33` }}
         >
-          <div
-            className={`${isCompact ? 'text-xs' : 'text-sm'} font-semibold tracking-wide uppercase`}
-            style={{ color: theme.accent }}
-          >
-            UNBC Confessions
+          <div className="flex items-center justify-between gap-2">
+            <div
+              className={`${isCompact ? 'text-xs' : 'text-sm'} font-semibold tracking-wide uppercase`}
+              style={{ color: theme.accent }}
+            >
+              UNBC Confessions
+            </div>
+            {isDemo && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/50">Demo</span>
+            )}
+            {!isDemo && error && (
+              <span className="min-w-0 truncate text-xs text-red-300/80" title={error}>Refresh failed</span>
+            )}
           </div>
         </div>
 

@@ -2,7 +2,20 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { buildCacheKey, buildProxyUrl, fetchJsonWithCache, type WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
+import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
 import { MACOS_UI_FONT, MacOSDashboardSurface } from '../shared/ui';
+
+/**
+ * Open-Meteo daily dates are calendar days ("2026-11-02") in the location's
+ * timezone. `new Date('2026-11-02')` is UTC midnight, which is the previous
+ * day west of UTC, so read the parts as a local date instead.
+ */
+function parseCalendarDay(value: string): Date {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  return match
+    ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+    : new Date(value);
+}
 
 interface WeatherConfig {
   location?: string;
@@ -129,28 +142,22 @@ export default function MacOSWeather({ config }: WidgetComponentProps) {
   const showForecast = weatherConfig.showForecast ?? true;
   const useSampleData = weatherConfig.useSampleData ?? false;
 
-  const [label, setLabel] = useState(location);
-  const [data, setData] = useState<ForecastResponse | null>(
-    useSampleData ? SAMPLE_WEATHER_DATA : null,
-  );
+  const requestKey = `${location}:${units}`;
+  // Last-good live forecast keyed by the location/units it came from: a
+  // failed refresh keeps it, and a config change never shows another
+  // location's weather while refetching.
+  const [live, setLive] = useState<{ key: string; label: string; data: ForecastResponse } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(!useSampleData);
 
   useEffect(() => {
     if (useSampleData) {
-      setLabel('San Francisco, US');
-      setData(SAMPLE_WEATHER_DATA);
       setError(null);
-      setLoading(false);
       return;
     }
 
     let cancelled = false;
 
     const run = async () => {
-      setLoading(true);
-      setError(null);
-
       try {
         const geoUrl = buildProxyUrl(
           `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(
@@ -185,19 +192,15 @@ export default function MacOSWeather({ config }: WidgetComponentProps) {
         );
 
         if (!cancelled) {
-          setData(forecast);
-          setLabel(nextLabel);
+          setLive({ key: requestKey, label: nextLabel, data: forecast });
+          setError(null);
         }
       } catch (nextError) {
+        // Keep the last-good forecast; only the error line changes.
         if (!cancelled) {
           setError(
             nextError instanceof Error ? nextError.message : 'Weather unavailable',
           );
-          setData(null);
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
         }
       }
     };
@@ -208,7 +211,12 @@ export default function MacOSWeather({ config }: WidgetComponentProps) {
       cancelled = true;
       window.clearInterval(refresh);
     };
-  }, [location, units, useSampleData]);
+  }, [location, units, requestKey, useSampleData]);
+
+  const current = !useSampleData && live?.key === requestKey ? live : null;
+  const data: ForecastResponse | null = useSampleData ? SAMPLE_WEATHER_DATA : current?.data ?? null;
+  const label = useSampleData ? 'San Francisco, US' : current?.label ?? location;
+  const loading = !useSampleData && current === null && error === null;
 
   const gradient = useMemo(() => {
     if (!data) return 'linear-gradient(180deg, #5A8AAF 0%, #8BAFC5 40%, #B0C8D8 100%)';
@@ -219,7 +227,7 @@ export default function MacOSWeather({ config }: WidgetComponentProps) {
     () =>
       data
         ? data.daily.time.slice(1, 7).map((dateValue, index) => ({
-            dayLabel: new Date(dateValue)
+            dayLabel: parseCalendarDay(dateValue)
               .toLocaleDateString([], { weekday: 'short' })
               .toUpperCase(),
             weatherCode: data.daily.weather_code[index + 1],
@@ -234,15 +242,8 @@ export default function MacOSWeather({ config }: WidgetComponentProps) {
   if (!data && !loading && error) {
     return (
       <MacOSDashboardSurface>
-        <div
-          className="relative z-[1] flex h-full min-h-0 items-center justify-center px-4 text-center"
-          style={{
-            color: 'rgba(255,255,255,0.72)',
-            fontFamily: MACOS_UI_FONT,
-            fontSize: 12,
-          }}
-        >
-          {error}
+        <div className="relative z-[1] flex h-full min-h-0 flex-1">
+          <SourceUnavailable label="Weather" detail={error} compact />
         </div>
       </MacOSDashboardSurface>
     );
@@ -254,6 +255,20 @@ export default function MacOSWeather({ config }: WidgetComponentProps) {
         className="relative z-[1] flex flex-1 px-3 py-3"
         style={{ background: gradient }}
       >
+        {useSampleData && (
+          <span
+            className="pointer-events-none absolute right-2 top-2 z-[2] rounded-full px-2 py-0.5 font-semibold uppercase"
+            style={{
+              fontSize: 9,
+              letterSpacing: '0.06em',
+              color: '#FFF',
+              background: 'rgba(0,0,0,0.3)',
+              fontFamily: MACOS_UI_FONT,
+            }}
+          >
+            Demo
+          </span>
+        )}
         {loading ? (
           <div
             className="flex w-full items-center justify-center rounded-[inherit]"

@@ -12,6 +12,12 @@ import {
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 import { ROOM_MAP, resolveRoomInfo, sortRooms, type RoomInfo } from './libraryAvailabilityRooms';
 
+/** Abort on either the caller's signal or a 15s timeout (editor-side fetch). */
+const withFetchTimeout = (signal: AbortSignal, ms = 15_000): AbortSignal =>
+  typeof AbortSignal.any === 'function' && typeof AbortSignal.timeout === 'function'
+    ? AbortSignal.any([signal, AbortSignal.timeout(ms)])
+    : signal;
+
 type DisplayMode = 'grid' | 'calendar' | 'cards';
 type RoomScope = 'all' | 'single';
 
@@ -139,7 +145,7 @@ export default function LibraryAvailabilityOptions({ data, onChange }: WidgetOpt
       fetch(targetUrl, {
         method: 'POST',
         body: formData,
-        signal: controller.signal,
+        signal: withFetchTimeout(controller.signal),
       })
         .then((res) => {
           if (!res.ok) throw new Error(`HTTP ${res.status}`);

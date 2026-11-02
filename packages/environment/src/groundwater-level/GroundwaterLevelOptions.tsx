@@ -16,9 +16,15 @@ const WELL_PRESETS = [
   { value: 'custom', label: 'Custom Well ID…' },
 ];
 
+/** Earlier versions saved this field as `dataSet`, which the widget never read. */
+function readDatasetId(data: Record<string, unknown> | undefined): string {
+  const value = data?.datasetId ?? data?.dataSet;
+  return value == null ? '' : String(value);
+}
+
 interface GwOptionsData {
   locationId: string;
-  dataSet: string;
+  datasetId: string;
   displayMode: 'current' | 'history';
   refreshInterval: number;
   useCorsProxy: boolean;
@@ -27,7 +33,7 @@ interface GwOptionsData {
 export default function GroundwaterLevelOptions({ data, onChange }: WidgetOptionsProps) {
   const [state, setState] = useState<GwOptionsData>({
     locationId: (data?.locationId as string) ?? 'OW378',
-    dataSet: (data?.dataSet as string) ?? '',
+    datasetId: readDatasetId(data),
     displayMode: (data?.displayMode as 'current' | 'history') ?? 'current',
     refreshInterval: (data?.refreshInterval as number) ?? 30,
     useCorsProxy: (data?.useCorsProxy as boolean) ?? true,
@@ -43,7 +49,7 @@ export default function GroundwaterLevelOptions({ data, onChange }: WidgetOption
       const loc = (data.locationId as string) ?? 'OW378';
       setState({
         locationId: loc,
-        dataSet: (data.dataSet as string) ?? '',
+        datasetId: readDatasetId(data),
         displayMode: (data.displayMode as 'current' | 'history') ?? 'current',
         refreshInterval: (data.refreshInterval as number) ?? 30,
         useCorsProxy: (data.useCorsProxy as boolean) ?? true,
@@ -102,17 +108,17 @@ export default function GroundwaterLevelOptions({ data, onChange }: WidgetOption
         </div>
 
         <FormInput
-          label="Dataset Filter (optional)"
-          name="dataSet"
+          label="Dataset ID"
+          name="datasetId"
           type="text"
-          value={state.dataSet}
-          placeholder="SGWL (auto-detected if blank)"
+          value={state.datasetId}
+          placeholder="e.g. 11130 (auto for OW378)"
           onChange={handleChange}
         />
         <div className="text-xs text-[var(--ui-text-muted)] text-center">
-          The time series identifier to display. Leave blank to auto-select the
-          primary groundwater level dataset (SGWL). Available datasets are
-          loaded from the API.
+          The numeric AQUARIUS WebPortal dataset ID of the well's groundwater
+          level (SGWL) series — the number in the dataset's WebPortal URL.
+          Required for every well except OW378, whose ID is built in.
         </div>
       </div>
 

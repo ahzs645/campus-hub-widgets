@@ -180,6 +180,7 @@ export default function StreamPlayer({ config, theme }: WidgetComponentProps) {
       try {
         const response = await fetch(buildProxyUrl(primarySource.url), {
           cache: 'no-store',
+          signal: AbortSignal.timeout(15_000),
         });
 
         if (!response.ok) {

@@ -45,8 +45,8 @@ function markdownToHtml(md: string): string {
     .replace(/^### (.+)$/gm, '<h3 class="text-lg font-semibold mt-4 mb-2">$1</h3>')
     .replace(/^## (.+)$/gm, '<h2 class="text-xl font-bold mt-4 mb-2">$1</h2>')
     .replace(/^# (.+)$/gm, '<h1 class="text-2xl font-bold mt-4 mb-2">$1</h1>')
-    // Blockquote
-    .replace(/^> (.+)$/gm, '<blockquote class="border-l-4 border-current opacity-70 pl-4 py-1 my-2 italic">$1</blockquote>')
+    // Blockquote (">" has already been escaped to "&gt;" above)
+    .replace(/^&gt; (.+)$/gm, '<blockquote class="border-l-4 border-current opacity-70 pl-4 py-1 my-2 italic">$1</blockquote>')
     // Bold
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     // Italic
@@ -64,7 +64,9 @@ function markdownToHtml(md: string): string {
 
 export default function RichText({ config, theme }: WidgetComponentProps) {
   const richConfig = config as RichTextConfig | undefined;
-  const content = richConfig?.content?.trim() || DEFAULT_CONTENT;
+  const configuredContent = richConfig?.content?.trim();
+  const isDemo = !configuredContent;
+  const content = configuredContent || DEFAULT_CONTENT;
   const scrollSpeed = richConfig?.scrollSpeed ?? 40;
   const fontSize = richConfig?.fontSize ?? 16;
   const textColor = richConfig?.textColor?.trim() || '';
@@ -142,6 +144,16 @@ export default function RichText({ config, theme }: WidgetComponentProps) {
 
       {/* Top and bottom fade gradients */}
       {needsScroll && <FadeOverlay theme={theme} height="h-8" />}
+
+      {/* Sample announcements shown only while no content is configured. */}
+      {isDemo && (
+        <div
+          className="absolute top-3 right-3 z-10 px-3 py-1 rounded-full text-xs font-semibold text-white/70 backdrop-blur-sm"
+          style={{ backgroundColor: `${theme.primary}99` }}
+        >
+          Demo
+        </div>
+      )}
     </div>
   );
 }

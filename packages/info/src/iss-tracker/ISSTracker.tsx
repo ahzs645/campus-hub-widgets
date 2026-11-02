@@ -3,6 +3,14 @@ import { useState, useEffect, useCallback, useId } from 'react';
 import { WidgetComponentProps, DarkContainer } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale } from '@firstform/campus-hub-widget-sdk';
 
+const FETCH_TIMEOUT_MS = 15_000;
+
+function timeoutSignal(ms: number): AbortSignal | undefined {
+  return typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+    ? AbortSignal.timeout(ms)
+    : undefined;
+}
+
 interface ISSTrackerConfig {
   refreshInterval?: number;
   showMap?: boolean;
@@ -35,7 +43,9 @@ export default function ISSTracker({ config, theme }: WidgetComponentProps) {
   const fetchPosition = useCallback(async () => {
     try {
       setError(null);
-      const res = await fetch('https://api.wheretheiss.at/v1/satellites/25544');
+      const res = await fetch('https://api.wheretheiss.at/v1/satellites/25544', {
+        signal: timeoutSignal(FETCH_TIMEOUT_MS),
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setPosition({

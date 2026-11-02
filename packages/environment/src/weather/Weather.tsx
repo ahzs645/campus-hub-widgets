@@ -13,6 +13,7 @@ import { useAdaptiveFitScale, ThemedContainer, IconText } from '@firstform/campu
 import { AppIcon } from '@firstform/campus-hub-widget-sdk';
 import type { IconName, NormalizedWeatherObservation } from '@firstform/campus-hub-widget-sdk';
 import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
+import { withFetchTimeout } from '../fetch-timeout';
 import { DISPLAY_MODE_PRESETS, GEOMET_PRINCE_GEORGE_URL } from './meta';
 
 type WeatherIconKey =
@@ -311,6 +312,7 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
       const { text } = await fetchTextWithCache(fetchUrl, {
         cacheKey: buildCacheKey(`source-adapter:${sourceAdapter.id}`, sourceUrl),
         ttlMs: refreshMs,
+        fetchInit: withFetchTimeout(),
       });
       const normalized = normalizeSourcePayload({
         adapterId: sourceAdapter.id,
@@ -340,6 +342,7 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
       const { data } = await fetchJsonWithCache<unknown>(fetchUrl, {
         cacheKey: buildCacheKey('weather-geomet', apiUrl),
         ttlMs: refreshMs,
+        fetchInit: withFetchTimeout(),
       });
       const normalized = normalizeSourcePayload({
         adapterId: 'msc-geomet-weather',
@@ -378,6 +381,7 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
       const { data } = await fetchJsonWithCache<OpenWeatherResponse>(url, {
         cacheKey: buildCacheKey('weather', `${location}:${unitParam}`),
         ttlMs: refreshMs,
+        fetchInit: withFetchTimeout(),
       });
 
       const temp = data?.main?.temp;

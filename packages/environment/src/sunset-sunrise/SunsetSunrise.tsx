@@ -4,6 +4,8 @@ import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { fetchJsonWithCache, buildCacheKey } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale, ThemedContainer, IconText } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon } from '@firstform/campus-hub-widget-sdk';
+import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
+import { withFetchTimeout } from '../fetch-timeout';
 
 interface SunriseSunsetConfig {
   latitude?: number;
@@ -12,6 +14,8 @@ interface SunriseSunsetConfig {
   timeFormat?: '12h' | '24h';
   showDetails?: boolean;
   refreshInterval?: number; // minutes
+  /** Gallery preview: show the labelled sample times instead of fetching. */
+  galleryDemo?: boolean;
 }
 
 interface SunData {
@@ -36,14 +40,47 @@ interface APIResponse {
   status: string;
 }
 
-const formatTime = (utcStr: string, format: '12h' | '24h'): string => {
+/** Open-Meteo's `timezone=auto` resolves a coordinate to its IANA time zone. */
+interface TimeZoneLookupResponse {
+  timezone?: string;
+}
+
+const TIME_ZONE_TTL_MS = 24 * 60 * 60 * 1000;
+
+const isValidTimeZone = (timeZone: string): boolean => {
+  try {
+    new Intl.DateTimeFormat('en', { timeZone });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Format an instant as wall-clock time at the *location* (not the display),
+ * so Paris sunrise reads 07:45 on a screen in Vancouver. Without a resolved
+ * zone it falls back to the display's own time zone.
+ */
+const formatTime = (utcStr: string, format: '12h' | '24h', timeZone?: string): string => {
   const date = new Date(utcStr);
   if (isNaN(date.getTime())) return '--:--';
   return date.toLocaleTimeString([], {
     hour: '2-digit',
     minute: '2-digit',
     hour12: format === '12h',
+    ...(timeZone ? { timeZone } : {}),
   });
+};
+
+/** Short zone label (e.g. "CET") for a location whose zone differs from the display's. */
+const zoneLabel = (timeZone: string | undefined): string | null => {
+  if (!timeZone) return null;
+  const displayZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  if (displayZone === timeZone) return null;
+  const part = new Intl.DateTimeFormat([], { timeZone, timeZoneName: 'short' })
+    .formatToParts(new Date())
+    .find((p) => p.type === 'timeZoneName');
+  return part?.value ?? timeZone;
 };
 
 const formatDuration = (seconds: number): string => {
@@ -148,14 +185,21 @@ const SunArc = ({
   );
 };
 
-const MOCK_DATA: SunData = {
-  sunrise: new Date(new Date().setHours(6, 45, 0)).toISOString(),
-  sunset: new Date(new Date().setHours(19, 20, 0)).toISOString(),
-  solarNoon: new Date(new Date().setHours(13, 2, 0)).toISOString(),
-  dayLength: formatDuration(45300),
-  civilTwilightBegin: new Date(new Date().setHours(6, 15, 0)).toISOString(),
-  civilTwilightEnd: new Date(new Date().setHours(19, 50, 0)).toISOString(),
-  goldenHour: new Date(new Date().setHours(18, 20, 0)).toISOString(),
+/**
+ * Sample times for the gallery preview. Built on demand (not at module load)
+ * so they always refer to *today* on a display that runs for days.
+ */
+const buildMockData = (): SunData => {
+  const at = (h: number, m: number) => new Date(new Date().setHours(h, m, 0, 0)).toISOString();
+  return {
+    sunrise: at(6, 45),
+    sunset: at(19, 20),
+    solarNoon: at(13, 2),
+    dayLength: formatDuration(45300),
+    civilTwilightBegin: at(6, 15),
+    civilTwilightEnd: at(19, 50),
+    goldenHour: at(18, 20),
+  };
 };
 
 export default function SunsetSunrise({ config, theme }: WidgetComponentProps) {
@@ -167,19 +211,59 @@ export default function SunsetSunrise({ config, theme }: WidgetComponentProps) {
   const showDetails = cfg?.showDetails ?? true;
   const refreshInterval = cfg?.refreshInterval ?? 30; // minutes
 
-  const [sunData, setSunData] = useState<SunData>(MOCK_DATA);
+  // sunrise-sunset.org is public and needs no setup, so the widget is always
+  // "live"; sample data is only for the gallery preview, and always badged.
+  const isDemo = cfg?.galleryDemo ?? false;
+  const sourceKey = `${lat}:${lng}`;
+
+  // Last-good live times, keyed by coordinates. Starts empty (loading), never
+  // with the sample times.
+  const [live, setLive] = useState<{ key: string; data: SunData } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [, setTick] = useState(0); // force re-render for live progress
+  // IANA zone of the location, so times read as local wall-clock time there.
+  const [locationZone, setLocationZone] = useState<{ key: string; timeZone: string } | null>(null);
+  const [minute, setMinute] = useState(() => Math.floor(Date.now() / 60_000)); // live progress
 
   const refreshMs = refreshInterval * 60 * 1000;
 
+  useEffect(() => {
+    if (isDemo) return;
+    let cancelled = false;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&timezone=auto&forecast_days=1`;
+    fetchJsonWithCache<TimeZoneLookupResponse>(url, {
+      cacheKey: buildCacheKey('sunset-sunrise-tz', sourceKey),
+      ttlMs: TIME_ZONE_TTL_MS,
+      fetchInit: withFetchTimeout(),
+    })
+      .then(({ data }) => {
+        const timeZone = data?.timezone;
+        if (!cancelled && timeZone && isValidTimeZone(timeZone)) {
+          setLocationZone({ key: sourceKey, timeZone });
+        }
+      })
+      // Not fatal: times fall back to the display's own zone.
+      .catch((err) => console.warn('Sunset/Sunrise: time zone lookup failed', err));
+    return () => {
+      cancelled = true;
+    };
+  }, [isDemo, lat, lng, sourceKey]);
+
+  const timeZone = !isDemo && locationZone?.key === sourceKey ? locationZone.timeZone : undefined;
+
   const fetchSunData = useCallback(async () => {
+    if (isDemo) {
+      setError(null);
+      return;
+    }
     try {
       setError(null);
-      const url = `https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}&formatted=0`;
+      // With tzid, "today" is the location's date rather than the server's UTC date.
+      const tzParam = timeZone ? `&tzid=${encodeURIComponent(timeZone)}` : '';
+      const url = `https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}&formatted=0${tzParam}`;
       const { data } = await fetchJsonWithCache<APIResponse>(url, {
-        cacheKey: buildCacheKey('sunset-sunrise', `${lat}:${lng}`),
+        cacheKey: buildCacheKey('sunset-sunrise', `${sourceKey}:${timeZone ?? ''}`),
         ttlMs: refreshMs,
+        fetchInit: withFetchTimeout(),
       });
 
       if (data?.status === 'OK' && data.results) {
@@ -190,7 +274,7 @@ export default function SunsetSunrise({ config, theme }: WidgetComponentProps) {
           ? dayLenMatch
           : parseInt(String(dayLenMatch), 10) || 0;
 
-        setSunData({
+        setLive({ key: sourceKey, data: {
           sunrise: r.sunrise,
           sunset: r.sunset,
           solarNoon: r.solar_noon,
@@ -198,14 +282,14 @@ export default function SunsetSunrise({ config, theme }: WidgetComponentProps) {
           civilTwilightBegin: r.civil_twilight_begin,
           civilTwilightEnd: r.civil_twilight_end,
           goldenHour: estimateGoldenHour(r.sunset),
-        });
+        } });
       } else {
         setError('Unable to fetch sun data');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [lat, lng, refreshMs]);
+  }, [isDemo, lat, lng, refreshMs, sourceKey, timeZone]);
 
   useEffect(() => {
     fetchSunData();
@@ -215,14 +299,21 @@ export default function SunsetSunrise({ config, theme }: WidgetComponentProps) {
 
   // Tick every minute for live sun position
   useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 60_000);
+    const id = setInterval(() => setMinute(Math.floor(Date.now() / 60_000)), 60_000);
     return () => clearInterval(id);
   }, []);
 
+  // demo → sample times (badged, rebuilt each day); live → last-good times for
+  // these coordinates; unavailable → the fetch failed with nothing to show.
+  const dayKey = new Date(minute * 60_000).toDateString();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const demoData = useMemo(() => (isDemo ? buildMockData() : null), [isDemo, dayKey]);
+  const sunData: SunData | null = demoData ?? (live?.key === sourceKey ? live.data : null);
+
   const progress = useMemo(
-    () => getSunProgress(sunData.sunrise, sunData.sunset),
+    () => (sunData ? getSunProgress(sunData.sunrise, sunData.sunset) : 0),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sunData.sunrise, sunData.sunset, Math.floor(Date.now() / 60_000)],
+    [sunData?.sunrise, sunData?.sunset, minute],
   );
   const isDaytime = progress > 0 && progress < 1;
 
@@ -251,6 +342,7 @@ export default function SunsetSunrise({ config, theme }: WidgetComponentProps) {
   const primaryMetaSize = clamp(metaSize * 1.02, 10, 14);
 
   const timeUntil = useMemo(() => {
+    if (!sunData) return '';
     const now = Date.now();
     const rise = new Date(sunData.sunrise).getTime();
     const set = new Date(sunData.sunset).getTime();
@@ -264,7 +356,21 @@ export default function SunsetSunrise({ config, theme }: WidgetComponentProps) {
     }
     return 'Sun has set';
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sunData.sunrise, sunData.sunset, Math.floor(Date.now() / 60_000)]);
+  }, [sunData?.sunrise, sunData?.sunset, minute]);
+
+  if (!sunData) {
+    return (
+      <ThemedContainer ref={containerRef} theme={theme} color="primary" opacity="20" className="flex items-center justify-center">
+        {error ? (
+          <SourceUnavailable label="Sun times" detail={error} compact={compact} />
+        ) : (
+          <div className="text-sm text-white/50">Loading sun times…</div>
+        )}
+      </ThemedContainer>
+    );
+  }
+
+  const zone = zoneLabel(timeZone);
 
   return (
     <ThemedContainer
@@ -284,6 +390,10 @@ export default function SunsetSunrise({ config, theme }: WidgetComponentProps) {
           style={{ color: theme.accent, fontSize: titleSize, lineHeight: 1.05 }}
         >
           {locationName}
+          {zone && <span className="text-white/50"> · {zone}</span>}
+          {isDemo && (
+            <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/50 align-middle">Demo</span>
+          )}
         </div>
 
         {/* Status line */}
@@ -317,7 +427,7 @@ export default function SunsetSunrise({ config, theme }: WidgetComponentProps) {
               </span>
             </IconText>
             <span className="font-bold text-white" style={{ fontSize: valueSize, lineHeight: 1, marginTop: 2 }}>
-              {formatTime(sunData.sunrise, timeFormat)}
+              {formatTime(sunData.sunrise, timeFormat, timeZone)}
             </span>
           </div>
           <div className="flex flex-col items-center">
@@ -327,7 +437,7 @@ export default function SunsetSunrise({ config, theme }: WidgetComponentProps) {
               </span>
             </IconText>
             <span className="font-bold text-white" style={{ fontSize: valueSize, lineHeight: 1, marginTop: 2 }}>
-              {formatTime(sunData.sunset, timeFormat)}
+              {formatTime(sunData.sunset, timeFormat, timeZone)}
             </span>
           </div>
         </div>
@@ -353,11 +463,11 @@ export default function SunsetSunrise({ config, theme }: WidgetComponentProps) {
               <span>{sunData.dayLength} daylight</span>
             </IconText>
             <IconText icon={<AppIcon name="sun" className="w-3.5 h-3.5" />} gap="1.5">
-              <span>Noon {formatTime(sunData.solarNoon, timeFormat)}</span>
+              <span>Noon {formatTime(sunData.solarNoon, timeFormat, timeZone)}</span>
             </IconText>
             {sunData.goldenHour && (
               <IconText icon={<AppIcon name="camera" className="w-3.5 h-3.5" />} gap="1.5">
-                <span>Golden {formatTime(sunData.goldenHour, timeFormat)}</span>
+                <span>Golden {formatTime(sunData.goldenHour, timeFormat, timeZone)}</span>
               </IconText>
             )}
           </div>
@@ -370,7 +480,7 @@ export default function SunsetSunrise({ config, theme }: WidgetComponentProps) {
             style={{ fontSize: twilightSize, lineHeight: 1.1 }}
           >
             <span className="max-w-full text-center">
-              Twilight {formatTime(sunData.civilTwilightBegin, timeFormat)} – {formatTime(sunData.civilTwilightEnd, timeFormat)}
+              Twilight {formatTime(sunData.civilTwilightBegin, timeFormat, timeZone)} – {formatTime(sunData.civilTwilightEnd, timeFormat, timeZone)}
             </span>
           </div>
         )}

@@ -21,6 +21,7 @@ export default defineWidget({
       mode: 'signaling',
       signalUrl: '',
       displayId: '',
+      signalToken: '',
       httpUrl: '',
       pollIntervalSeconds: 30,
       entityIds: [],

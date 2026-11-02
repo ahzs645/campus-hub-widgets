@@ -9,6 +9,8 @@ interface StickyNoteConfig {
   color?: string;
 }
 
+const NOTE_FONT = '"Marker Felt", "Comic Sans MS", "Bradley Hand", cursive';
+
 function textColorForBackground(hex: string) {
   const normalized = hex.replace('#', '');
   const value = normalized.length === 3
@@ -25,6 +27,7 @@ function textColorForBackground(hex: string) {
 export default function MacOSStickyNote({ config }: WidgetComponentProps) {
   const noteConfig = (config ?? {}) as StickyNoteConfig;
   const paperColor = noteConfig.color ?? '#fff8a6';
+  const title = noteConfig.title?.trim() ?? '';
   const [text, setText] = useState(noteConfig.text ?? 'Add a reminder…');
 
   useEffect(() => {
@@ -59,14 +62,22 @@ export default function MacOSStickyNote({ config }: WidgetComponentProps) {
           color: textColorForBackground(paperColor),
         }}
       >
-        <textarea
-          className="h-full w-full resize-none bg-transparent text-[14px] leading-7 outline-none"
-          style={{
-            fontFamily: '"Marker Felt", "Comic Sans MS", "Bradley Hand", cursive',
-          }}
-          value={text}
-          onChange={(event) => setText(event.target.value)}
-        />
+        <div className="flex h-full min-h-0 flex-col">
+          {title && (
+            <div
+              className="shrink-0 truncate text-[15px] font-bold leading-7"
+              style={{ fontFamily: NOTE_FONT }}
+            >
+              {title}
+            </div>
+          )}
+          <textarea
+            className="min-h-0 w-full flex-1 resize-none bg-transparent text-[14px] leading-7 outline-none"
+            style={{ fontFamily: NOTE_FONT }}
+            value={text}
+            onChange={(event) => setText(event.target.value)}
+          />
+        </div>
       </div>
     </div>
   );
