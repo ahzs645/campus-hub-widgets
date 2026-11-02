@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppIcon, DEFAULT_GROUP_FITNESS_URL, buildCacheKey, buildProxyUrl, fetchTextWithCache, getTodayWeekday, getCorsProxyUrl, normalizeSourcePayload, resolveSourceAdapter, useAdaptiveFitScale, type GroupFitnessSection, type GroupFitnessViewMode, type ParsedGroupFitnessSchedule, type WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
+import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
 
 interface GroupFitnessConfig {
   title?: string;
@@ -170,20 +171,20 @@ export default function GroupFitness({
   const maxRows = Math.max(1, cfg?.maxRows ?? 6);
   const useCorsProxy = cfg?.useCorsProxy ?? true;
 
-  const [schedule, setSchedule] = useState<ParsedGroupFitnessSchedule | null>(DEMO_SCHEDULE);
+  const isDemo = !scheduleUrl;
+
+  // Last-good live schedule, keyed by the URL it came from. A configured
+  // source starts empty (loading), never with the demo schedule.
+  const [live, setLive] = useState<{ key: string; schedule: ParsedGroupFitnessSchedule } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
 
   const refreshMs = refreshInterval * 60 * 1000;
 
   const fetchSchedule = useCallback(async () => {
-    if (!scheduleUrl) {
-      setSchedule(DEMO_SCHEDULE);
+    if (isDemo) {
       setError(null);
-      setLoading(false);
       return;
     }
-    setLoading(true);
 
     try {
       const fetchUrl = useCorsProxy ? buildProxyUrl(scheduleUrl) : scheduleUrl;
@@ -202,14 +203,13 @@ export default function GroupFitness({
         throw new Error('Could not parse the group fitness schedule.');
       }
 
-      setSchedule(parsed);
+      setLive({ key: scheduleUrl, schedule: parsed });
       setError(null);
     } catch (fetchError) {
+      // Keep any last-good live schedule; never substitute the demo schedule.
       setError(getLoadError(fetchError, useCorsProxy));
-    } finally {
-      setLoading(false);
     }
-  }, [cfg?.sourceAdapter, refreshMs, scheduleUrl, useCorsProxy]);
+  }, [cfg?.sourceAdapter, isDemo, refreshMs, scheduleUrl, useCorsProxy]);
 
   useEffect(() => {
     void fetchSchedule();
@@ -218,6 +218,14 @@ export default function GroupFitness({
     }, refreshMs);
     return () => clearInterval(interval);
   }, [fetchSchedule, refreshMs]);
+
+  // demo → sample schedule (badged); live → last-good schedule from this URL;
+  // unavailable → the configured source failed with nothing good to show.
+  const schedule: ParsedGroupFitnessSchedule | null = isDemo
+    ? DEMO_SCHEDULE
+    : live?.key === scheduleUrl ? live.schedule : null;
+  const isUnavailable = !isDemo && schedule === null && error !== null;
+  const isLoading = !isDemo && schedule === null && error === null;
 
   const section =
     viewMode === 'class'
@@ -283,6 +291,10 @@ export default function GroupFitness({
             </div>
           </div>
 
+          {isDemo && (
+            <span className="shrink-0 self-center rounded-full bg-white/10 px-2 py-0.5 text-xs text-white/50">Demo</span>
+          )}
+
           {showSemester && schedule && (
             <div className="shrink-0 rounded-xl border border-white/10 bg-black/15 px-3 py-2 text-right">
               <div className="text-[12px] uppercase tracking-[0.14em] text-white/45">Semester</div>
@@ -295,15 +307,12 @@ export default function GroupFitness({
         </div>
 
         <div className="mt-4 flex-1 min-h-0 rounded-2xl border border-white/10 bg-black/20 p-4 overflow-hidden">
-          {loading && !schedule ? (
+          {isLoading ? (
             <div className="flex h-full items-center justify-center text-center text-[15px] text-white/55">
-              Loading UNBC fitness schedule...
+              Loading fitness schedule...
             </div>
-          ) : error && !schedule ? (
-            <div className="flex h-full flex-col items-center justify-center text-center">
-              <AppIcon name="calendar" className="mb-3 h-10 w-10 text-white/30" />
-              <div className="max-w-[340px] text-[15px] leading-relaxed text-red-200">{error}</div>
-            </div>
+          ) : isUnavailable ? (
+            <SourceUnavailable label="Fitness schedule" detail={error} />
           ) : section ? (
             <div className="flex h-full min-h-0 flex-col">
               <div

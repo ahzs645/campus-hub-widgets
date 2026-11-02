@@ -11,6 +11,12 @@ import {
   type ParsedGroupFitnessSchedule,
 } from '@firstform/campus-hub-widget-sdk';
 
+/** Abort on either the caller's signal or a 15s timeout (editor-side fetch). */
+const withFetchTimeout = (signal: AbortSignal, ms = 15_000): AbortSignal =>
+  typeof AbortSignal.any === 'function' && typeof AbortSignal.timeout === 'function'
+    ? AbortSignal.any([signal, AbortSignal.timeout(ms)])
+    : signal;
+
 interface GroupFitnessOptionsData {
   title: string;
   scheduleUrl: string;
@@ -67,7 +73,7 @@ export default function GroupFitnessOptions({ data, onChange }: WidgetOptionsPro
 
       const fetchUrl = state.useCorsProxy ? buildProxyUrl(state.scheduleUrl.trim()) : state.scheduleUrl.trim();
 
-      fetch(fetchUrl, { signal: controller.signal })
+      fetch(fetchUrl, { signal: withFetchTimeout(controller.signal) })
         .then((response) => {
           if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);

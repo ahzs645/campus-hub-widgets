@@ -3,6 +3,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, buildProxyUrl, fetchJsonWithCache, fetchTextWithCache } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
+import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
+import { withFetchTimeout } from '../fetch-timeout';
 
 interface AirQualityConfig {
   dataSource?: 'waqi' | 'bc-aqhi';
@@ -99,15 +101,24 @@ export default function AirQuality({ config, theme }: WidgetComponentProps) {
   const refreshInterval = aqConfig?.refreshInterval ?? 15;
   const useCorsProxy = aqConfig?.useCorsProxy ?? true;
 
-  const [data, setData] = useState<AqiData>(MOCK_DATA);
+  // WAQI with no token is "not configured": sample reading with a Demo badge.
+  // BC AQHI is a public page, so it is always a real (configured) source.
+  const isDemo = dataSource !== 'bc-aqhi' && !waqiToken;
+  // Identifies the source a reading came from, so a config change never shows
+  // another source's data while refetching.
+  const sourceKey = dataSource === 'bc-aqhi' ? 'bc-aqhi' : `waqi:${waqiCity}`;
+
+  // Last-good live reading, keyed by source. A configured source starts empty
+  // (loading), never with the sample reading.
+  const [live, setLive] = useState<{ key: string; data: AqiData; updatedAt: Date } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const refreshMs = refreshInterval * 60 * 1000;
 
   const fetchWaqi = useCallback(async () => {
     if (!waqiToken) {
-      setData(MOCK_DATA);
+      // Not configured: demo mode, rendered from MOCK_DATA with a badge.
+      setError(null);
       return;
     }
     try {
@@ -116,6 +127,7 @@ export default function AirQuality({ config, theme }: WidgetComponentProps) {
       const { data: resp } = await fetchJsonWithCache<WaqiResponse>(url, {
         cacheKey: buildCacheKey('aqi-waqi', waqiCity),
         ttlMs: refreshMs,
+        fetchInit: withFetchTimeout(),
       });
 
       if (resp?.status !== 'ok' || !resp.data) {
@@ -127,7 +139,12 @@ export default function AirQuality({ config, theme }: WidgetComponentProps) {
       const level = aqiLevel(aqi);
       const iaqi = resp.data.iaqi ?? {};
 
-      setData({
+      if (typeof resp.data.aqi !== 'number') {
+        // WAQI reports "-" when a station has no current reading.
+        setError('No current AQI reading');
+        return;
+      }
+      setLive({ key: sourceKey, updatedAt: new Date(), data: {
         value: aqi,
         ...level,
         pm25: iaqi.pm25?.v,
@@ -139,12 +156,11 @@ export default function AirQuality({ config, theme }: WidgetComponentProps) {
         dominantPollutant: resp.data.dominentpol,
         station: resp.data.city?.name ?? waqiCity,
         lastUpdated: resp.data.time?.s,
-      });
-      setLastUpdated(new Date());
+      } });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [waqiToken, waqiCity, refreshMs]);
+  }, [waqiToken, waqiCity, refreshMs, sourceKey]);
 
   const fetchBcAqhi = useCallback(async () => {
     try {
@@ -153,18 +169,18 @@ export default function AirQuality({ config, theme }: WidgetComponentProps) {
       const { text } = await fetchTextWithCache(fetchUrl, {
         cacheKey: buildCacheKey('aqi-bcaqhi', BC_AQHI_URL),
         ttlMs: refreshMs,
+        fetchInit: withFetchTimeout(),
       });
       const parsed = parseBcAqhi(text);
       if (parsed) {
-        setData(parsed);
-        setLastUpdated(new Date());
+        setLive({ key: sourceKey, data: parsed, updatedAt: new Date() });
       } else {
         setError('Failed to parse BC AQHI data');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [refreshMs, useCorsProxy]);
+  }, [refreshMs, useCorsProxy, sourceKey]);
 
   useEffect(() => {
     let isMounted = true;
@@ -188,6 +204,24 @@ export default function AirQuality({ config, theme }: WidgetComponentProps) {
     landscape: { w: 340, h: 280 },
     portrait: { w: 240, h: 380 },
   });
+
+  // demo → sample reading (badged); live → last-good reading from this source;
+  // unavailable → the configured source failed with nothing good to show.
+  const hasLiveData = live?.key === sourceKey;
+  const data: AqiData | null = isDemo ? MOCK_DATA : hasLiveData ? live.data : null;
+  const lastUpdated = !isDemo && hasLiveData ? live.updatedAt : null;
+
+  if (!data) {
+    return (
+      <ThemedContainer ref={containerRef} theme={theme} color="primary" opacity="20" className="flex items-center justify-center">
+        {error ? (
+          <SourceUnavailable label="Air quality" detail={error} />
+        ) : (
+          <div className="text-sm text-white/50">Loading air quality…</div>
+        )}
+      </ThemedContainer>
+    );
+  }
 
   const pollutants = [
     { key: 'pm25', label: 'PM2.5', value: data.pm25 },
@@ -219,8 +253,11 @@ export default function AirQuality({ config, theme }: WidgetComponentProps) {
         className={`flex flex-col p-6 ${!isLandscape ? 'items-center' : ''}`}
       >
         {/* Header */}
-        <div className={`text-sm font-medium opacity-70 mb-1 ${!isLandscape ? 'text-center' : ''}`} style={{ color: theme.accent }}>
-          {data.station ?? 'Air Quality'}
+        <div className={`flex items-center gap-2 text-sm font-medium mb-1 ${!isLandscape ? 'justify-center' : ''}`}>
+          <span className="opacity-70 truncate" style={{ color: theme.accent }}>{data.station ?? 'Air Quality'}</span>
+          {isDemo && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/50">Demo</span>
+          )}
         </div>
 
         {/* Main AQI display */}

@@ -4,6 +4,12 @@ import { FormInput, FormSelect, FormSwitch, OptionsPanel, OptionsSection, descri
 import { buildProxyUrl } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
+/** Abort on either the caller's signal or a 15s timeout (editor-side fetch). */
+const withFetchTimeout = (signal: AbortSignal, ms = 15_000): AbortSignal =>
+  typeof AbortSignal.any === 'function' && typeof AbortSignal.timeout === 'function'
+    ? AbortSignal.any([signal, AbortSignal.timeout(ms)])
+    : signal;
+
 type DisplayMode = 'scroll' | 'ticker' | 'paginate';
 
 interface CategoryInfo {
@@ -76,7 +82,7 @@ export default function EventsListOptions({ data, onChange, linkedSource }: Widg
 
       const fetchUrl = state.useCorsProxy ? buildProxyUrl(state.apiUrl) : state.apiUrl;
 
-      fetch(fetchUrl, { signal: controller.signal })
+      fetch(fetchUrl, { signal: withFetchTimeout(controller.signal) })
         .then(res => {
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           return res.json();

@@ -11,6 +11,7 @@ import {
   SectionHeader,
   MarqueeText,
 } from '@firstform/campus-hub-widget-sdk';
+import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
 
 interface JobPosting {
   id: string | number;
@@ -105,27 +106,30 @@ export default function JobBoard({
   const useCorsProxy = cfg?.useCorsProxy ?? true;
   const galleryPreview = cfg?.galleryPreview ?? false;
 
-  const [jobs, setJobs] = useState<JobPosting[]>(DEMO_JOBS);
-  const jobsRef = useRef(jobs);
+  const isDemo = !apiUrl;
+  const sourceKey = `${apiUrl ?? ''}|${sourceType}|${useCorsProxy ? 'proxy' : 'direct'}`;
 
-  useEffect(() => {
-    jobsRef.current = jobs;
-  }, [jobs]);
+  // Last-good live postings, keyed by the source they came from. A configured
+  // source starts empty (loading), never with the demo postings.
+  const [live, setLive] = useState<{ key: string; jobs: JobPosting[] } | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const applyFetchedJobs = useCallback((next: JobPosting[]) => {
-    if (!Array.isArray(next) || next.length === 0) return;
-    if (areJobsEqual(jobsRef.current, next)) return;
-    setJobs(next);
+  const applyFetchedJobs = useCallback((key: string, next: JobPosting[]) => {
+    setLive((current) =>
+      current && current.key === key && areJobsEqual(current.jobs, next)
+        ? current
+        : { key, jobs: next },
+    );
+    setError(null);
   }, []);
 
   useEffect(() => {
-    if (apiUrl) return;
-    setJobs(DEMO_JOBS);
-  }, [apiUrl]);
-
-  useEffect(() => {
-    if (!apiUrl) return;
+    if (!apiUrl) {
+      setError(null);
+      return;
+    }
     let isMounted = true;
+    const key = sourceKey;
 
     const fetchJobs = async () => {
       try {
@@ -143,7 +147,7 @@ export default function JobBoard({
             department: item.categories?.[0] ?? '',
             type: item.categories?.[1] ?? 'part-time',
           }));
-          if (isMounted) applyFetchedJobs(mapped);
+          if (isMounted) applyFetchedJobs(key, mapped);
           return;
         }
 
@@ -160,7 +164,7 @@ export default function JobBoard({
         } else if (data && typeof data === 'object' && Array.isArray((data as Record<string, unknown>).jobs)) {
           rawJobs = (data as Record<string, unknown>).jobs as unknown[];
         } else {
-          return;
+          throw new Error('Job feed is not a list of postings');
         }
 
         const mapped: JobPosting[] = rawJobs
@@ -173,9 +177,11 @@ export default function JobBoard({
           }))
           .filter((j) => j.title.length > 0);
 
-        if (isMounted && mapped.length > 0) applyFetchedJobs(mapped);
+        if (isMounted) applyFetchedJobs(key, mapped);
       } catch (err) {
         console.error('Failed to fetch job postings:', err);
+        // Keep any last-good live postings; never substitute the demo postings.
+        if (isMounted) setError(err instanceof Error ? err.message : 'Failed to load job postings');
       }
     };
 
@@ -185,7 +191,7 @@ export default function JobBoard({
       isMounted = false;
       clearInterval(interval);
     };
-  }, [apiUrl, sourceType, cacheTtlSeconds, applyFetchedJobs, useCorsProxy]);
+  }, [apiUrl, sourceKey, sourceType, cacheTtlSeconds, applyFetchedJobs, useCorsProxy]);
 
   // QR code generation
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
@@ -231,6 +237,13 @@ export default function JobBoard({
   }, []);
 
   /* ---------- ticker / paginate logic ---------- */
+
+  // demo → sample postings (badged); live → last-good postings from this
+  // source; unavailable → the configured source failed with nothing to show.
+  const liveJobs = !isDemo && live?.key === sourceKey ? live.jobs : null;
+  const jobs: JobPosting[] = isDemo ? DEMO_JOBS : liveJobs ?? [];
+  const isUnavailable = !isDemo && liveJobs === null && error !== null;
+  const isLoading = !isDemo && liveJobs === null && error === null;
 
   const displayJobs = jobs.filter((j) => j.title?.trim()).slice(0, maxItems);
   const totalJobs = displayJobs.length;
@@ -349,13 +362,21 @@ export default function JobBoard({
           </svg>
         }
         trailing={
-          displayMode !== 'scroll' && totalJobs > 1 ? (
-            <span className="text-sm font-normal opacity-60 whitespace-nowrap">
-              {displayMode === 'ticker'
-                ? `${currentIndex + 1} / ${totalJobs}`
-                : `Page ${currentPage + 1} / ${totalPages}`}
-            </span>
-          ) : undefined
+          <span className="flex items-center gap-2">
+            {displayMode !== 'scroll' && totalJobs > 1 && (
+              <span className="text-sm font-normal opacity-60 whitespace-nowrap">
+                {displayMode === 'ticker'
+                  ? `${currentIndex + 1} / ${totalJobs}`
+                  : `Page ${currentPage + 1} / ${totalPages}`}
+              </span>
+            )}
+            {isDemo && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/50 font-normal">Demo</span>
+            )}
+            {!isDemo && error && liveJobs !== null && (
+              <span className="text-xs font-normal text-red-300/80 whitespace-nowrap" title={error}>Refresh failed</span>
+            )}
+          </span>
         }
       />
 
@@ -363,7 +384,19 @@ export default function JobBoard({
       <div className="flex-1 flex gap-4 min-h-0">
         <div className="flex-1 flex flex-col min-w-0 min-h-0">
           {/* Scroll mode – auto-infinite vertical marquee */}
-          {displayMode === 'scroll' && (
+          {isLoading && (
+            <div className="flex-1 flex items-center justify-center text-center text-sm font-medium text-white/60">
+              Loading job postings…
+            </div>
+          )}
+          {isUnavailable && <SourceUnavailable label="Job postings" detail={error} />}
+          {!isDemo && liveJobs !== null && totalJobs === 0 && (
+            <div className="flex-1 flex items-center justify-center text-center text-sm font-medium text-white/60">
+              No job postings right now
+            </div>
+          )}
+
+          {totalJobs > 0 && displayMode === 'scroll' && (
             <div className="flex-1 relative overflow-hidden">
               <div
                 data-layout-diagnostic-ignore="true"
@@ -380,7 +413,7 @@ export default function JobBoard({
           )}
 
           {/* Ticker mode – one job at a time, vertical slide, fills the full container */}
-          {displayMode === 'ticker' && (
+          {totalJobs > 0 && displayMode === 'ticker' && (
             <div className="flex-1 flex flex-col min-h-0">
               <div className="flex-1 relative overflow-hidden">
                 {displayJobs.map((job, index) => (
@@ -408,7 +441,7 @@ export default function JobBoard({
           )}
 
           {/* Paginate mode – chunks slide horizontally, sized to fit */}
-          {displayMode === 'paginate' && (
+          {totalJobs > 0 && displayMode === 'paginate' && (
             <div className="flex-1 flex flex-col min-h-0">
               <div className="flex-1 relative overflow-hidden">
                 {Array.from({ length: totalPages }).map((_, pageIdx) => {

@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { WidgetComponentProps, CAFETERIA_DAY_NAMES, hasCafeteriaMenuContent, loadCafeteriaSource, resolveSourceAdapter, type CafeteriaMealSection, type CafeteriaMenuItem, type CafeteriaMenuStatus, type ParsedCafeteriaMenu } from '@firstform/campus-hub-widget-sdk';
 import { getCorsProxyUrl } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon } from '@firstform/campus-hub-widget-sdk';
+import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -221,6 +222,14 @@ const DEMO_MENU: ParsedCafeteriaMenu = {
   ],
 };
 
+const EMPTY_MENU: ParsedCafeteriaMenu = {
+  weekly: [],
+  breakfast: [],
+  lunch: [],
+  dinner: [],
+  showtime: [],
+};
+
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
@@ -235,11 +244,18 @@ export default function CafeteriaMenu({
   const refreshInterval = cfg?.refreshInterval ?? 30;
   const useCorsProxy = cfg?.useCorsProxy ?? true;
 
-  const [menu, setMenu] = useState<ParsedCafeteriaMenu>(DEMO_MENU);
-  const [isDemo, setIsDemo] = useState(true);
+  const isDemo = !menuUrl;
+  const sourceKey = `${menuUrl}|${danaLocations}|${useCorsProxy ? 'proxy' : 'direct'}`;
+
+  // Last-good live menu, keyed by the source it came from. A configured source
+  // starts empty (loading), never with the demo menu.
+  const [live, setLive] = useState<{
+    key: string;
+    menu: ParsedCafeteriaMenu;
+    status: CafeteriaMenuStatus;
+    updatedAt: Date;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [menuStatus, setMenuStatus] = useState<CafeteriaMenuStatus>('ready');
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [servicePeriod, setServicePeriod] = useState<ServicePeriod>(() =>
     getCurrentServicePeriod(cfg ?? {}),
@@ -262,10 +278,17 @@ export default function CafeteriaMenu({
   //   3. Generic HTML parse of the menu page
 
   const fetchMenu = useCallback(async () => {
-    if (!menuUrl || !useCorsProxy || !getCorsProxyUrl()) return;
+    if (isDemo) {
+      setError(null);
+      return;
+    }
+    if (useCorsProxy && !getCorsProxyUrl()) {
+      // A configured menu must never fall back to the demo menu.
+      setError('A CORS proxy must be configured to load the menu.');
+      return;
+    }
 
     try {
-      setError(null);
       const source = await loadCafeteriaSource({
         menuUrl,
         danaLocations,
@@ -273,20 +296,20 @@ export default function CafeteriaMenu({
         useCorsProxy,
       });
 
-      setMenuStatus(source.status);
-      setIsDemo(false);
-      setLastUpdated(new Date());
-
-      if (source.status !== 'ready') return;
-      if (hasCafeteriaMenuContent(source.menu)) {
-        setMenu(source.menu);
-      } else {
-        setError('No menu items found');
-      }
+      // An empty "ready" menu is a real answer (nothing posted today), shown as
+      // such — never replaced by the demo menu.
+      setLive({
+        key: sourceKey,
+        menu: source.status === 'ready' && hasCafeteriaMenuContent(source.menu) ? source.menu : EMPTY_MENU,
+        status: source.status,
+        updatedAt: new Date(),
+      });
+      setError(null);
     } catch (err) {
+      // Keep any last-good live menu; never substitute the demo menu.
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [menuUrl, danaLocations, refreshMs, useCorsProxy]);
+  }, [isDemo, menuUrl, danaLocations, refreshMs, sourceKey, useCorsProxy]);
 
   useEffect(() => {
     let mounted = true;
@@ -303,6 +326,15 @@ export default function CafeteriaMenu({
   }, [fetchMenu, refreshMs]);
 
   // ---- Display logic ----
+  // demo → sample menu (badged); live → last-good menu from this source;
+  // unavailable → the configured source failed with nothing good to show.
+  const liveForSource = !isDemo && live?.key === sourceKey ? live : null;
+  const menu: ParsedCafeteriaMenu = isDemo ? DEMO_MENU : liveForSource?.menu ?? EMPTY_MENU;
+  const menuStatus: CafeteriaMenuStatus = liveForSource?.status ?? 'ready';
+  const lastUpdated = liveForSource?.updatedAt ?? null;
+  const isUnavailable = !isDemo && liveForSource === null && error !== null;
+  const isLoading = !isDemo && liveForSource === null && error === null;
+
   const currentMealSections = useMemo<CafeteriaMealSection[]>(
     () => (servicePeriod === 'closed' ? [] : menu[servicePeriod]),
     [menu, servicePeriod],
@@ -409,6 +441,9 @@ export default function CafeteriaMenu({
       >
         <AppIcon name="utensils" className="w-5 h-5 text-white/80" />
         <span className="text-base font-semibold text-white">Cafeteria</span>
+        {isDemo && (
+          <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/50">Demo</span>
+        )}
         <span
           className="ml-auto text-sm font-medium px-2 py-0.5 rounded-full"
           style={{
@@ -426,7 +461,11 @@ export default function CafeteriaMenu({
         data-layout-diagnostic-ignore="true"
         className="flex-1 overflow-y-auto scrollbar-hide px-4 py-3 space-y-4 min-h-0"
       >
-        {statusMessage ? (
+        {isUnavailable ? (
+          <SourceUnavailable label="Cafeteria menu" detail={error} />
+        ) : isLoading ? (
+          <div className="text-white/50 text-sm text-center mt-4">Loading menu…</div>
+        ) : statusMessage ? (
           <div className="rounded-md border border-amber-300/30 bg-amber-400/10 px-3 py-3 text-sm font-medium text-amber-100">
             {statusMessage}
           </div>
@@ -436,9 +475,9 @@ export default function CafeteriaMenu({
           </div>
         )}
 
-        {displaySections.length === 0 && !error && !statusMessage && (
+        {displaySections.length === 0 && !isUnavailable && !isLoading && !statusMessage && (
           <div className="text-white/50 text-sm text-center mt-4">
-            No menu available
+            No menu available today
           </div>
         )}
 
@@ -496,10 +535,10 @@ export default function CafeteriaMenu({
 
       {/* Footer */}
       <div className="shrink-0 px-4 py-2 flex items-center justify-between text-[11px] text-white/30">
-        {isDemo && !error && !statusMessage && (
-          <span>Demo data – set CORS proxy for live menu</span>
+        {isDemo && (
+          <span>Demo data – set a menu URL for the live menu</span>
         )}
-        {error && (
+        {!isDemo && error && !isUnavailable && (
           <span className="text-red-400/70 truncate max-w-[70%]">{error}</span>
         )}
         {!isDemo && !error && !statusMessage && lastUpdated && (

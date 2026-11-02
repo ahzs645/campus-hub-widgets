@@ -1,6 +1,7 @@
 'use client';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { buildProxyUrl, createLibCalAvailabilityFormData, getCorsProxyUrl, normalizeSourcePayload, resolveSourceAdapter, WidgetComponentProps, type LibCalGridResponse, type LibCalSlot } from '@firstform/campus-hub-widget-sdk';
+import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
 import { ROOM_MAP, roomSortValue, type RoomInfo } from './libraryAvailabilityRooms';
 
 type DisplayMode = 'grid' | 'calendar' | 'cards';
@@ -78,6 +79,7 @@ interface CompactPage {
 type WidgetPage = GridPage | CalendarPage | CardsPage | CompactPage;
 
 const SLOT_MINUTES = 30;
+const FETCH_TIMEOUT_MS = 15_000;
 
 const HATCH_BG =
   'repeating-linear-gradient(-45deg, rgba(255,255,255,0.08), rgba(255,255,255,0.08) 2px, rgba(255,255,255,0.02) 2px, rgba(255,255,255,0.02) 6px)';
@@ -278,16 +280,19 @@ export default function LibraryAvailability({
   const closeHour = closeHourRaw <= openHour ? openHour + 1 : closeHourRaw;
   const useCorsProxy = widgetConfig?.useCorsProxy ?? true;
   const sourceAdapterId = widgetConfig?.sourceAdapter ?? 'libcal-room-availability';
-  const [response, setResponse] = useState<LibCalGridResponse | null>(() => generateDemoResponse());
-  const [loading, setLoading] = useState(false);
+  const isDemo = !endpoint;
+  const sourceKey = `${endpoint}|${lid}|${gid}|${useCorsProxy ? 'proxy' : 'direct'}`;
+
+  const [demoResponse, setDemoResponse] = useState<LibCalGridResponse>(() => generateDemoResponse());
+  // Last-good live availability, keyed by the source it came from. A configured
+  // endpoint starts empty (loading), never with the demo grid.
+  const [live, setLive] = useState<{ key: string; response: LibCalGridResponse; updatedAt: Date } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const [pageIndex, setPageIndex] = useState(0);
   const [size, setSize] = useState({ width: 0, height: 0 });
 
-  const hasLoadedRef = useRef(true);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const dayMeta = useMemo<DayMeta[]>(() => {
@@ -332,11 +337,15 @@ export default function LibraryAvailability({
     async (signal?: AbortSignal) => {
       const firstDay = dayMeta[0]?.date;
       if (!firstDay) return;
-      if (!endpoint || (useCorsProxy && !getCorsProxyUrl())) {
-        setResponse(generateDemoResponse());
+      if (isDemo) {
+        setDemoResponse(generateDemoResponse());
         setError(null);
-        setLastUpdated(null);
-        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+      if (useCorsProxy && !getCorsProxyUrl()) {
+        // A configured endpoint must never fall back to the demo grid.
+        setError('A CORS proxy must be configured to reach LibCal.');
         setRefreshing(false);
         return;
       }
@@ -353,18 +362,19 @@ export default function LibraryAvailability({
         pageSize,
       });
 
-      if (hasLoadedRef.current) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
-      setError(null);
+      setRefreshing(true);
+
+      // Bound each request so a hung upstream can't stall a 24/7 display.
+      const timeoutController = new AbortController();
+      const timeout = setTimeout(() => timeoutController.abort(), FETCH_TIMEOUT_MS);
+      const onAbort = () => timeoutController.abort();
+      signal?.addEventListener('abort', onAbort);
 
       try {
         const res = await fetch(targetUrl, {
           method: 'POST',
           body: formData,
-          signal,
+          signal: timeoutController.signal,
         });
 
         if (!res.ok) {
@@ -381,20 +391,25 @@ export default function LibraryAvailability({
         });
         const nextResponse = normalized?.data as LibCalGridResponse | undefined;
         if (!nextResponse) throw new Error('LibCal response could not be normalized');
-        setResponse(nextResponse);
-        setLastUpdated(new Date());
+        setLive({ key: sourceKey, response: nextResponse, updatedAt: new Date() });
+        setError(null);
       } catch (err) {
         if (signal?.aborted) return;
-        setError(describeError(err));
+        // Keep any last-good live data; never substitute the demo grid.
+        setError(
+          timeoutController.signal.aborted
+            ? 'LibCal request timed out'
+            : describeError(err),
+        );
       } finally {
+        clearTimeout(timeout);
+        signal?.removeEventListener('abort', onAbort);
         if (!signal?.aborted) {
-          hasLoadedRef.current = true;
-          setLoading(false);
           setRefreshing(false);
         }
       }
     },
-    [dayMeta, endpoint, gid, lid, pageSize, sourceAdapterId, useCorsProxy],
+    [dayMeta, endpoint, gid, isDemo, lid, pageSize, sourceAdapterId, sourceKey, useCorsProxy],
   );
 
   useEffect(() => {
@@ -411,6 +426,14 @@ export default function LibraryAvailability({
       clearInterval(interval);
     };
   }, [fetchAvailability, refreshSeconds]);
+
+  // demo → sample grid (badged); live → last-good grid from this source;
+  // unavailable → the configured source failed with nothing good to show.
+  const liveForSource = !isDemo && live?.key === sourceKey ? live : null;
+  const response: LibCalGridResponse | null = isDemo ? demoResponse : liveForSource?.response ?? null;
+  const lastUpdated = liveForSource?.updatedAt ?? null;
+  const isUnavailable = !isDemo && response === null && error !== null;
+  const loading = !isDemo && response === null && error === null;
 
   const processed = useMemo(() => {
     const dayKeys = dayMeta.map((day) => day.key);
@@ -758,7 +781,9 @@ export default function LibraryAvailability({
   }, [activePage, dayMeta, openHour]);
 
   const pageCountText = pages.length > 0 ? `Page ${pageIndex + 1} / ${pages.length}` : 'Page 1 / 1';
-  const updatedText = refreshing
+  const updatedText = isDemo
+    ? 'Sample data'
+    : refreshing && response
     ? 'Refreshing…'
     : lastUpdated
       ? `Updated ${lastUpdated.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
@@ -788,6 +813,11 @@ export default function LibraryAvailability({
             }}
           >
             {title}
+            {isDemo && (
+              <span className="ml-2 inline-block rounded-full bg-white/10 px-2 py-0.5 align-middle text-xs font-normal text-white/50">
+                Demo
+              </span>
+            )}
           </h3>
           <p
             className={`text-white/65 mt-1 ${compactMode ? 'line-clamp-2' : ''}`}
@@ -829,13 +859,13 @@ export default function LibraryAvailability({
         </div>
       )}
 
-      {!loading && error && !response && (
-        <div className="flex-1 rounded-xl border border-red-400/40 bg-red-500/10 flex items-center justify-center text-red-100 text-sm px-4 text-center">
-          Failed to load availability: {error}
+      {isUnavailable && (
+        <div className="flex-1 min-h-0 rounded-xl border border-white/15 bg-black/25">
+          <SourceUnavailable label="Room availability" detail={error} />
         </div>
       )}
 
-      {!loading && activePage && (
+      {response && activePage && (
         <div
           className="flex-1 min-h-0 rounded-xl border border-white/15 bg-black/20 p-2 md:p-3 overflow-hidden"
           style={{ padding: compactMode ? '10px' : undefined }}
