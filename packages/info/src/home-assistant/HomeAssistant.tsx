@@ -1,7 +1,8 @@
 'use client';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, type Ref } from 'react';
 import { type WidgetComponentProps, useLoopingAutoScroll } from '@firstform/campus-hub-widget-sdk';
 import { createSignalingClient, type SignalingClient } from '@firstform/campus-hub-widget-sdk';
+import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
 
 interface HAEntityState {
   entity_id: string;
@@ -22,6 +23,65 @@ interface HAWidgetConfig {
   showEntityName?: boolean;
   showIcon?: boolean;
   showLastChanged?: boolean;
+}
+
+const HTTP_TIMEOUT_MS = 15_000;
+
+function timeoutSignal(ms: number): AbortSignal | undefined {
+  return typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+    ? AbortSignal.timeout(ms)
+    : undefined;
+}
+
+type HALayout = NonNullable<HAWidgetConfig['layout']>;
+
+function DemoBadge({ accent }: { accent: string }) {
+  return (
+    <span
+      className="pointer-events-none absolute right-2 top-2 z-10 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+      style={{ backgroundColor: `${accent}26`, color: accent }}
+    >
+      Demo
+    </span>
+  );
+}
+
+/** Lay out entities per the `layout` option. `auto` fills for one entity, lists for more. */
+function EntityLayout({
+  entities,
+  layout,
+  theme,
+  listRef,
+}: {
+  entities: HAEntityState[];
+  layout: HALayout;
+  theme: WidgetComponentProps['theme'];
+  listRef: Ref<HTMLDivElement>;
+}) {
+  const effective: HALayout =
+    layout === 'auto' ? (entities.length === 1 ? 'single' : 'list') : layout;
+
+  if (effective === 'single') {
+    return (
+      <div className="h-full w-full flex flex-col justify-center p-2 overflow-hidden">
+        <EntityRenderer entity={entities[0]} theme={theme} />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={listRef}
+      data-layout-diagnostic-ignore="true"
+      className={`h-full w-full overflow-y-auto p-2 scrollbar-hide ${
+        effective === 'grid' ? 'grid grid-cols-2 content-start gap-2' : 'space-y-2'
+      }`}
+    >
+      {entities.map((entity) => (
+        <EntityRenderer key={entity.entity_id} entity={entity} theme={theme} />
+      ))}
+    </div>
+  );
 }
 
 const DEMO_ENTITIES: HAEntityState[] = [
@@ -290,6 +350,8 @@ function HomeAssistantWidget({ config, theme }: WidgetComponentProps) {
   const httpUrl = resolveHttpStateUrl(cfg?.httpUrl || '');
   const pollIntervalMs = Math.max(5, Number(cfg?.pollIntervalSeconds) || 30) * 1000;
   const entityIds = cfg?.entityIds || [];
+  const layout: HALayout =
+    cfg?.layout === 'list' || cfg?.layout === 'grid' || cfg?.layout === 'single' ? cfg.layout : 'auto';
   const listRef = useLoopingAutoScroll<HTMLDivElement>([
     entities,
     entityIds.join(','),
@@ -311,6 +373,10 @@ function HomeAssistantWidget({ config, theme }: WidgetComponentProps) {
     if (!signalUrl || !displayId || entityIds.length === 0) return;
 
     let client: SignalingClient | null = null;
+    // The client is created asynchronously; if the widget unmounts (or the
+    // config changes) before it resolves, close it as soon as it arrives so
+    // the socket never outlives the widget.
+    let cancelled = false;
     setEntities(new Map());
     setConnected(false);
     setError(null);
@@ -319,28 +385,45 @@ function HomeAssistantWidget({ config, theme }: WidgetComponentProps) {
       // Async because the SDK resolves the engine implementation lazily,
       // rather than re-exporting it and forcing the dependency on every
       // package that imports the SDK.
-      client = await createSignalingClient(signalUrl, 'display', displayId, {
+      const created = await createSignalingClient(signalUrl, 'display', displayId, {
         name: displayId,
       });
-      clientRef.current = client;
+      if (cancelled) {
+        created.disconnect();
+        return;
+      }
+      client = created;
+      clientRef.current = created;
 
-      client.on('connected', () => {
+      created.on('connected', () => {
+        if (cancelled) return;
         setConnected(true);
         setError(null);
         // Subscribe to HA entities once connected
-        client!.haSubscribe(entityIds);
+        created.haSubscribe(entityIds);
       });
 
-      client.on('disconnected', () => setConnected(false));
-      client.on('ha-state', handleState);
-      client.on('ha-error', (data: Record<string, unknown>) => setError(String(data.message ?? 'Home Assistant error')));
+      created.on('disconnected', () => {
+        if (!cancelled) setConnected(false);
+      });
+      created.on('ha-state', (data: Record<string, unknown>) => {
+        if (!cancelled) handleState(data);
+      });
+      created.on('ha-error', (data: Record<string, unknown>) => {
+        if (!cancelled) setError(String(data.message ?? 'Home Assistant error'));
+      });
 
-      await client.connect();
+      await created.connect();
     };
 
-    setup();
+    setup().catch((err: unknown) => {
+      if (!cancelled) {
+        setError(err instanceof Error ? err.message : 'Could not connect to the Home Assistant bridge');
+      }
+    });
 
     return () => {
+      cancelled = true;
       client?.haUnsubscribe(entityIds);
       client?.disconnect();
       clientRef.current = null;
@@ -369,6 +452,7 @@ function HomeAssistantWidget({ config, theme }: WidgetComponentProps) {
         const response = await fetch(url.toString(), {
           headers: { Accept: 'application/json' },
           cache: 'no-store',
+          signal: timeoutSignal(HTTP_TIMEOUT_MS),
         });
 
         const payload = await response.json() as { error?: string; states?: HAEntityState[] };
@@ -389,7 +473,11 @@ function HomeAssistantWidget({ config, theme }: WidgetComponentProps) {
       } catch (err) {
         if (!cancelled) {
           setConnected(false);
-          setError(err instanceof Error ? err.message : 'Failed to load Home Assistant state');
+          setError(
+            err instanceof Error && err.name === 'TimeoutError'
+              ? 'Home Assistant request timed out'
+              : err instanceof Error ? err.message : 'Failed to load Home Assistant state',
+          );
         }
       }
     };
@@ -411,26 +499,26 @@ function HomeAssistantWidget({ config, theme }: WidgetComponentProps) {
 
   if (isUnconfigured) {
     return (
-      <div
-        ref={listRef}
-        data-layout-diagnostic-ignore="true"
-        className="h-full w-full overflow-y-auto p-2 space-y-2 scrollbar-hide"
-      >
-        {DEMO_ENTITIES.map((entity) => (
-          <EntityRenderer key={entity.entity_id} entity={entity} theme={theme} />
-        ))}
+      <div className="relative h-full w-full">
+        <DemoBadge accent={theme.accent} />
+        <EntityLayout entities={DEMO_ENTITIES} layout={layout} theme={theme} listRef={listRef} />
       </div>
     );
   }
 
-  // Loading / error states
+  // Configured source failed with no last-good state: never show demo data.
+  if (error && entities.size === 0) {
+    return <SourceUnavailable label="Home Assistant" detail={error} />;
+  }
+
+  // Loading / connecting
   if (!connected && entities.size === 0) {
     return (
       <div className="h-full w-full flex items-center justify-center p-4">
         <div className="text-center space-y-2">
           <div className="text-2xl animate-pulse">🏠</div>
           <div className="text-xs text-white/40">
-            {error || (mode === 'http' ? 'Loading Home Assistant data...' : 'Connecting to Home Assistant...')}
+            {mode === 'http' ? 'Loading Home Assistant data...' : 'Connecting to Home Assistant...'}
           </div>
         </div>
       </div>
@@ -452,27 +540,7 @@ function HomeAssistantWidget({ config, theme }: WidgetComponentProps) {
     );
   }
 
-  // Single entity — fill the widget
-  if (entityList.length === 1) {
-    return (
-      <div className="h-full w-full flex flex-col justify-center p-2 overflow-hidden">
-        <EntityRenderer entity={entityList[0]} theme={theme} />
-      </div>
-    );
-  }
-
-  // Multiple entities — scrollable list
-  return (
-    <div
-      ref={listRef}
-      data-layout-diagnostic-ignore="true"
-      className="h-full w-full overflow-y-auto p-2 space-y-2 scrollbar-hide"
-    >
-      {entityList.map((entity) => (
-        <EntityRenderer key={entity.entity_id} entity={entity} theme={theme} />
-      ))}
-    </div>
-  );
+  return <EntityLayout entities={entityList} layout={layout} theme={theme} listRef={listRef} />;
 }
 
 export default HomeAssistantWidget;

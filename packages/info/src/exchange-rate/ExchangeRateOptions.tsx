@@ -1,11 +1,37 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { FormSelect } from '@firstform/campus-hub-widget-sdk';
+import { FormInput, FormSelect } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
 interface ExchangeRateOptionsData {
   baseCurrency: string;
   cycleInterval: number;
+  /** Comma-separated target currency codes as typed. */
+  currencies: string;
+  amount: number;
+}
+
+const DEFAULT_CURRENCIES = ['EUR', 'GBP', 'JPY', 'INR'];
+
+function toState(data: Record<string, unknown> | undefined): ExchangeRateOptionsData {
+  const currencies = Array.isArray(data?.currencies)
+    ? (data.currencies as unknown[]).map(String)
+    : DEFAULT_CURRENCIES;
+  const amount = Number(data?.amount);
+  return {
+    baseCurrency: (data?.baseCurrency as string) ?? 'USD',
+    cycleInterval: Number(data?.cycleInterval) || 10,
+    currencies: currencies.join(', '),
+    amount: Number.isFinite(amount) && amount > 0 ? amount : 1,
+  };
+}
+
+function parseCurrencies(value: string): string[] {
+  const codes = value
+    .split(/[\s,]+/)
+    .map((code) => code.trim().toUpperCase())
+    .filter((code) => /^[A-Z]{3}$/.test(code));
+  return Array.from(new Set(codes));
 }
 
 const CURRENCY_OPTIONS = [
@@ -28,27 +54,36 @@ const INTERVAL_OPTIONS = [
 ];
 
 export default function ExchangeRateOptions({ data, onChange }: WidgetOptionsProps) {
-  const [state, setState] = useState<ExchangeRateOptionsData>({
-    baseCurrency: (data?.baseCurrency as string) ?? 'USD',
-    cycleInterval: Number(data?.cycleInterval) || 10,
-  });
+  const [state, setState] = useState<ExchangeRateOptionsData>(() => toState(data));
 
   useEffect(() => {
-    if (data) {
-      setState({
-        baseCurrency: (data.baseCurrency as string) ?? 'USD',
-        cycleInterval: Number(data.cycleInterval) || 10,
-      });
-    }
+    if (!data) return;
+    setState((previous) => {
+      const next = toState(data);
+      // Keep the in-progress text (e.g. a trailing ", ") while it still
+      // means the same currency list, so typing is not reset mid-edit.
+      if (parseCurrencies(previous.currencies).join(',') === parseCurrencies(next.currencies).join(',')) {
+        next.currencies = previous.currencies;
+      }
+      return next;
+    });
   }, [data]);
 
-  const handleChange = (name: string, value: string | boolean) => {
-    const newState = {
+  const handleChange = (name: string, value: string | number | boolean) => {
+    const newState: ExchangeRateOptionsData = {
       ...state,
-      [name]: name === 'cycleInterval' ? Number(value) : value,
+      [name]: name === 'cycleInterval' || name === 'amount' ? Number(value) : String(value),
     };
     setState(newState);
-    onChange(newState);
+    const currencies = parseCurrencies(newState.currencies);
+    // Spread the existing data so keys this form does not edit survive.
+    onChange({
+      ...data,
+      baseCurrency: newState.baseCurrency,
+      cycleInterval: newState.cycleInterval,
+      currencies: currencies.length > 0 ? currencies : DEFAULT_CURRENCIES,
+      amount: newState.amount > 0 ? newState.amount : 1,
+    });
   };
 
   return (
@@ -61,6 +96,27 @@ export default function ExchangeRateOptions({ data, onChange }: WidgetOptionsPro
           name="baseCurrency"
           value={state.baseCurrency}
           options={CURRENCY_OPTIONS}
+          onChange={handleChange}
+        />
+
+        <FormInput
+          label="Target Currencies"
+          name="currencies"
+          value={state.currencies}
+          placeholder="EUR, GBP, JPY"
+          onChange={handleChange}
+        />
+        <p className="-mt-2 text-xs text-[var(--ui-text-muted)]">
+          Three-letter currency codes, separated by commas.
+        </p>
+
+        <FormInput
+          label="Amount"
+          name="amount"
+          type="number"
+          min={0}
+          step="any"
+          value={state.amount}
           onChange={handleChange}
         />
 

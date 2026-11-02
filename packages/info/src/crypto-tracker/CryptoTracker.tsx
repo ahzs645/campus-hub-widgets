@@ -1,8 +1,9 @@
 'use client';
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { WidgetComponentProps, DarkContainer } from '@firstform/campus-hub-widget-sdk';
 import { useFitScale } from '@firstform/campus-hub-widget-sdk';
 import { DotMatrixText, textToChars } from '@firstform/campus-hub-widget-sdk';
+import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
 
 interface CryptoTrackerConfig {
   coins?: string[];
@@ -22,8 +23,16 @@ interface CoinData {
 
 const DEFAULT_COINS = ['bitcoin', 'ethereum', 'solana'];
 
-// Representative sample shown when the live API is unreachable, so the widget
-// renders a real layout instead of an indefinite "Loading…" spinner.
+const FETCH_TIMEOUT_MS = 15_000;
+
+function timeoutSignal(ms: number): AbortSignal | undefined {
+  return typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+    ? AbortSignal.timeout(ms)
+    : undefined;
+}
+
+// Sample shown only when no coins are configured (demo mode, badged). A
+// failing live API never falls back to these made-up prices.
 const makeSparkline = (base: number, amp: number): number[] =>
   Array.from({ length: 48 }, (_, i) => base + Math.sin(i / 4) * amp + (i % 7) * amp * 0.04);
 
@@ -115,34 +124,38 @@ export default function CryptoTracker({ config, theme }: WidgetComponentProps) {
   const showSparkline = trackerConfig?.showSparkline ?? true;
 
   const { containerRef, scale } = useFitScale(220, 200);
-  const [coinData, setCoinData] = useState<CoinData[]>([]);
+  const coinIds = coins.map((id) => id.trim()).filter(Boolean).join(',');
+  const isDemo = coinIds === '';
+  // Last-good live prices keyed by the coin list they came from.
+  const [live, setLive] = useState<{ key: string; data: CoinData[] } | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [fadeIn, setFadeIn] = useState(true);
-  const [usingSample, setUsingSample] = useState(false);
-  const hasRealDataRef = useRef(false);
 
   const fetchData = useCallback(async () => {
-    if (coins.length === 0) return;
+    if (isDemo) {
+      setError(null);
+      return;
+    }
     try {
-      const ids = coins.join(',');
       const res = await fetch(
-        `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&price_change_percentage=24h&sparkline=true`,
+        `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${encodeURIComponent(coinIds)}&price_change_percentage=24h&sparkline=true`,
+        { signal: timeoutSignal(FETCH_TIMEOUT_MS) },
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: CoinData[] = await res.json();
-      if (!Array.isArray(data) || data.length === 0) throw new Error('empty response');
-      hasRealDataRef.current = true;
-      setCoinData(data);
-      setUsingSample(false);
-    } catch {
-      // Live API unavailable — fall back to sample data (unless real data has
-      // already loaded) so the widget shows a layout instead of spinning.
-      if (!hasRealDataRef.current) {
-        setCoinData(SAMPLE_COIN_DATA);
-        setUsingSample(true);
-      }
+      if (!Array.isArray(data) || data.length === 0) throw new Error('No prices returned');
+      setLive({ key: coinIds, data });
+      setError(null);
+    } catch (err) {
+      // Keep last-good prices; never substitute sample prices.
+      setError(
+        err instanceof Error && err.name === 'TimeoutError'
+          ? 'Request timed out'
+          : err instanceof Error ? err.message : 'Unable to load prices',
+      );
     }
-  }, [coins]);
+  }, [coinIds, isDemo]);
 
   useEffect(() => {
     fetchData();
@@ -150,23 +163,31 @@ export default function CryptoTracker({ config, theme }: WidgetComponentProps) {
     return () => clearInterval(interval);
   }, [fetchData]);
 
+  const current = !isDemo && live?.key === coinIds ? live : null;
+  const coinData: CoinData[] = isDemo ? SAMPLE_COIN_DATA : current?.data ?? [];
+  const isUnavailable = !isDemo && current === null && error !== null;
+
   useEffect(() => {
     if (coinData.length <= 1) return;
+    let fadeTimeout: ReturnType<typeof setTimeout> | undefined;
     const interval = setInterval(() => {
       setFadeIn(false);
-      setTimeout(() => {
+      fadeTimeout = setTimeout(() => {
         setActiveIndex((prev) => (prev + 1) % coinData.length);
         setFadeIn(true);
       }, 300);
     }, cycleInterval * 1000);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      if (fadeTimeout) clearTimeout(fadeTimeout);
+    };
   }, [coinData.length, cycleInterval]);
 
   useEffect(() => {
     setActiveIndex(0);
-  }, [coins.length]);
+  }, [coinIds]);
 
-  const coin = coinData[activeIndex];
+  const coin = coinData[activeIndex] ?? coinData[0];
   const changePositive = coin ? coin.price_change_percentage_24h >= 0 : true;
   const headlineColor = mixColors(theme.background, '#ffffff', 0.96);
   const mutedColor = mixColors(theme.background, '#ffffff', 0.67);
@@ -193,7 +214,9 @@ export default function CryptoTracker({ config, theme }: WidgetComponentProps) {
           padding: 16,
         }}
       >
-        {!coin ? (
+        {isUnavailable ? (
+          <SourceUnavailable label="Crypto prices" detail={error} compact />
+        ) : !coin ? (
           <div className="flex items-center justify-center w-full h-full">
             <span style={{ color: subtleColor, fontSize: 12 }}>Loading...</span>
           </div>
@@ -281,7 +304,7 @@ export default function CryptoTracker({ config, theme }: WidgetComponentProps) {
           </div>
         )}
       </div>
-      {usingSample && (
+      {isDemo && (
         <div
           style={{
             position: 'absolute',
@@ -292,7 +315,7 @@ export default function CryptoTracker({ config, theme }: WidgetComponentProps) {
             pointerEvents: 'none',
           }}
         >
-          Sample data
+          Demo
         </div>
       )}
     </DarkContainer>

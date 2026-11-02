@@ -46,7 +46,8 @@ export default function MacOSStickyNoteOptions({
   const handleChange = (name: string, value: string | number | boolean) => {
     const next = { ...state, [name]: value };
     setState(next);
-    onChange(next);
+    // Spread existing data so keys this form does not edit survive.
+    onChange({ ...data, ...next });
   };
 
   return (

@@ -15,6 +15,11 @@ interface CalendarOptionsState {
   apiUrl: string;
   sourceType: 'json' | 'ical' | 'rss';
   maxItems: number;
+  layoutMode: 'auto' | 'full' | 'compact';
+}
+
+function readLayoutMode(value: unknown): CalendarOptionsState['layoutMode'] {
+  return value === 'full' || value === 'compact' ? value : 'auto';
 }
 
 export default function MacOSCalendarOptions({
@@ -26,6 +31,7 @@ export default function MacOSCalendarOptions({
     apiUrl: (data.apiUrl as string) ?? '',
     sourceType: ((data.sourceType as 'json' | 'ical' | 'rss') ?? 'ical'),
     maxItems: Number(data.maxItems ?? 6),
+    layoutMode: readLayoutMode(data.layoutMode),
   });
 
   useEffect(() => {
@@ -34,6 +40,7 @@ export default function MacOSCalendarOptions({
       apiUrl: (data.apiUrl as string) ?? '',
       sourceType: ((data.sourceType as 'json' | 'ical' | 'rss') ?? 'ical'),
       maxItems: Number(data.maxItems ?? 6),
+      layoutMode: readLayoutMode(data.layoutMode),
     });
   }, [data]);
 
@@ -43,7 +50,9 @@ export default function MacOSCalendarOptions({
       [name]: name === 'maxItems' ? Number(value) : value,
     };
     setState(next);
-    onChange(next);
+    // Spread existing data so keys this form does not edit (e.g. a linked
+    // source reference) survive.
+    onChange({ ...data, ...next });
   };
 
   return (
@@ -82,6 +91,17 @@ export default function MacOSCalendarOptions({
           step={1}
           unit=""
           onChange={handleChange}
+        />
+        <FormSelect
+          label="Layout"
+          name="layoutMode"
+          value={state.layoutMode}
+          onChange={handleChange}
+          options={[
+            { value: 'auto', label: 'Auto (compact when small)' },
+            { value: 'full', label: 'Full' },
+            { value: 'compact', label: 'Compact' },
+          ]}
         />
       </OptionsSection>
     </OptionsPanel>

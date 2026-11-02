@@ -68,6 +68,9 @@ export default function MacOSCalendar({ config }: WidgetComponentProps) {
   const gridStart = new Date(monthStart);
   gridStart.setDate(monthStart.getDate() - monthStart.getDay());
 
+  const title = calendarConfig.title?.trim() ?? '';
+  // No feed configured: useEvents returns the sample events below.
+  const isDemo = !calendarConfig.apiUrl?.trim();
   const events = useEvents({
     apiUrl: calendarConfig.apiUrl?.trim() || undefined,
     sourceType: calendarConfig.sourceType ?? 'ical',
@@ -210,7 +213,7 @@ export default function MacOSCalendar({ config }: WidgetComponentProps) {
                 textTransform: 'uppercase',
               }}
             >
-              {events.length} event{events.length === 1 ? '' : 's'}
+              {isDemo ? 'Demo' : `${events.length} event${events.length === 1 ? '' : 's'}`}
             </span>
           </div>
         </div>
@@ -371,7 +374,13 @@ export default function MacOSCalendar({ config }: WidgetComponentProps) {
               fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
             }}
           >
-            {events.length} event{events.length === 1 ? '' : 's'}
+            {[
+              title,
+              isDemo ? 'Demo' : null,
+              `${events.length} event${events.length === 1 ? '' : 's'}`,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
           </div>
         ) : null}
       </div>

@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { DarkContainer, buildCacheKey, buildProxyUrl, fetchJsonWithCache, type WidgetComponentProps, useFitScale, useLoopingAutoScroll } from '@firstform/campus-hub-widget-sdk';
+import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
 
 interface TeamScheduleConfig {
   title?: string;
@@ -36,8 +37,8 @@ const DEMO_OPPONENTS = [
   'LA Clippers',
 ];
 
-function makeDemoGames(): TeamGame[] {
-  const now = new Date();
+function makeDemoGames(nowMs: number): TeamGame[] {
+  const now = new Date(nowMs);
   return DEMO_OPPONENTS.map((opponent, index) => {
     const gameDate = new Date(now);
     gameDate.setDate(now.getDate() + index * 2 + 1);
@@ -56,7 +57,20 @@ function makeDemoGames(): TeamGame[] {
   });
 }
 
-const DEMO_GAMES = makeDemoGames();
+const DEMO_REFRESH_MS = 60 * 60 * 1000;
+
+/**
+ * Parse a game date. A date-only value ("2026-10-21") is a calendar day, so
+ * it is read as local midnight; `new Date('2026-10-21')` would be UTC
+ * midnight and show the previous day west of UTC.
+ */
+function parseGameDate(date: string): Date {
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date.trim());
+  if (dateOnly) {
+    return new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]));
+  }
+  return new Date(date);
+}
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
   const normalized = hex.trim().replace('#', '');
@@ -137,15 +151,15 @@ function parseManualData(text: string): TeamGame[] {
 
 function sortGames(games: TeamGame[]): TeamGame[] {
   return [...games].sort((left, right) => {
-    const leftTime = new Date(left.date).getTime();
-    const rightTime = new Date(right.date).getTime();
+    const leftTime = parseGameDate(left.date).getTime();
+    const rightTime = parseGameDate(right.date).getTime();
     if (!Number.isFinite(leftTime) || !Number.isFinite(rightTime)) return 0;
     return leftTime - rightTime;
   });
 }
 
 function formatDate(date: string): string {
-  const parsed = new Date(date);
+  const parsed = parseGameDate(date);
   if (Number.isNaN(parsed.getTime())) return date;
   return new Intl.DateTimeFormat('en-US', {
     weekday: 'short',
@@ -173,62 +187,89 @@ export default function TeamSchedule({ config, theme }: WidgetComponentProps) {
   const useCorsProxy = scheduleConfig?.useCorsProxy ?? true;
 
   const { containerRef, scale } = useFitScale(420, 260);
-  const [games, setGames] = useState<TeamGame[]>(DEMO_GAMES);
+  // demo: no schedule configured — sample games with a visible badge.
+  // manual: the pasted schedule (invalid rows are an error, never samples).
+  // url: last-good games from this URL; on failure with nothing good to
+  // show, an unavailable state instead of sample games.
+  const isDemo =
+    source === 'demo' ||
+    (source === 'url' && !apiUrl) ||
+    (source === 'manual' && !manualData);
+  const fetchUrl = source === 'url' && apiUrl ? (useCorsProxy ? buildProxyUrl(apiUrl) : apiUrl) : '';
+  const [live, setLive] = useState<{ key: string; games: TeamGame[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Demo dates are relative to "now"; recompute them periodically so a
+  // 24/7 display does not drift into showing past games.
+  const [demoEpoch, setDemoEpoch] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!isDemo) return undefined;
+    const interval = window.setInterval(() => setDemoEpoch(Date.now()), DEMO_REFRESH_MS);
+    return () => window.clearInterval(interval);
+  }, [isDemo]);
+
+  const manualGames = useMemo(
+    () => (source === 'manual' && manualData ? sortGames(parseManualData(manualData)) : []),
+    [manualData, source],
+  );
 
   const loadGames = useCallback(async () => {
-    if (source === 'manual') {
-      const parsed = sortGames(parseManualData(manualData));
-      setGames(parsed.length > 0 ? parsed : DEMO_GAMES);
-      setError(parsed.length > 0 ? null : 'Using demo schedule');
+    if (!fetchUrl) {
+      setError(null);
       return;
     }
 
-    if (source === 'url' && apiUrl) {
-      try {
-        const fetchUrl = useCorsProxy ? buildProxyUrl(apiUrl) : apiUrl;
-        const { data } = await fetchJsonWithCache<unknown>(fetchUrl, {
-          cacheKey: buildCacheKey('team-schedule', fetchUrl),
-          ttlMs: refreshInterval * 60 * 1000,
-        });
+    try {
+      const { data } = await fetchJsonWithCache<unknown>(fetchUrl, {
+        cacheKey: buildCacheKey('team-schedule', fetchUrl),
+        ttlMs: refreshInterval * 60 * 1000,
+      });
 
-        const rawGames = Array.isArray(data)
-          ? data
-          : data && typeof data === 'object' && Array.isArray((data as { games?: unknown[] }).games)
-            ? (data as { games: unknown[] }).games
-            : [];
+      const rawGames = Array.isArray(data)
+        ? data
+        : data && typeof data === 'object' && Array.isArray((data as { games?: unknown[] }).games)
+          ? (data as { games: unknown[] }).games
+          : [];
 
-        const parsed = sortGames(
-          rawGames
-            .map((entry) => normalizeGame(entry))
-            .filter((game): game is TeamGame => Boolean(game)),
-        );
+      const parsed = sortGames(
+        rawGames
+          .map((entry) => normalizeGame(entry))
+          .filter((game): game is TeamGame => Boolean(game)),
+      );
 
-        if (parsed.length === 0) {
-          throw new Error('No valid games returned');
-        }
-
-        setGames(parsed);
-        setError(null);
-        return;
-      } catch (fetchError) {
-        setGames(DEMO_GAMES);
-        setError(fetchError instanceof Error ? fetchError.message : 'Using demo schedule');
-        return;
+      if (parsed.length === 0) {
+        throw new Error('No valid games returned');
       }
-    }
 
-    setGames(DEMO_GAMES);
-    setError(null);
-  }, [apiUrl, manualData, refreshInterval, source, useCorsProxy]);
+      setLive({ key: fetchUrl, games: parsed });
+      setError(null);
+    } catch (fetchError) {
+      // Keep last-good games; never fall back to the demo schedule.
+      setError(fetchError instanceof Error ? fetchError.message : 'Unable to load schedule');
+    }
+  }, [fetchUrl, refreshInterval]);
 
   useEffect(() => {
     loadGames();
-    if (source !== 'url' || !apiUrl) return undefined;
+    if (!fetchUrl) return undefined;
 
     const interval = window.setInterval(loadGames, refreshInterval * 60 * 1000);
     return () => window.clearInterval(interval);
-  }, [apiUrl, loadGames, refreshInterval, source]);
+  }, [fetchUrl, loadGames, refreshInterval]);
+
+  const demoGames = useMemo(() => (isDemo ? makeDemoGames(demoEpoch) : []), [isDemo, demoEpoch]);
+  const currentLive = fetchUrl && live?.key === fetchUrl ? live : null;
+  const games: TeamGame[] = isDemo
+    ? demoGames
+    : source === 'manual'
+      ? manualGames
+      : currentLive?.games ?? [];
+  const sourceError =
+    source === 'manual' && !isDemo && manualGames.length === 0
+      ? 'No valid games in the manual schedule'
+      : error;
+  const isUnavailable = !isDemo && games.length === 0 && sourceError !== null;
+  const isLoading = !isDemo && games.length === 0 && sourceError === null;
 
   const upcoming = useMemo(() => sortGames(games).slice(0, maxGames), [games, maxGames]);
   const gamesRef = useLoopingAutoScroll<HTMLDivElement>([
@@ -236,7 +277,7 @@ export default function TeamSchedule({ config, theme }: WidgetComponentProps) {
     showStatus,
     showVenue,
   ]);
-  const nextGame = upcoming[0] ?? DEMO_GAMES[0];
+  const nextGame = upcoming[0];
   const headlineColor = mixColors(theme.background, '#ffffff', 0.95);
   const mutedColor = mixColors(theme.background, '#ffffff', 0.65);
   const subtleColor = mixColors(theme.background, '#ffffff', 0.4);
@@ -273,10 +314,20 @@ export default function TeamSchedule({ config, theme }: WidgetComponentProps) {
                 background: `${theme.accent}10`,
               }}
             >
-              {upcoming.length} games
+              {isDemo ? 'Demo' : `${upcoming.length} games`}
             </div>
           </div>
 
+          {isUnavailable ? (
+            <div className="min-h-0 flex-1">
+              <SourceUnavailable label="Schedule" detail={sourceError} />
+            </div>
+          ) : isLoading || !nextGame ? (
+            <div className="flex min-h-0 flex-1 items-center justify-center" style={{ fontSize: 12, color: subtleColor }}>
+              Loading schedule…
+            </div>
+          ) : (
+            <>
           <div
             className="rounded-[22px]"
             style={{
@@ -347,9 +398,14 @@ export default function TeamSchedule({ config, theme }: WidgetComponentProps) {
             ))}
           </div>
 
+            </>
+          )}
+
           <div className="mt-2 flex items-center justify-between" style={{ fontSize: 11, color: subtleColor }}>
             <span>{source === 'url' ? `Refreshes every ${refreshInterval}m` : 'Editable schedule widget'}</span>
-            <span>{error ? `Fallback • ${error}` : 'Phoenix Suns defaults included'}</span>
+            <span className="min-w-0 truncate pl-2">
+              {isDemo ? 'Sample schedule' : sourceError && !isUnavailable ? `Refresh failed • ${sourceError}` : source === 'manual' ? 'Manual schedule' : 'Live schedule'}
+            </span>
           </div>
         </div>
       </div>
