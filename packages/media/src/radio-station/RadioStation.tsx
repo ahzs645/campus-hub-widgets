@@ -177,7 +177,7 @@ export default function RadioStation({ config, theme }: WidgetComponentProps) {
       try {
         const response = await fetch(
           useCorsProxy ? buildProxyUrl(metadataUrl) : metadataUrl,
-          { cache: 'no-store' }
+          { cache: 'no-store', signal: AbortSignal.timeout(15_000) }
         );
 
         const checkedAt = Date.now();

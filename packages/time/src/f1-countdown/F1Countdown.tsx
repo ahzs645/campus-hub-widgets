@@ -125,7 +125,9 @@ export default function F1Countdown({ config, theme }: WidgetComponentProps) {
   const fetchSchedule = useCallback(async () => {
     try {
       setError(null);
-      const res = await fetch('https://api.jolpi.ca/ergast/f1/current.json');
+      const res = await fetch('https://api.jolpi.ca/ergast/f1/current.json', {
+        signal: AbortSignal.timeout(15_000),
+      });
       if (!res.ok) throw new Error('Failed to fetch F1 schedule');
       const json = await res.json();
       const races: Race[] = json?.MRData?.RaceTable?.Races ?? [];

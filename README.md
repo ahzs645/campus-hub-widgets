@@ -6,14 +6,15 @@ Widget packages for the Campus Hub Engine, organized by category.
 
 | Package | Widgets |
 |---------|---------|
-| `@firstform/campus-hub-widgets-time` | Clock, Countdown, Time Progress, Holiday Calendar, F1 Countdown, Word Clock |
-| `@firstform/campus-hub-widgets-environment` | Weather, Air Quality, UV Index, Fire Hazard, Aurora Forecast, Drought Level, Groundwater Level, Satellite View |
-| `@firstform/campus-hub-widgets-campus` | Cafeteria Menu, Club Spotlight, Confessions, Group Fitness, Library Availability, Job Board, Events List, Climbing Gym, Google Calendar |
+| `@firstform/campus-hub-widgets-time` | Clock, Countdown, F1 Countdown, Holiday Calendar, Time Progress, Word Clock |
+| `@firstform/campus-hub-widgets-environment` | Air Quality, Aurora Forecast, Drought Level, Fire Hazard Rating, Gas Prices, Groundwater Level, Satellite View, Sunset / Sunrise, UV Index, Weather |
+| `@firstform/campus-hub-widgets-campus` | Cafeteria Menu, Calendar, Climbing Gym, Club Spotlight, Confessions, Events List, Google Calendar, Group Fitness, Job Board, Library Availability |
 | `@firstform/campus-hub-widgets-transit` | Bus Connection |
-| `@firstform/campus-hub-widgets-info` | News Ticker, Exchange Rate, Crypto Tracker, ISS Tracker, RSS Reader, Home Assistant |
-| `@firstform/campus-hub-widgets-media` | Poster Carousel, Poster Feed, Slideshow, Image, Media Player, Radio Station, YouTube, Web, Rich Text |
-| `@firstform/campus-hub-widgets-fun` | Nothing Glyph, Bottle Spin, Rock Paper Scissors, Kaomoji, Coin Dice, Word of the Day, Flashcard |
-| `@firstform/campus-hub-widgets-utility` | QR Code, Widget Stack, Simple Table |
+| `@firstform/campus-hub-widgets-info` | Crypto Tracker, Daily Horoscope, Exchange Rate, Home Assistant, ISS Tracker, News Ticker, RSS Reader, Stock Quotes, Team Schedule |
+| `@firstform/campus-hub-widgets-media` | Canva, Google Sheets, Image, Media Player, Poster Carousel, Poster Feed, PowerPoint, Radio Station, Rich Text, Slideshow, Stream Player, Web Embed, Web Region, YouTube |
+| `@firstform/campus-hub-widgets-fun` | Bottle Spin, Coin & Dice, Flashcard, Fortune Cookie, Kaomoji, Nothing Glyph, Rock Paper Scissors, Trivia Game, Word of the Day |
+| `@firstform/campus-hub-widgets-utility` | QR Code, Simple Table, Widget Stack, WiFi Share |
+| `@firstform/campus-hub-widgets-macos` | Dashboard Clock, Dashboard Weather, macOS Calendar, macOS Dictionary, macOS iPod, macOS Sticky Note, macOS Stocks, macOS Translate |
 
 ## Usage
 
@@ -64,8 +65,12 @@ npm test
 npm run typecheck
 ```
 
-The widget SDK is an **optional peer dependency**: the host supplies it, so it
-is not installed here. Tests that need it run in the host repo instead.
+The widget SDK is an **optional peer dependency** of each widget package: the
+host supplies it. For standalone checks only, the workspace root installs it
+as a dev dependency from GitHub (with `react-dom` and its types, which the SDK
+needs), so `npm run typecheck` covers every package and `npm test` can run
+SDK-dependent tests here. These root dev dependencies are never installed by a
+host, which only installs the individual packages.
 
 Never run `npm install` inside this repo while it is checked out as a submodule
 of a host — the nested `node_modules` shadows the host's copies for these

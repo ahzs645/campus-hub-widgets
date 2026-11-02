@@ -13,7 +13,8 @@
     "src"
   ],
   "dependencies": {
-    "@firstform/campus-hub-widgets-shared": "^0.1.0"
+    "@firstform/campus-hub-widgets-shared": "^0.1.0",
+    "hls.js": "^1.6.15"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",

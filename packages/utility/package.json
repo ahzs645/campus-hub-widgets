@@ -1,7 +1,7 @@
 {
   "name": "@firstform/campus-hub-widgets-utility",
   "version": "0.1.0",
-  "description": "Utility widgets for Campus Hub — qrcode, widget-stack, simple-table",
+  "description": "Utility widgets for Campus Hub — qrcode, widget-stack, simple-table, wifi-share",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",

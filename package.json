@@ -10,6 +10,9 @@
     "test": "vitest run"
   },
   "devDependencies": {
+    "@firstform/campus-hub-widget-sdk": "github:ahzs645/campus-hub-widget-sdk",
+    "@types/react-dom": "^19.0.0",
+    "react-dom": "^19.0.0",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
   }

@@ -363,7 +363,8 @@ export function getCachedStaticGtfs(): StaticGtfsData | null {
 
 export async function fetchStaticGtfs(useCorsProxy: boolean): Promise<StaticGtfsData> {
   const url = useCorsProxy ? buildProxyUrl(STATIC_GTFS_URL) : STATIC_GTFS_URL;
-  const response = await fetch(url);
+  // The static feed is a zip, so allow longer than the realtime feed.
+  const response = await fetch(url, { signal: AbortSignal.timeout(60_000) });
   if (!response.ok) throw new Error(`Failed to fetch static GTFS: ${response.status}`);
 
   const data = parseStaticGtfsZip(new Uint8Array(await response.arrayBuffer()));

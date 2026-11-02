@@ -170,7 +170,7 @@ async function fetchRealtimeUpdates(
       return new Map();
     }
 
-    const res = await fetch(url);
+    const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
     if (!res.ok) return new Map();
 
     const buffer = await res.arrayBuffer();
