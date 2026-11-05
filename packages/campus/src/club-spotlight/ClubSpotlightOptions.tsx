@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import { FormInput, FormSwitch, OptionsPanel, OptionsSection } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
-const DEFAULT_API_URL = 'https://overtheedge.unbc.ca/wp-json/wp/v2/organization?per_page=100&_embed=wp:featuredmedia&org_status=181,183,182';
 
 interface ClubSpotlightData {
   apiUrl: string;
@@ -55,7 +54,7 @@ export default function ClubSpotlightOptions({ data, onChange }: WidgetOptionsPr
           name="apiUrl"
           type="url"
           value={state.apiUrl}
-          placeholder={DEFAULT_API_URL}
+          placeholder="https://example.edu/api/clubs"
           onChange={handleChange}
         />
         <div className="text-xs text-[var(--ui-text-muted)] text-center">
@@ -68,7 +67,7 @@ export default function ClubSpotlightOptions({ data, onChange }: WidgetOptionsPr
           name="pageUrl"
           type="url"
           value={state.pageUrl}
-          placeholder="https://overtheedge.unbc.ca/clubs/"
+          placeholder="https://example.edu/source"
           onChange={handleChange}
         />
         <div className="text-xs text-[var(--ui-text-muted)] text-center">
@@ -136,3 +135,4 @@ export default function ClubSpotlightOptions({ data, onChange }: WidgetOptionsPr
     </OptionsPanel>
   );
 }
+

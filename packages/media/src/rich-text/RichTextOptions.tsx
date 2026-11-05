@@ -44,13 +44,13 @@ export default function RichTextOptions({ data, onChange }: WidgetOptionsProps) 
   const handleChange = (name: string, value: string | number | boolean) => {
     const newState = { ...state, [name]: value };
     setState(newState);
-    onChange(newState);
+    onChange({ ...data, ...newState });
   };
 
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newState = { ...state, content: e.target.value };
     setState(newState);
-    onChange(newState);
+    onChange({ ...data, ...newState });
   };
 
   return (
@@ -137,3 +137,4 @@ export default function RichTextOptions({ data, onChange }: WidgetOptionsProps) 
     </div>
   );
 }
+

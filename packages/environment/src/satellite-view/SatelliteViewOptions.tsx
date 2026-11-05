@@ -72,7 +72,7 @@ export default function SatelliteViewOptions({ data, onChange }: WidgetOptionsPr
   const handleChange = (name: string, value: string | number | boolean) => {
     const newState = { ...state, [name]: value };
     setState(newState);
-    onChange(newState);
+    onChange({ ...data, ...newState });
   };
 
   const handlePreset = (_name: string, value: string) => {
@@ -87,7 +87,7 @@ export default function SatelliteViewOptions({ data, onChange }: WidgetOptionsPr
           locationLabel: preset.label,
         };
         setState(newState);
-        onChange(newState);
+        onChange({ ...data, ...newState });
       }
     }
   };
@@ -172,3 +172,4 @@ export default function SatelliteViewOptions({ data, onChange }: WidgetOptionsPr
     </div>
   );
 }
+

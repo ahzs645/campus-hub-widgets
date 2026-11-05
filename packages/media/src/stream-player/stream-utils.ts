@@ -42,7 +42,6 @@ export interface YouTubeLiveProbeResult {
   videoId: string | null;
 }
 
-export const ISS_LIVE_URL = 'https://www.youtube.com/embed/fO9e9jnhYK8';
 
 const VIDEO_EXTENSIONS = [
   '.mp4',
@@ -98,9 +97,6 @@ export function resolveConfiguredStreamUrl(url: string, preset: StreamPreset): s
     return resolveAbsoluteUrl(trimmed);
   }
 
-  if (preset === 'iss-live') {
-    return ISS_LIVE_URL;
-  }
 
   return '';
 }
@@ -354,3 +350,4 @@ export function resolveStreamSource(
 
   return { kind: 'embed', sourceUrl, url: sourceUrl };
 }
+

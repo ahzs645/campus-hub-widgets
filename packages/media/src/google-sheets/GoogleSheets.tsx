@@ -1,4 +1,6 @@
 'use client';
+import { DemoBadge } from '@firstform/campus-hub-widgets-shared';
+import { useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { useEffect, useState, useMemo } from 'react';
 import { WidgetComponentProps, useFitScale } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon } from '@firstform/campus-hub-widget-sdk';
@@ -40,11 +42,12 @@ function GoogleSheetsDemo({
   return (
     <div
       ref={containerRef}
-      className="flex h-full w-full items-center justify-center overflow-hidden"
+      className="relative flex h-full w-full items-center justify-center overflow-hidden"
       style={{
         background: `linear-gradient(180deg, ${theme.primary}36 0%, ${theme.background} 100%)`,
       }}
     >
+      <DemoBadge />
       <div
         className="shrink-0 p-4"
         style={{
@@ -225,9 +228,9 @@ export default function GoogleSheetsWidget({ config, theme }: WidgetComponentPro
   const showTitle = c?.showTitle ?? false;
   const title = c?.title ?? '';
   const refreshInterval = c?.refreshInterval ?? 300;
-  const galleryDemo = c?.galleryDemo ?? false;
+  const galleryDemo = useWidgetPreview() || (c?.galleryDemo ?? false);
 
-  const embedUrl = useMemo(() => buildEmbedUrl(c ?? {}), [c?.url, c?.sheetName, c?.cellRange]);
+  const embedUrl = useMemo(() => galleryDemo ? '' : buildEmbedUrl(c ?? {}), [c?.url, c?.sheetName, c?.cellRange, galleryDemo]);
 
   const [iframeSrc, setIframeSrc] = useState(embedUrl);
 
@@ -253,7 +256,7 @@ export default function GoogleSheetsWidget({ config, theme }: WidgetComponentPro
   }, [embedUrl, refreshInterval]);
 
   if (!embedUrl) {
-    if (galleryDemo) {
+    if (galleryDemo || !c?.url) {
       return (
         <GoogleSheetsDemo
           theme={theme}
@@ -302,3 +305,4 @@ export default function GoogleSheetsWidget({ config, theme }: WidgetComponentPro
     </div>
   );
 }
+

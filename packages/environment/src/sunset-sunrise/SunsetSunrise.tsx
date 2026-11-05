@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { fetchJsonWithCache, buildCacheKey } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale, ThemedContainer, IconText } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon } from '@firstform/campus-hub-widget-sdk';
@@ -8,6 +8,7 @@ import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
 import { withFetchTimeout } from '../fetch-timeout';
 
 interface SunriseSunsetConfig {
+  apiUrl?: string;
   latitude?: number;
   longitude?: number;
   locationName?: string;
@@ -204,6 +205,7 @@ const buildMockData = (): SunData => {
 
 export default function SunsetSunrise({ config, theme }: WidgetComponentProps) {
   const cfg = config as SunriseSunsetConfig | undefined;
+  const preview = useWidgetPreview();
   const lat = cfg?.latitude ?? 48.8566;
   const lng = cfg?.longitude ?? 2.3522;
   const locationName = cfg?.locationName ?? 'Paris';
@@ -211,10 +213,12 @@ export default function SunsetSunrise({ config, theme }: WidgetComponentProps) {
   const showDetails = cfg?.showDetails ?? true;
   const refreshInterval = cfg?.refreshInterval ?? 30; // minutes
 
-  // sunrise-sunset.org is public and needs no setup, so the widget is always
-  // "live"; sample data is only for the gallery preview, and always badged.
-  const isDemo = cfg?.galleryDemo ?? false;
-  const sourceKey = `${lat}:${lng}`;
+  // Coordinates explicitly saved by older widgets retain their provider.
+  // New widgets have an empty endpoint until a source is selected.
+  const legacySource = cfg?.apiUrl === undefined && typeof cfg?.latitude === 'number' && typeof cfg?.longitude === 'number';
+  const apiUrl = cfg?.apiUrl?.trim() || (legacySource ? 'https://api.sunrise-sunset.org/json' : '');
+  const isDemo = preview || cfg?.galleryDemo === true || !apiUrl;
+  const sourceKey = `${apiUrl}:${lat}:${lng}`;
 
   // Last-good live times, keyed by coordinates. Starts empty (loading), never
   // with the sample times.
@@ -227,7 +231,7 @@ export default function SunsetSunrise({ config, theme }: WidgetComponentProps) {
   const refreshMs = refreshInterval * 60 * 1000;
 
   useEffect(() => {
-    if (isDemo) return;
+    if (isDemo || !legacySource) return;
     let cancelled = false;
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&timezone=auto&forecast_days=1`;
     fetchJsonWithCache<TimeZoneLookupResponse>(url, {
@@ -246,7 +250,7 @@ export default function SunsetSunrise({ config, theme }: WidgetComponentProps) {
     return () => {
       cancelled = true;
     };
-  }, [isDemo, lat, lng, sourceKey]);
+  }, [isDemo, legacySource, lat, lng, sourceKey]);
 
   const timeZone = !isDemo && locationZone?.key === sourceKey ? locationZone.timeZone : undefined;
 
@@ -258,9 +262,12 @@ export default function SunsetSunrise({ config, theme }: WidgetComponentProps) {
     try {
       setError(null);
       // With tzid, "today" is the location's date rather than the server's UTC date.
-      const tzParam = timeZone ? `&tzid=${encodeURIComponent(timeZone)}` : '';
-      const url = `https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}&formatted=0${tzParam}`;
-      const { data } = await fetchJsonWithCache<APIResponse>(url, {
+      const url = new URL(apiUrl);
+      url.searchParams.set('lat', String(lat));
+      url.searchParams.set('lng', String(lng));
+      url.searchParams.set('formatted', '0');
+      if (timeZone) url.searchParams.set('tzid', timeZone);
+      const { data } = await fetchJsonWithCache<APIResponse>(url.toString(), {
         cacheKey: buildCacheKey('sunset-sunrise', `${sourceKey}:${timeZone ?? ''}`),
         ttlMs: refreshMs,
         fetchInit: withFetchTimeout(),
@@ -289,7 +296,7 @@ export default function SunsetSunrise({ config, theme }: WidgetComponentProps) {
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [isDemo, lat, lng, refreshMs, sourceKey, timeZone]);
+  }, [apiUrl, isDemo, lat, lng, refreshMs, sourceKey, timeZone]);
 
   useEffect(() => {
     fetchSunData();
@@ -492,3 +499,4 @@ export default function SunsetSunrise({ config, theme }: WidgetComponentProps) {
     </ThemedContainer>
   );
 }
+

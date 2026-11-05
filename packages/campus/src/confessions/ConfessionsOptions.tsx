@@ -61,7 +61,7 @@ export default function ConfessionsOptions({ data, onChange }: WidgetOptionsProp
       next.batchRefreshMinutes = clamp(toNumber(value, DEFAULTS.batchRefreshMinutes), 0, 1440);
     }
 
-    onChange(next);
+    onChange({ ...data, ...next });
   };
 
   return (
@@ -73,7 +73,7 @@ export default function ConfessionsOptions({ data, onChange }: WidgetOptionsProp
           name="apiUrl"
           type="url"
           value={state.apiUrl}
-          placeholder="https://overtheedge.unbc.ca/wp-json/wp/v2/pages?slug=confession&_fields=id,slug,content.rendered"
+          placeholder="https://example.edu/source"
           onChange={handleChange}
         />
         <FormInput
@@ -81,7 +81,7 @@ export default function ConfessionsOptions({ data, onChange }: WidgetOptionsProp
           name="pageUrl"
           type="url"
           value={state.pageUrl}
-          placeholder="https://overtheedge.unbc.ca/confession/"
+          placeholder="https://example.edu/source"
           onChange={handleChange}
         />
         <div className="text-sm text-[var(--ui-text-muted)]">
@@ -157,3 +157,4 @@ export default function ConfessionsOptions({ data, onChange }: WidgetOptionsProp
     </div>
   );
 }
+

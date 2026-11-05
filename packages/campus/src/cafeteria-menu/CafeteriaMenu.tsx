@@ -1,4 +1,5 @@
 'use client';
+import { useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { WidgetComponentProps, CAFETERIA_DAY_NAMES, hasCafeteriaMenuContent, loadCafeteriaSource, resolveSourceAdapter, type CafeteriaMealSection, type CafeteriaMenuItem, type CafeteriaMenuStatus, type ParsedCafeteriaMenu } from '@firstform/campus-hub-widget-sdk';
 import { getCorsProxyUrl } from '@firstform/campus-hub-widget-sdk';
@@ -244,7 +245,7 @@ export default function CafeteriaMenu({
   const refreshInterval = cfg?.refreshInterval ?? 30;
   const useCorsProxy = cfg?.useCorsProxy ?? true;
 
-  const isDemo = !menuUrl;
+  const isDemo = useWidgetPreview() || (!menuUrl);
   const sourceKey = `${menuUrl}|${danaLocations}|${useCorsProxy ? 'proxy' : 'direct'}`;
 
   // Last-good live menu, keyed by the source it came from. A configured source
@@ -561,3 +562,4 @@ export default function CafeteriaMenu({
     </div>
   );
 }
+

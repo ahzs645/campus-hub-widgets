@@ -11,6 +11,7 @@ import {
 } from '@firstform/campus-hub-widget-sdk';
 
 interface WeatherOptionsState {
+  apiUrl: string;
   location: string;
   units: 'metric' | 'imperial';
   showForecast: boolean;
@@ -21,14 +22,16 @@ export default function MacOSWeatherOptions({
   onChange,
 }: WidgetOptionsProps) {
   const [state, setState] = useState<WeatherOptionsState>({
-    location: (data.location as string) ?? 'Vancouver',
+    apiUrl: (data.apiUrl as string) ?? '',
+    location: (data.location as string) ?? '',
     units: ((data.units as 'metric' | 'imperial') ?? 'metric'),
     showForecast: (data.showForecast as boolean) ?? true,
   });
 
   useEffect(() => {
     setState({
-      location: (data.location as string) ?? 'Vancouver',
+      apiUrl: (data.apiUrl as string) ?? '',
+    location: (data.location as string) ?? '',
       units: ((data.units as 'metric' | 'imperial') ?? 'metric'),
       showForecast: (data.showForecast as boolean) ?? true,
     });
@@ -37,17 +40,18 @@ export default function MacOSWeatherOptions({
   const handleChange = (name: string, value: string | number | boolean) => {
     const next = { ...state, [name]: value };
     setState(next);
-    onChange(next);
+    onChange({ ...data, ...next });
   };
 
   return (
     <OptionsPanel>
       <OptionsSection title="Forecast">
+        <FormInput label="Forecast source URL" name="apiUrl" type="url" value={state.apiUrl} placeholder="Select an Open-Meteo forecast source" onChange={handleChange} />
         <FormInput
-          label="Location"
+          label="Location (legacy lookup)"
           name="location"
           value={state.location}
-          placeholder="Vancouver"
+          placeholder="Optional city lookup"
           onChange={handleChange}
         />
         <FormSelect
@@ -70,3 +74,4 @@ export default function MacOSWeatherOptions({
     </OptionsPanel>
   );
 }
+

@@ -1,9 +1,11 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { WidgetComponentProps, Skeleton } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, Skeleton, useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { useFitScale } from '@firstform/campus-hub-widget-sdk';
+import { DemoBadge } from '@firstform/campus-hub-widgets-shared';
 
 interface ExchangeRateConfig {
+  apiUrl?: string;
   baseCurrency?: string;
   currencies?: string[];
   cycleInterval?: number;
@@ -13,6 +15,7 @@ interface ExchangeRateConfig {
 const DESIGN_W = 300;
 const DESIGN_H = 90;
 const REFRESH_INTERVAL_MS = 60 * 60 * 1000; // 60 minutes
+const SAMPLE_RATES: Record<string, number> = { USD: 1, EUR: 0.92, GBP: 0.79, JPY: 150, INR: 83, CAD: 1.35, AUD: 1.51, CHF: 0.88, CNY: 7.2 };
 
 const FETCH_TIMEOUT_MS = 15_000;
 
@@ -58,32 +61,47 @@ function mixColors(base: string, target: string, weight: number): string {
 
 export default function ExchangeRate({ config, theme }: WidgetComponentProps) {
   const cfg = config as ExchangeRateConfig | undefined;
+  const preview = useWidgetPreview();
   const baseCurrency = cfg?.baseCurrency ?? 'USD';
   const currencies = cfg?.currencies ?? ['EUR', 'GBP', 'JPY', 'INR'];
   const cycleInterval = cfg?.cycleInterval ?? 10;
   const amount = cfg?.amount ?? 1;
+  const legacySource = cfg?.apiUrl === undefined && Boolean(cfg?.baseCurrency);
+  const apiUrl = cfg?.apiUrl?.trim() || (legacySource ? `https://api.exchangerate-api.com/v4/latest/${encodeURIComponent(baseCurrency)}` : '');
+  const isDemo = preview || !apiUrl;
+  const sourceKey = `${apiUrl}:${baseCurrency}`;
 
   const { containerRef, containerWidth, containerHeight } = useFitScale(DESIGN_W, DESIGN_H);
 
-  const [rates, setRates] = useState<Record<string, number> | null>(null);
+  const [live, setLive] = useState<{ key: string; rates: Record<string, number> } | null>(null);
+  const rates = isDemo
+    ? Object.fromEntries(Object.entries(SAMPLE_RATES).map(([currency, rate]) => [currency, rate / (SAMPLE_RATES[baseCurrency] || 1)]))
+    : live?.key === sourceKey ? live.rates : null;
   const [currentIndex, setCurrentIndex] = useState(0);
   const [visible, setVisible] = useState(true);
   const [error, setError] = useState(false);
 
   const fetchRates = useCallback(async () => {
+    if (isDemo) return;
     try {
       const res = await fetch(
-        `https://api.exchangerate-api.com/v4/latest/${encodeURIComponent(baseCurrency)}`,
+        apiUrl,
         { signal: timeoutSignal(FETCH_TIMEOUT_MS) },
       );
       if (!res.ok) throw new Error('Failed to fetch');
       const data = await res.json();
-      setRates(data.rates);
+      const returnedRates = data.rates ?? data.conversion_rates;
+      const returnedBase = data.base ?? data.base_code ?? baseCurrency;
+      const divisor = returnedBase === baseCurrency ? 1 : returnedRates?.[baseCurrency];
+      if (!returnedRates || typeof returnedRates !== 'object' || typeof divisor !== 'number' || divisor <= 0) throw new Error('No exchange rates for the selected base currency');
+      const normalized = Object.fromEntries(Object.entries(returnedRates).filter((entry): entry is [string, number] => typeof entry[1] === 'number').map(([currency, rate]) => [currency, rate / divisor]));
+      normalized[returnedBase] = 1 / divisor;
+      setLive({ key: sourceKey, rates: normalized });
       setError(false);
     } catch {
       setError(true);
     }
-  }, [baseCurrency]);
+  }, [apiUrl, baseCurrency, isDemo, sourceKey]);
 
   // Fetch rates on mount and every 60 minutes
   useEffect(() => {
@@ -156,8 +174,9 @@ export default function ExchangeRate({ config, theme }: WidgetComponentProps) {
   return (
     <div
       ref={containerRef}
-      className="w-full h-full overflow-hidden flex items-center justify-center"
+      className="relative w-full h-full overflow-hidden flex items-center justify-center"
     >
+      {isDemo && <DemoBadge />}
       <div
         style={{
           width: '100%',
@@ -388,3 +407,4 @@ export default function ExchangeRate({ config, theme }: WidgetComponentProps) {
     </div>
   );
 }
+

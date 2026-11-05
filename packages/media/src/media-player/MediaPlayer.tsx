@@ -1,3 +1,5 @@
+import { createDemoImage } from '@firstform/campus-hub-widgets-shared';
+import { useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon } from '@firstform/campus-hub-widget-sdk';
 
@@ -11,8 +13,7 @@ interface MediaPlayerConfig {
   galleryDemo?: boolean;
 }
 
-const MEDIA_PLAYER_DEMO_VIDEO_URL =
-  'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4';
+const MEDIA_PLAYER_DEMO_IMAGE = createDemoImage('Campus stories', 2);
 
 function MediaPlayerDemo({
   theme,
@@ -59,25 +60,17 @@ function MediaPlayerDemo({
                 <div>
                   <div className="text-lg font-semibold">Campus Morning Mix</div>
                   <div className="mt-1 text-sm text-white/60">
-                    Streaming audio sample
+                    Sample audio layout
                   </div>
                 </div>
               </div>
             </>
           ) : (
             <>
-              <video
-                src={MEDIA_PLAYER_DEMO_VIDEO_URL}
-                autoPlay={autoplay}
-                muted={muted}
-                loop={loop}
-                controls={controls}
-                playsInline
-                className="h-full w-full object-cover"
-              />
+              <img src={MEDIA_PLAYER_DEMO_IMAGE} alt="Sample media artwork" className="h-full w-full object-cover" />
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/10" />
               <div className="pointer-events-none absolute left-4 top-4 rounded-full border border-white/12 bg-black/30 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/75">
-                Sample Clip
+                Demo · Video layout
               </div>
             </>
           )}
@@ -115,13 +108,14 @@ function MediaPlayerDemo({
 
 export default function MediaPlayer({ config, theme }: WidgetComponentProps) {
   const mediaConfig = config as MediaPlayerConfig | undefined;
-  const url = mediaConfig?.url ?? '';
+  const preview = useWidgetPreview();
+  const url = preview ? '' : mediaConfig?.url ?? '';
   const type = mediaConfig?.type ?? 'video';
   const autoplay = mediaConfig?.autoplay ?? false;
   const muted = mediaConfig?.muted ?? true;
   const loop = mediaConfig?.loop ?? true;
   const controls = mediaConfig?.controls ?? true;
-  const galleryDemo = mediaConfig?.galleryDemo ?? false;
+  const galleryDemo = preview || !url || (mediaConfig?.galleryDemo ?? false);
 
   if (!url) {
     if (galleryDemo) {
@@ -185,3 +179,4 @@ export default function MediaPlayer({ config, theme }: WidgetComponentProps) {
     </div>
   );
 }
+

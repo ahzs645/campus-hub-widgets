@@ -16,7 +16,9 @@ export default defineWidget({
     maxH: 5,
     defaultW: 3,
     defaultH: 3,
+    acceptsSources: [{ propName: 'animationUrl', types: ['api'], capabilityHint: 'A Lottie animation JSON file.', applySource: (source) => ({ animationUrl: source.url, mode: 'source' }) }],
     defaultProps: {
+      animationUrl: '',
       mode: 'pendulum',
       glow: true,
       pixelSize: 12,
@@ -26,3 +28,4 @@ export default defineWidget({
   load: () => import('./NothingGlyph'),
   loadOptions: () => import('./NothingGlyphOptions'),
 });
+

@@ -14,7 +14,7 @@ export default defineWidget({
     minH: 2,
     defaultW: 4,
     defaultH: 3,
-    acceptsSources: [{ propName: 'url', types: ['image'] }],
+    acceptsSources: [{ propName: 'url', types: ['image', 'unsplash'] }],
     defaultProps: {
       url: '',
       alt: 'Image',
@@ -24,3 +24,4 @@ export default defineWidget({
   load: () => import('./Image'),
   loadOptions: () => import('./ImageOptions'),
 });
+

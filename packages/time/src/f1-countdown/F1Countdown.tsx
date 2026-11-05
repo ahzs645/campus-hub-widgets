@@ -1,9 +1,12 @@
 'use client';
+import { DemoBadge, SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
+import { useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { useState, useEffect, useCallback } from 'react';
 import { WidgetComponentProps, DarkContainer } from '@firstform/campus-hub-widget-sdk';
 import { useFitScale } from '@firstform/campus-hub-widget-sdk';
 
 interface F1CountdownConfig {
+  apiUrl?: string;
   showSessions?: boolean;
 }
 
@@ -113,8 +116,16 @@ function formatSessionDate(date: string, time?: string): string {
 export default function F1Countdown({ config, theme }: WidgetComponentProps) {
   const cfg = config as F1CountdownConfig | undefined;
   const showSessions = cfg?.showSessions ?? true;
+  const preview = useWidgetPreview();
+  const apiUrl = cfg?.apiUrl?.trim() || '';
+  const isDemo = preview || !apiUrl;
+  const [sampleRace] = useState<Race>(() => {
+    const date = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    return { raceName: 'Sample Grand Prix', Circuit: { circuitName: 'Campus Circuit', Location: { country: 'Canada', locality: 'Sample City' } }, date, time: '14:00:00Z', Qualifying: { date, time: '10:00:00Z' } };
+  });
 
-  const [nextRace, setNextRace] = useState<Race | null>(null);
+  const [live, setLive] = useState<{ key: string; race: Race | null } | null>(null);
+  const nextRace = isDemo ? sampleRace : live?.key === apiUrl ? live.race : null;
   const [remaining, setRemaining] = useState<TimeRemaining>({ days: 0, hours: 0, minutes: 0, seconds: 0, total: 0 });
   const [error, setError] = useState<string | null>(null);
 
@@ -123,21 +134,23 @@ export default function F1Countdown({ config, theme }: WidgetComponentProps) {
   const { containerRef, scale } = useFitScale(DESIGN_W, DESIGN_H);
 
   const fetchSchedule = useCallback(async () => {
+    if (isDemo) { setError(null); return; }
     try {
       setError(null);
-      const res = await fetch('https://api.jolpi.ca/ergast/f1/current.json', {
+      const res = await fetch(apiUrl, {
         signal: AbortSignal.timeout(15_000),
       });
       if (!res.ok) throw new Error('Failed to fetch F1 schedule');
       const json = await res.json();
-      const races: Race[] = json?.MRData?.RaceTable?.Races ?? [];
+      if (!Array.isArray(json?.MRData?.RaceTable?.Races)) throw new Error('The selected source is not an F1 schedule');
+      const races: Race[] = json.MRData.RaceTable.Races;
       const now = new Date();
       const upcoming = races.find((r) => parseRaceDate(r.date, r.time) > now);
-      setNextRace(upcoming ?? null);
+      setLive({ key: apiUrl, race: upcoming ?? null });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, []);
+  }, [apiUrl, isDemo]);
 
   useEffect(() => {
     fetchSchedule();
@@ -172,6 +185,7 @@ export default function F1Countdown({ config, theme }: WidgetComponentProps) {
 
   return (
     <DarkContainer ref={containerRef} bg={theme.background}>
+      {isDemo && <DemoBadge />}
       <div
         style={{
           width: DESIGN_W,
@@ -184,11 +198,11 @@ export default function F1Countdown({ config, theme }: WidgetComponentProps) {
         className="flex items-end"
       >
         {error && (
-          <div style={{ color: mutedColor, fontSize: 11, textAlign: 'center', width: '100%' }}>{error}</div>
+          <SourceUnavailable label="Race schedule" detail={error} compact />
         )}
 
         {!nextRace && !error && (
-          <div style={{ color: subtleColor, fontSize: 12, textAlign: 'center', width: '100%' }}>Loading F1 schedule...</div>
+          <div style={{ color: subtleColor, fontSize: 12, textAlign: 'center', width: '100%' }}>{live?.key === apiUrl ? 'No upcoming races in this source' : 'Loading F1 schedule…'}</div>
         )}
 
         {nextRace && (
@@ -277,3 +291,4 @@ export default function F1Countdown({ config, theme }: WidgetComponentProps) {
     </DarkContainer>
   );
 }
+

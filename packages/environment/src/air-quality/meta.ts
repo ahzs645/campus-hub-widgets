@@ -16,7 +16,14 @@ export default defineWidget({
     maxH: 5,
     defaultW: 3,
     defaultH: 3,
+    acceptsSources: [{
+      propName: 'apiUrl', types: ['api'], requires: { format: ['html'] },
+      capabilityHint: 'BC AQHI page containing a current air quality reading.',
+      applySource: (source) => ({ apiUrl: source.url, dataSource: 'bc-aqhi' }),
+      removeSource: () => ({ apiUrl: '', waqiToken: '' }),
+    }],
     defaultProps: {
+      apiUrl: '',
       dataSource: 'waqi',
       waqiToken: '',
       waqiCity: 'prince-george',
@@ -27,3 +34,4 @@ export default defineWidget({
   load: () => import('./AirQuality'),
   loadOptions: () => import('./AirQualityOptions'),
 });
+

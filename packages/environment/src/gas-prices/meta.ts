@@ -1,8 +1,5 @@
 import { defineWidget } from '@firstform/campus-hub-widget-sdk';
 
-export const DEFAULT_URL =
-  'https://www.gasbuddy.com/gasprices/british-columbia/prince-george';
-
 /**
  * Loaded by every host that reads the widget catalogue, so it must stay free
  * of component and library imports.
@@ -17,8 +14,12 @@ export default defineWidget({
     minH: 3,
     defaultW: 3,
     defaultH: 4,
+    acceptsSources: [{
+      propName: 'url', types: ['api'], requires: { format: ['html'] },
+      capabilityHint: 'GasBuddy location page with current station prices.',
+    }],
     defaultProps: {
-      url: DEFAULT_URL,
+      url: '',
       refreshInterval: 30,
       useCorsProxy: true,
       maxStations: 10,
@@ -27,3 +28,4 @@ export default defineWidget({
   load: () => import('./GasPrices'),
   loadOptions: () => import('./GasPricesOptions'),
 });
+

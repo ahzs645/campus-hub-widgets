@@ -53,6 +53,7 @@ export default function StockQuotesOptions({ data, onChange }: WidgetOptionsProp
   const commit = (next: StockQuotesOptionsState) => {
     setState(next);
     onChange({
+      ...data,
       title: next.title,
       symbols: next.symbols,
       chartSymbol: next.chartSymbol.trim().toUpperCase(),
@@ -174,3 +175,4 @@ export default function StockQuotesOptions({ data, onChange }: WidgetOptionsProp
     </OptionsPanel>
   );
 }
+

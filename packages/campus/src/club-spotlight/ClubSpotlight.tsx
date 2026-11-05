@@ -1,4 +1,7 @@
 'use client';
+import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
+import { useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
+import { createDemoImage, DemoBadge } from '@firstform/campus-hub-widgets-shared';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import QRCodeLib from 'qrcode';
 import { WidgetComponentProps, normalizeSourcePayload, resolveSourceAdapter, type ClubItem } from '@firstform/campus-hub-widget-sdk';
@@ -17,15 +20,18 @@ interface ClubSpotlightConfig {
 }
 
 const DEFAULT_CLUBS: ClubItem[] = [
-  { id: '1', name: 'Outdoors Club', image: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=300&h=300&fit=crop', link: '' },
-  { id: '2', name: 'Debate Society', image: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=300&h=300&fit=crop', link: '' },
-  { id: '3', name: 'Photography Club', image: 'https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=300&h=300&fit=crop', link: '' },
+  { id: '1', name: 'Outdoors Club', image: createDemoImage('Campus festival', 0), link: '' },
+  { id: '2', name: 'Debate Society', image: createDemoImage('Creative community', 1), link: '' },
+  { id: '3', name: 'Photography Club', image: createDemoImage('Student showcase', 2), link: '' },
 ];
 
 export default function ClubSpotlight({ config, theme }: WidgetComponentProps) {
   const cfg = config as ClubSpotlightConfig | undefined;
-  const apiUrl = cfg?.apiUrl?.trim() || '';
-  const pageUrl = cfg?.pageUrl?.trim() || '';
+  const preview = useWidgetPreview();
+  const apiUrl = preview ? '' : cfg?.apiUrl?.trim() || '';
+  const pageUrl = preview ? '' : cfg?.pageUrl?.trim() || '';
+  const isDemo = !apiUrl && !pageUrl;
+  const sourceKey = `${apiUrl}|${pageUrl}`;
   const sourceAdapterId = cfg?.sourceAdapter ?? 'unbc-clubs';
   const rotationSeconds = Math.max(4, Math.min(120, cfg?.rotationSeconds ?? 10));
   const useCorsProxy = cfg?.useCorsProxy ?? false;
@@ -33,18 +39,16 @@ export default function ClubSpotlight({ config, theme }: WidgetComponentProps) {
   const showQrCode = cfg?.showQrCode ?? false;
   const qrLabel = cfg?.qrLabel ?? 'Learn more';
 
-  const [clubs, setClubs] = useState<ClubItem[]>(DEFAULT_CLUBS);
+  const [live, setLive] = useState<{ key: string; clubs: ClubItem[] } | null>(null);
+  const clubs = isDemo ? DEFAULT_CLUBS : live?.key === sourceKey ? live.clubs : [];
   const [activeIndex, setActiveIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [usingDefaults, setUsingDefaults] = useState(true);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchClubs = useCallback(async () => {
     setError(null);
     const ttlMs = refreshMinutes * 60 * 1000;
     if (!apiUrl && !pageUrl) {
-      setClubs(DEFAULT_CLUBS);
-      setUsingDefaults(true);
       return;
     }
 
@@ -64,9 +68,8 @@ export default function ClubSpotlight({ config, theme }: WidgetComponentProps) {
       });
       const parsed = (normalized?.data ?? []) as ClubItem[];
       if (parsed.length > 0) {
-        setClubs(parsed);
+        setLive({ key: sourceKey, clubs: parsed });
         setActiveIndex(0);
-        setUsingDefaults(false);
         return;
       }
     } catch {
@@ -89,9 +92,8 @@ export default function ClubSpotlight({ config, theme }: WidgetComponentProps) {
       });
       const parsed = (normalized?.data ?? []) as ClubItem[];
       if (parsed.length > 0) {
-        setClubs(parsed);
+        setLive({ key: sourceKey, clubs: parsed });
         setActiveIndex(0);
-        setUsingDefaults(false);
         return;
       }
     } catch {
@@ -99,7 +101,7 @@ export default function ClubSpotlight({ config, theme }: WidgetComponentProps) {
     }
 
     setError('Could not load clubs from API or page');
-  }, [useCorsProxy, apiUrl, pageUrl, refreshMinutes, sourceAdapterId]);
+  }, [useCorsProxy, apiUrl, pageUrl, refreshMinutes, sourceAdapterId, sourceKey]);
 
   useEffect(() => {
     fetchClubs();
@@ -144,6 +146,10 @@ export default function ClubSpotlight({ config, theme }: WidgetComponentProps) {
     portrait: { w: 280, h: 380 },
   });
 
+  if (!isDemo && clubs.length === 0) {
+    return <ThemedContainer theme={theme}>{error ? <SourceUnavailable label="Clubs" detail={error} /> : <span className="text-sm text-white/60">Loading clubs…</span>}</ThemedContainer>;
+  }
+
   return (
     <ThemedContainer
       ref={containerRef}
@@ -151,6 +157,7 @@ export default function ClubSpotlight({ config, theme }: WidgetComponentProps) {
       color="primary"
       opacity="20"
     >
+      {isDemo && <DemoBadge />}
       <div
         style={{
           width: DESIGN_W,
@@ -209,10 +216,8 @@ export default function ClubSpotlight({ config, theme }: WidgetComponentProps) {
             {current?.name || 'Loading...'}
           </div>
 
-          {/* Error / defaults notice */}
-          {error && usingDefaults && (
-            <div className="text-xs text-white/40 mt-2">Sample data — configure CORS proxy to load clubs</div>
-          )}
+          {error && !isDemo && <div className="text-xs text-rose-200 mt-2">Update failed</div>}
+
         </div>
 
         {/* QR Code */}
@@ -233,3 +238,4 @@ export default function ClubSpotlight({ config, theme }: WidgetComponentProps) {
     </ThemedContainer>
   );
 }
+

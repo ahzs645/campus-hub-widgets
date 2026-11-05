@@ -16,8 +16,10 @@ export default defineWidget({
     maxH: 4,
     defaultW: 3,
     defaultH: 2,
-    defaultProps: { showSessions: true },
+    acceptsSources: [{ propName: 'apiUrl', types: ['api'], capabilityHint: 'An Ergast-compatible Formula 1 schedule response.' }],
+    defaultProps: { apiUrl: '', showSessions: true },
   },
   load: () => import('./F1Countdown'),
   loadOptions: () => import('./F1CountdownOptions'),
 });
+

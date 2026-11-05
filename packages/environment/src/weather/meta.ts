@@ -24,7 +24,6 @@ export const DISPLAY_MODE_PRESETS: Record<Exclude<DisplayMode, 'custom'>, Displa
     windGust: false, precipitation: false, lastUpdated: false,
   },
 };
-export const GEOMET_PRINCE_GEORGE_URL = 'https://api.weather.gc.ca/collections/citypageweather-realtime/items/bc-79?f=json&lang=en';
 
 /**
  * Loaded by every host that reads the widget catalogue, so it must stay free
@@ -49,7 +48,7 @@ export default defineWidget({
       displayMode: 'full',
       displayItems: DISPLAY_MODE_PRESETS.full,
       apiKey: '',
-      apiUrl: GEOMET_PRINCE_GEORGE_URL,
+      apiUrl: '',
       dataSource: 'openweathermap',
       refreshInterval: 10,
       useCorsProxy: true,
@@ -63,6 +62,7 @@ export default defineWidget({
         return adapter?.id === 'unbc-rooftop-weather'
           || adapter?.id === 'msc-geomet-weather';
       },
+      removeSource: () => ({ apiUrl: '', apiKey: '', sourceAdapter: undefined }),
       applySource: (source, currentData) => {
         const candidate = resolveSourceAdapter({ url: source.url, presetId: source.presetId });
         return {
@@ -80,3 +80,4 @@ export default defineWidget({
   load: () => import('./Weather'),
   loadOptions: () => import('./WeatherOptions'),
 });
+

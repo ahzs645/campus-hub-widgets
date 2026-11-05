@@ -7,9 +7,10 @@ import {
   useWidgetOptionsSurface,
 } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon } from '@firstform/campus-hub-widget-sdk';
-import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
+import type { WidgetOptionsProps, SourceReference } from '@firstform/campus-hub-widget-sdk';
 
 interface Slide {
+  id?: string;
   url: string;
   caption?: string;
 }
@@ -47,7 +48,7 @@ export default function SlideshowOptions({ data, onChange }: WidgetOptionsProps)
   const handleChange = (name: string, value: string | number | boolean) => {
     const newState = { ...state, [name]: value };
     setState(newState);
-    onChange(newState);
+    onChange({ ...data, ...newState });
   };
 
   const handleSlideChange = (index: number, field: 'url' | 'caption', value: string) => {
@@ -55,21 +56,36 @@ export default function SlideshowOptions({ data, onChange }: WidgetOptionsProps)
     newSlides[index] = { ...newSlides[index], [field]: value };
     const newState = { ...state, slides: newSlides };
     setState(newState);
-    onChange(newState);
+    const refs = Array.isArray(data.__sourceRefs) ? data.__sourceRefs.filter((ref: SourceReference) => !(field === 'url' && ref.propName === 'slides' && ref.itemId === newSlides[index].id)) : undefined;
+    const next: Record<string, unknown> = { ...data, ...newState };
+    if (refs) {
+      delete next.__sourceRef;
+      delete next.__sourceRefs;
+      if (refs.length) { next.__sourceRefs = refs; next.__sourceRef = refs[refs.length - 1]; }
+    }
+    onChange(next);
   };
 
   const addSlide = () => {
-    const newSlides = [...state.slides, { url: '', caption: '' }];
+    const newSlides = [...state.slides, { id: crypto.randomUUID(), url: '', caption: '' }];
     const newState = { ...state, slides: newSlides };
     setState(newState);
-    onChange(newState);
+    onChange({ ...data, ...newState });
   };
 
   const removeSlide = (index: number) => {
+    const removedId = state.slides[index]?.id;
     const newSlides = state.slides.filter((_, i) => i !== index);
     const newState = { ...state, slides: newSlides };
     setState(newState);
-    onChange(newState);
+    const refs = Array.isArray(data.__sourceRefs) ? data.__sourceRefs.filter((ref: SourceReference) => !(ref.propName === 'slides' && ref.itemId === removedId)) : undefined;
+    const next: Record<string, unknown> = { ...data, ...newState };
+    if (refs) {
+      delete next.__sourceRef;
+      delete next.__sourceRefs;
+      if (refs.length) { next.__sourceRefs = refs; next.__sourceRef = refs[refs.length - 1]; }
+    }
+    onChange(next);
   };
 
   return (
@@ -173,3 +189,4 @@ export default function SlideshowOptions({ data, onChange }: WidgetOptionsProps)
     </div>
   );
 }
+

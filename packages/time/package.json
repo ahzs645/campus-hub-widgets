@@ -1,7 +1,7 @@
 {
   "name": "@firstform/campus-hub-widgets-time",
   "version": "0.1.0",
-  "description": "Time widgets for Campus Hub — clock, countdown, time-progress, and more",
+  "description": "Time widgets for Campus Hub \u2014 clock, countdown, time-progress, and more",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
@@ -29,5 +29,8 @@
   },
   "campusHub": {
     "widgets": "./src/index.ts"
+  },
+  "dependencies": {
+    "@firstform/campus-hub-widgets-shared": "^0.1.0"
   }
 }

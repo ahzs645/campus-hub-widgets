@@ -35,7 +35,7 @@ export default function AirQualityOptions({ data, onChange }: WidgetOptionsProps
   const handleChange = (name: string, value: string | number | boolean) => {
     const newState = { ...state, [name]: value };
     setState(newState);
-    onChange(newState);
+    onChange({ ...data, ...newState });
   };
 
   const isWaqi = state.dataSource === 'waqi';
@@ -115,3 +115,4 @@ export default function AirQualityOptions({ data, onChange }: WidgetOptionsProps
     </div>
   );
 }
+

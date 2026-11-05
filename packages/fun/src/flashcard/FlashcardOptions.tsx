@@ -28,7 +28,7 @@ export default function FlashcardOptions({ data, onChange }: WidgetOptionsProps)
 
   const emit = (newState: FlashcardData) => {
     setState(newState);
-    onChange(newState as unknown as Record<string, unknown>);
+    onChange({ ...data, ...newState });
   };
 
   const handleChange = (name: string, value: string | number | boolean) => {
@@ -76,3 +76,4 @@ export default function FlashcardOptions({ data, onChange }: WidgetOptionsProps)
     </div>
   );
 }
+

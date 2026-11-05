@@ -33,12 +33,13 @@ export default function MacOSStocksOptions({
   const handleChange = (name: string, value: string | number | boolean) => {
     const next = { ...state, [name]: value };
     setState(next);
-    onChange(next);
+    onChange({ ...data, ...next });
   };
 
   return (
     <OptionsPanel>
       <OptionsSection title="Market Watch">
+        <FormInput label="Stock source URL" name="apiUrl" type="url" value={String(data.apiUrl ?? '')} onChange={(_name, value) => onChange({ ...data, apiUrl: value })} placeholder="Select a stock data source" />
         <FormInput
           label="Symbols"
           name="symbols"
@@ -62,3 +63,4 @@ export default function MacOSStocksOptions({
     </OptionsPanel>
   );
 }
+

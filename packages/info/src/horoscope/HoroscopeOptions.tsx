@@ -51,7 +51,7 @@ export default function HoroscopeOptions({ data, onChange }: WidgetOptionsProps)
   const handleChange = (name: string, value: string | number | boolean) => {
     const next = { ...state, [name]: value } as HoroscopeOptionsState;
     setState(next);
-    onChange(next as unknown as Record<string, unknown>);
+    onChange({ ...data, ...next } as unknown as Record<string, unknown>);
   };
 
   return (
@@ -117,3 +117,4 @@ export default function HoroscopeOptions({ data, onChange }: WidgetOptionsProps)
     </OptionsPanel>
   );
 }
+

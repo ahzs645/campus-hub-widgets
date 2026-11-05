@@ -60,7 +60,7 @@ export default function ClockOptions({ data, onChange }: WidgetOptionsProps) {
   const handleChange = (name: string, value: string | number | boolean) => {
     const newState = { ...state, [name]: value };
     setState(newState);
-    onChange(newState);
+    onChange({ ...data, ...newState });
   };
 
   const isAnalog = state.style === 'analog';
@@ -150,3 +150,4 @@ export default function ClockOptions({ data, onChange }: WidgetOptionsProps) {
     </OptionsPanel>
   );
 }
+

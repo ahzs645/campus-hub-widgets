@@ -1,12 +1,13 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
-import { buildCacheKey, buildProxyUrl, fetchTextWithCache, getCorsProxyUrl } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
+import { buildCacheKey, buildProxyUrl, fetchTextWithCache } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
 import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
 import { withFetchTimeout } from '../fetch-timeout';
 
 interface FireHazardConfig {
+  apiUrl?: string;
   fireCentre?: string;
   refreshInterval?: number;
   useCorsProxy?: boolean;
@@ -59,12 +60,6 @@ const DANGER_COLORS = [
   { cls: 4, color: '#f97316' },
   { cls: 5, color: '#ef4444' },
 ];
-
-const BASE_URL =
-  'https://wfapps.nrs.gov.bc.ca/pub/wfwx-danger-summary-war/dangerSummary';
-
-const buildApiUrl = (fireCentre: string): string =>
-  `${BASE_URL}?fireCentre=${encodeURIComponent(fireCentre)}`;
 
 /**
  * Parse the BC Wildfire danger summary HTML page.
@@ -166,13 +161,14 @@ export default function FireHazard({
   theme,
 }: WidgetComponentProps) {
   const cfg = config as FireHazardConfig | undefined;
+  const preview = useWidgetPreview();
+  const apiUrl = cfg?.apiUrl?.trim() || '';
   const fireCentre = cfg?.fireCentre ?? FIRE_CENTRES[0];
   const refreshInterval = cfg?.refreshInterval ?? 30;
   const useCorsProxy = cfg?.useCorsProxy ?? true;
 
-  // The BC Wildfire page is public, so the widget is always "live"; sample
-  // data is only for the gallery preview, and always badged.
-  const isDemo = cfg?.galleryDemo ?? false;
+  const isDemo = preview || cfg?.galleryDemo === true || !apiUrl;
+  const sourceKey = `${apiUrl}:${fireCentre}`;
 
   // Last-good live reading, keyed by fire centre. Starts empty (loading),
   // never with the sample reading.
@@ -186,30 +182,26 @@ export default function FireHazard({
       setError(null);
       return;
     }
-    if (!useCorsProxy || !getCorsProxyUrl()) {
-      // The page sends no CORS headers, so it cannot be read without the proxy.
-      setError('A CORS proxy is required to load BC Wildfire data');
-      return;
-    }
     try {
       setError(null);
-      const targetUrl = buildApiUrl(fireCentre);
-      const fetchUrl = buildProxyUrl(targetUrl);
+      const targetUrl = new URL(apiUrl);
+      targetUrl.searchParams.set('fireCentre', fireCentre);
+      const fetchUrl = useCorsProxy ? buildProxyUrl(targetUrl.toString()) : targetUrl.toString();
       const { text } = await fetchTextWithCache(fetchUrl, {
-        cacheKey: buildCacheKey('fire-hazard', fireCentre),
+        cacheKey: buildCacheKey('fire-hazard', sourceKey),
         ttlMs: refreshMs,
         fetchInit: withFetchTimeout(),
       });
       const parsed = parseDangerHtml(text, fireCentre);
       if (parsed) {
-        setLive({ key: fireCentre, data: parsed, updatedAt: new Date() });
+        setLive({ key: sourceKey, data: parsed, updatedAt: new Date() });
       } else {
         setError('Failed to parse fire danger data');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [fireCentre, isDemo, refreshMs, useCorsProxy]);
+  }, [apiUrl, fireCentre, isDemo, refreshMs, sourceKey, useCorsProxy]);
 
   useEffect(() => {
     let isMounted = true;
@@ -232,8 +224,8 @@ export default function FireHazard({
 
   const data: DangerData | null = isDemo
     ? { ...MOCK_DATA, fireCentre }
-    : live?.key === fireCentre ? live.data : null;
-  const lastUpdated = !isDemo && live?.key === fireCentre ? live.updatedAt : null;
+    : live?.key === sourceKey ? live.data : null;
+  const lastUpdated = !isDemo && live?.key === sourceKey ? live.updatedAt : null;
 
   if (!data) {
     return (
@@ -372,3 +364,4 @@ export default function FireHazard({
     </ThemedContainer>
   );
 }
+

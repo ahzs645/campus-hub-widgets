@@ -9,7 +9,6 @@ import {
   type WidgetOptionsProps,
 } from '@firstform/campus-hub-widget-sdk';
 import {
-  ISS_LIVE_URL,
   resolveConfiguredStreamUrl,
   type StreamFormat,
   type StreamPreset,
@@ -77,7 +76,7 @@ export default function StreamPlayerOptions({ data, onChange }: WidgetOptionsPro
       [name]: value,
     };
     setState(nextState);
-    onChange(nextState);
+    onChange({ ...data, ...nextState });
   };
 
   const activeUrl = resolveConfiguredStreamUrl(state.url, state.preset);
@@ -94,10 +93,6 @@ export default function StreamPlayerOptions({ data, onChange }: WidgetOptionsPro
       : 'https://example.com/live.m3u8';
 
   const helpText = useMemo(() => {
-    if (state.preset === 'iss-live') {
-      return 'Uses the default NASA ISS YouTube stream when the URL field is empty.';
-    }
-
     if (state.format === 'youtube-channel-live') {
       return 'Checks a YouTube channel’s /live page and switches to the active stream when the channel goes live.';
     }
@@ -110,16 +105,7 @@ export default function StreamPlayerOptions({ data, onChange }: WidgetOptionsPro
       <div className="space-y-4">
         <h3 className="font-semibold text-[var(--ui-text)]">Source</h3>
 
-        <FormSelect
-          label="Preset"
-          name="preset"
-          value={state.preset}
-          options={[
-            { value: 'custom', label: 'Custom' },
-            { value: 'iss-live', label: 'ISS Live (NASA)' },
-          ]}
-          onChange={handleChange}
-        />
+<p className="text-sm text-[var(--ui-text-muted)]">Choose a saved source or add a stream from the Source Store.</p>
 
         <FormSelect
           label="Format"
@@ -234,7 +220,7 @@ export default function StreamPlayerOptions({ data, onChange }: WidgetOptionsPro
                   {state.preset === 'iss-live' ? 'ISS live preset' : 'Stream preview'}
                 </div>
                 <div className="mt-1 max-w-xs truncate text-xs text-white/50">
-                  {activeUrl || ISS_LIVE_URL}
+                  {activeUrl || 'Select a source'}
                 </div>
               </div>
             </div>
@@ -244,3 +230,4 @@ export default function StreamPlayerOptions({ data, onChange }: WidgetOptionsPro
     </div>
   );
 }
+

@@ -17,10 +17,14 @@ export default defineWidget({
     defaultW: 4,
     defaultH: 3,
     tags: ['retro', 'media'],
+    acceptsSources: [
+      { propName: 'audioUrl', types: ['video'], applySource: (source) => ({ audioUrl: source.url, title: source.name, artist: '', album: '' }) },
+      { propName: 'coverUrl', types: ['image', 'unsplash'] },
+    ],
     defaultProps: {
-      title: 'Campus Groove',
-      artist: 'Campus Hub',
-      album: 'Aqua Mix',
+      title: '',
+      artist: '',
+      album: '',
       audioUrl: '',
       coverUrl: '',
       accentColor: '#70b86c',
@@ -29,3 +33,4 @@ export default defineWidget({
   load: () => import('./MacOSIPod'),
   loadOptions: () => import('./MacOSIPodOptions'),
 });
+

@@ -42,7 +42,7 @@ export default function QRCodeOptions({ data, onChange }: WidgetOptionsProps) {
   const handleChange = (name: string, value: string | number | boolean) => {
     const newState = { ...state, [name]: value };
     setState(newState);
-    onChange(newState);
+    onChange({ ...data, ...newState });
   };
 
   return (
@@ -139,3 +139,4 @@ export default function QRCodeOptions({ data, onChange }: WidgetOptionsProps) {
     </div>
   );
 }
+

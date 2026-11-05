@@ -53,7 +53,7 @@ export default function CryptoTrackerOptions({ data, onChange }: WidgetOptionsPr
     if (newCoins.length === 0) return; // must have at least one
     const newState = { ...state, coins: newCoins };
     setState(newState);
-    onChange(newState);
+    onChange({ ...data, ...newState });
   };
 
   const handleChange = (name: string, value: string | boolean) => {
@@ -62,7 +62,7 @@ export default function CryptoTrackerOptions({ data, onChange }: WidgetOptionsPr
       [name]: name === 'cycleInterval' ? Number(value) : value,
     };
     setState(newState);
-    onChange(newState);
+    onChange({ ...data, ...newState });
   };
 
   return (
@@ -110,3 +110,4 @@ export default function CryptoTrackerOptions({ data, onChange }: WidgetOptionsPr
     </div>
   );
 }
+

@@ -95,7 +95,7 @@ export default function WeatherOptions({ data, onChange }: WidgetOptionsProps) {
     displayMode: (data?.displayMode as DisplayMode) ?? 'full',
     displayItems: parseItems(data?.displayItems),
     apiKey: (data?.apiKey as string) ?? '',
-    apiUrl: (data?.apiUrl as string) ?? GEOMET_DEFAULT_URL,
+    apiUrl: (data?.apiUrl as string) ?? '',
     dataSource: readDataSource(data?.dataSource),
     refreshInterval: (data?.refreshInterval as number) ?? 10,
     useCorsProxy: (data?.useCorsProxy as boolean) ?? true,
@@ -111,7 +111,7 @@ export default function WeatherOptions({ data, onChange }: WidgetOptionsProps) {
         displayMode: (data.displayMode as DisplayMode) ?? 'full',
         displayItems: parseItems(data.displayItems),
         apiKey: (data.apiKey as string) ?? '',
-        apiUrl: (data.apiUrl as string) ?? GEOMET_DEFAULT_URL,
+        apiUrl: (data.apiUrl as string) ?? '',
         dataSource: readDataSource(data.dataSource),
         refreshInterval: (data.refreshInterval as number) ?? 10,
         useCorsProxy: (data.useCorsProxy as boolean) ?? true,
@@ -322,3 +322,4 @@ export default function WeatherOptions({ data, onChange }: WidgetOptionsProps) {
     </OptionsPanel>
   );
 }
+

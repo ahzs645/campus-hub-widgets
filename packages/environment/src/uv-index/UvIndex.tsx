@@ -1,11 +1,11 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, buildProxyUrl, fetchJsonWithCache, fetchTextWithCache, getCorsProxyUrl } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
 import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
 import { withFetchTimeout } from '../fetch-timeout';
-import { DEFAULT_CITY, DEFAULT_LATITUDE, DEFAULT_LONGITUDE, DEFAULT_REFRESH_MINUTES, DEFAULT_WEATHER_NETWORK_URL } from './meta';
+import { DEFAULT_CITY, DEFAULT_LATITUDE, DEFAULT_LONGITUDE, DEFAULT_REFRESH_MINUTES } from './meta';
 
 interface UvIndexConfig {
   dataSource?: 'openuv' | 'waqi' | 'weather-network';
@@ -179,7 +179,7 @@ const pickBestGeocodingResult = (
     .sort((a, b) => scoreGeocodingResult(b, query, qualifiers) - scoreGeocodingResult(a, query, qualifiers))[0];
 
 const normalizeWeatherNetworkUrl = (value: string): string => {
-  const raw = value.trim() || DEFAULT_WEATHER_NETWORK_URL;
+  const raw = value.trim();
   let url: URL;
   try {
     url = new URL(raw);
@@ -308,12 +308,13 @@ export default function UvIndex({ config, theme }: WidgetComponentProps) {
   const longitude = cfg?.longitude ?? DEFAULT_LONGITUDE;
   const waqiToken = cfg?.waqiToken?.trim();
   const waqiCity = cfg?.waqiCity?.trim() || 'prince-george';
-  const weatherNetworkUrl = cfg?.weatherNetworkUrl?.trim() || DEFAULT_WEATHER_NETWORK_URL;
+  const weatherNetworkUrl = cfg?.weatherNetworkUrl?.trim() || '';
   const refreshInterval = clampRefreshInterval(cfg?.refreshInterval);
 
   // OpenUV without a key / WAQI without a token is "not configured": sample
   // reading with a Demo badge. The Weather Network page needs no credentials.
-  const isDemo = (dataSource === 'openuv' && !openUvApiKey) || (dataSource === 'waqi' && !waqiToken);
+  const preview = useWidgetPreview();
+  const isDemo = preview || (dataSource === 'openuv' && !openUvApiKey) || (dataSource === 'waqi' && !waqiToken) || (dataSource === 'weather-network' && !weatherNetworkUrl);
   const demoLocation = dataSource === 'waqi'
     ? waqiCity
     : locationMode === 'city' ? city : formatCoordinateLocation(latitude, longitude);
@@ -488,6 +489,7 @@ export default function UvIndex({ config, theme }: WidgetComponentProps) {
   }, [refreshMs, sourceKey, weatherNetworkUrl]);
 
   useEffect(() => {
+    if (isDemo) return;
     let isMounted = true;
     const doFetch = async () => {
       if (!isMounted) return;
@@ -505,7 +507,7 @@ export default function UvIndex({ config, theme }: WidgetComponentProps) {
       isMounted = false;
       clearInterval(interval);
     };
-  }, [dataSource, fetchOpenUv, fetchWaqiUv, fetchWeatherNetworkUv, refreshMs]);
+  }, [isDemo, dataSource, fetchOpenUv, fetchWaqiUv, fetchWeatherNetworkUv, refreshMs]);
 
   const { containerRef, scale, designWidth: DESIGN_W, designHeight: DESIGN_H, isLandscape } = useAdaptiveFitScale({
     landscape: { w: 340, h: 260 },
@@ -638,3 +640,4 @@ export default function UvIndex({ config, theme }: WidgetComponentProps) {
     </ThemedContainer>
   );
 }
+

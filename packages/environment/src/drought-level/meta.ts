@@ -16,7 +16,12 @@ export default defineWidget({
     maxH: 5,
     defaultW: 3,
     defaultH: 3,
+    acceptsSources: [{
+      propName: 'apiUrl', types: ['api'], requires: { format: ['json'] },
+      capabilityHint: 'ArcGIS drought basin query with BasinName and DroughtLevel fields.',
+    }],
     defaultProps: {
+      apiUrl: '',
       basin: '',
       displayMode: 'single',
       refreshInterval: 60,
@@ -26,3 +31,4 @@ export default defineWidget({
   load: () => import('./DroughtLevel'),
   loadOptions: () => import('./DroughtLevelOptions'),
 });
+

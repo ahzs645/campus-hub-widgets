@@ -34,7 +34,7 @@ export default function PowerPointOptions({ data, onChange }: WidgetOptionsProps
   const handleChange = (name: string, value: string | number | boolean) => {
     const nextState = { ...state, [name]: value };
     setState(nextState);
-    onChange(nextState);
+    onChange({ ...data, ...nextState });
   };
 
   const looksRelevant = looksLikePowerPointInput(state.url);
@@ -137,3 +137,4 @@ export default function PowerPointOptions({ data, onChange }: WidgetOptionsProps
     </div>
   );
 }
+

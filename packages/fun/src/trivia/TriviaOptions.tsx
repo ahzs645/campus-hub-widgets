@@ -101,7 +101,7 @@ export default function TriviaOptions({ data, onChange }: WidgetOptionsProps) {
 
   const emit = (newState: TriviaData) => {
     setState(newState);
-    onChange(newState as unknown as Record<string, unknown>);
+    onChange({ ...data, ...newState });
   };
 
   const handleChange = (name: string, value: string | number | boolean) => {
@@ -280,3 +280,4 @@ export default function TriviaOptions({ data, onChange }: WidgetOptionsProps) {
     </div>
   );
 }
+

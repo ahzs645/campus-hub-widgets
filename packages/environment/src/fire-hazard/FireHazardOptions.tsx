@@ -38,7 +38,7 @@ export default function FireHazardOptions({ data, onChange }: WidgetOptionsProps
   const handleChange = (name: string, value: string | number | boolean) => {
     const newState = { ...state, [name]: value };
     setState(newState);
-    onChange(newState);
+    onChange({ ...data, ...newState });
   };
 
   const dangerColors = [
@@ -134,3 +134,4 @@ export default function FireHazardOptions({ data, onChange }: WidgetOptionsProps
     </div>
   );
 }
+

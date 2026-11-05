@@ -1,7 +1,7 @@
 {
   "name": "@firstform/campus-hub-widgets-utility",
   "version": "0.1.0",
-  "description": "Utility widgets for Campus Hub — qrcode, widget-stack, simple-table, wifi-share",
+  "description": "Utility widgets for Campus Hub \u2014 qrcode, widget-stack, simple-table, wifi-share",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
@@ -24,7 +24,8 @@
   },
   "license": "MIT",
   "dependencies": {
-    "qrcode": "^1.5.4"
+    "qrcode": "^1.5.4",
+    "@firstform/campus-hub-widgets-shared": "^0.1.0"
   },
   "peerDependenciesMeta": {
     "@firstform/campus-hub-widget-sdk": {

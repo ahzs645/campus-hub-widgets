@@ -1,12 +1,13 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
-import { buildCacheKey, buildProxyUrl, fetchJsonWithCache, getCorsProxyUrl } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
+import { buildCacheKey, buildProxyUrl, fetchJsonWithCache } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
 import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
 import { withFetchTimeout } from '../fetch-timeout';
 
 interface GroundwaterConfig {
+  apiUrl?: string;
   locationId?: string;
   datasetId?: string;
   /** Legacy key written by older options UIs; read only when datasetId is unset. */
@@ -33,7 +34,8 @@ interface GwData {
   history: { time: string; value: number }[];
 }
 
-const WEBPORTAL_BASE = 'https://bcmoe-prod.aquaticinformatics.net';
+// Compatibility for older saved widgets with an explicit well/dataset ID.
+const LEGACY_DATASET_URL = 'https://bcmoe-prod.aquaticinformatics.net/Data/DatasetGrid';
 
 /** Known dataset IDs — maps locationId to the numeric DatasetGrid id. */
 const KNOWN_DATASETS: Record<string, number> = {
@@ -131,18 +133,19 @@ export default function GroundwaterLevel({
   theme,
 }: WidgetComponentProps) {
   const cfg = config as GroundwaterConfig | undefined;
-  const locationId = cfg?.locationId?.trim() || 'OW378';
+  const preview = useWidgetPreview();
+  const locationId = cfg?.locationId?.trim() || 'Observation well';
   const datasetId = String(cfg?.datasetId ?? cfg?.dataSet ?? '').trim();
+  const legacySource = cfg?.apiUrl === undefined && Boolean(cfg?.locationId?.trim() || datasetId);
+  const apiUrl = cfg?.apiUrl?.trim() || (legacySource ? LEGACY_DATASET_URL : '');
   const displayMode = cfg?.displayMode ?? 'current';
   const refreshInterval = cfg?.refreshInterval ?? 30;
   const useCorsProxy = cfg?.useCorsProxy ?? true;
 
-  // The AQUARIUS portal is public, so the widget is always "live"; sample data
-  // is only for the gallery preview, and always badged.
-  const isDemo = cfg?.galleryDemo ?? false;
+  const isDemo = preview || cfg?.galleryDemo === true || !apiUrl;
   // Identifies the well/dataset a reading came from, so a config change never
   // shows another well's data while refetching.
-  const sourceKey = `${locationId.toUpperCase()}:${datasetId}`;
+  const sourceKey = `${apiUrl}:${locationId.toUpperCase()}:${datasetId}`;
 
   // Last-good live reading, keyed by source. Starts empty (loading), never
   // with the sample reading.
@@ -156,18 +159,14 @@ export default function GroundwaterLevel({
       setError(null);
       return;
     }
-    if (!useCorsProxy || !getCorsProxyUrl()) {
-      // The portal sends no CORS headers, so it cannot be read without the proxy.
-      setError('A CORS proxy is required to load groundwater data');
-      return;
-    }
-
     try {
       setError(null);
 
       // Resolve the numeric dataset ID
-      const numericId = datasetId
-        ? Number(datasetId)
+      const endpoint = new URL(apiUrl);
+      const configuredId = datasetId || endpoint.searchParams.get('dataset');
+      const numericId = configuredId
+        ? Number(configuredId)
         : KNOWN_DATASETS[locationId.toUpperCase()];
 
       if (!numericId || !Number.isInteger(numericId) || numericId <= 0) {
@@ -180,27 +179,26 @@ export default function GroundwaterLevel({
       const today = new Date().toISOString().slice(0, 10);
 
       // Fetch latest reading (single row)
-      const latestUrl =
-        `${WEBPORTAL_BASE}/Data/DatasetGrid` +
-        `?dataset=${numericId}&sort=TimeStamp-desc&page=1&pageSize=1` +
-        `&interval=Latest&timezone=0&date=${today}&alldata=false`;
+      const requestUrl = (pageSize: number) => {
+        const url = new URL(endpoint);
+        for (const [key, value] of Object.entries({ dataset: String(numericId), sort: 'TimeStamp-desc', page: '1', pageSize: String(pageSize), interval: 'Latest', timezone: '0', date: today, alldata: 'false' })) url.searchParams.set(key, value);
+        return url.toString();
+      };
+      const latestUrl = requestUrl(1);
 
       const { data: latestResp } = await fetchJsonWithCache<DatasetGridResponse>(
-        buildProxyUrl(latestUrl),
-        { cacheKey: buildCacheKey('gw-latest', `${numericId}`), ttlMs: refreshMs, fetchInit: withFetchTimeout() },
+        useCorsProxy ? buildProxyUrl(latestUrl) : latestUrl,
+        { cacheKey: buildCacheKey('gw-latest', sourceKey), ttlMs: refreshMs, fetchInit: withFetchTimeout() },
       );
 
       const latestRow = latestResp?.Data?.[0];
 
       // Fetch recent history (last 168 points ≈ 7 days hourly)
-      const histUrl =
-        `${WEBPORTAL_BASE}/Data/DatasetGrid` +
-        `?dataset=${numericId}&sort=TimeStamp-desc&page=1&pageSize=168` +
-        `&interval=Latest&timezone=0&date=${today}&alldata=false`;
+      const histUrl = requestUrl(168);
 
       const { data: histResp } = await fetchJsonWithCache<DatasetGridResponse>(
-        buildProxyUrl(histUrl),
-        { cacheKey: buildCacheKey('gw-hist', `${numericId}`), ttlMs: refreshMs, fetchInit: withFetchTimeout() },
+        useCorsProxy ? buildProxyUrl(histUrl) : histUrl,
+        { cacheKey: buildCacheKey('gw-hist', sourceKey), ttlMs: refreshMs, fetchInit: withFetchTimeout() },
       );
 
       const history = (histResp?.Data ?? [])
@@ -223,7 +221,7 @@ export default function GroundwaterLevel({
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [locationId, datasetId, isDemo, refreshMs, sourceKey, useCorsProxy]);
+  }, [apiUrl, locationId, datasetId, isDemo, refreshMs, sourceKey, useCorsProxy]);
 
   useEffect(() => {
     let isMounted = true;
@@ -400,3 +398,4 @@ export default function GroundwaterLevel({
     </ThemedContainer>
   );
 }
+

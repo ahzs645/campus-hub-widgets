@@ -41,7 +41,7 @@ export default function GoogleCalendarOptions({ data, onChange }: WidgetOptionsP
   const handleChange = (name: string, value: string | number | boolean) => {
     const newState = { ...state, [name]: value };
     setState(newState);
-    onChange(newState);
+    onChange({ ...data, ...newState });
   };
 
   return (
@@ -142,3 +142,4 @@ export default function GoogleCalendarOptions({ data, onChange }: WidgetOptionsP
     </div>
   );
 }
+

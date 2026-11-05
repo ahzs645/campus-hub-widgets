@@ -61,7 +61,7 @@ export default function GroundwaterLevelOptions({ data, onChange }: WidgetOption
   const handleChange = (name: string, value: string | number | boolean) => {
     const newState = { ...state, [name]: value };
     setState(newState);
-    onChange(newState);
+    onChange({ ...data, ...newState });
   };
 
   const handlePreset = (_name: string, value: string) => {
@@ -69,7 +69,7 @@ export default function GroundwaterLevelOptions({ data, onChange }: WidgetOption
     if (value !== 'custom') {
       const newState = { ...state, locationId: value };
       setState(newState);
-      onChange(newState);
+      onChange({ ...data, ...newState });
     }
   };
 
@@ -167,3 +167,4 @@ export default function GroundwaterLevelOptions({ data, onChange }: WidgetOption
     </div>
   );
 }
+

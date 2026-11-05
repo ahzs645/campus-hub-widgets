@@ -28,7 +28,7 @@ export default function WordOfTheDayOptions({ data, onChange }: WidgetOptionsPro
 
   const emit = (newState: WordOfTheDayData) => {
     setState(newState);
-    onChange(newState as unknown as Record<string, unknown>);
+    onChange({ ...data, ...newState });
   };
 
   const handleChange = (name: string, value: string | number | boolean) => {
@@ -81,3 +81,4 @@ export default function WordOfTheDayOptions({ data, onChange }: WidgetOptionsPro
     </div>
   );
 }
+

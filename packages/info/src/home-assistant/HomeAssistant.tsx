@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback, useRef, type Ref } from 'react';
-import { type WidgetComponentProps, useLoopingAutoScroll } from '@firstform/campus-hub-widget-sdk';
+import { type WidgetComponentProps, useLoopingAutoScroll, useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { createSignalingClient, type SignalingClient } from '@firstform/campus-hub-widget-sdk';
 import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
 
@@ -353,6 +353,7 @@ function resolveHttpStateUrl(configuredUrl: string): string {
 
 function HomeAssistantWidget({ config, theme }: WidgetComponentProps) {
   const cfg = config as unknown as HAWidgetConfig;
+  const preview = useWidgetPreview();
   const [entities, setEntities] = useState<Map<string, HAEntityState>>(new Map());
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -365,7 +366,7 @@ function HomeAssistantWidget({ config, theme }: WidgetComponentProps) {
   // Same fallbacks as the display page: ?signalingToken= once, then the copy
   // it remembers in localStorage.
   const signalToken = cfg?.signalToken?.trim() || readDisplaySignalingToken();
-  const httpUrl = resolveHttpStateUrl(cfg?.httpUrl || '');
+  const httpUrl = cfg?.httpUrl === undefined && cfg?.mode === 'http' ? resolveHttpStateUrl('') : cfg?.httpUrl?.trim() || '';
   const pollIntervalMs = Math.max(5, Number(cfg?.pollIntervalSeconds) || 30) * 1000;
   const entityIds = cfg?.entityIds || [];
   const layout: HALayout =
@@ -387,7 +388,7 @@ function HomeAssistantWidget({ config, theme }: WidgetComponentProps) {
   }, []);
 
   useEffect(() => {
-    if (mode !== 'signaling') return;
+    if (preview || mode !== 'signaling') return;
     if (!signalUrl || !displayId || entityIds.length === 0) return;
 
     let client: SignalingClient | null = null;
@@ -447,10 +448,10 @@ function HomeAssistantWidget({ config, theme }: WidgetComponentProps) {
       client?.disconnect();
       clientRef.current = null;
     };
-  }, [mode, signalUrl, displayId, signalToken, entityIds.join(','), handleState]);
+  }, [preview, mode, signalUrl, displayId, signalToken, entityIds.join(','), handleState]);
 
   useEffect(() => {
-    if (mode !== 'http') return;
+    if (preview || mode !== 'http') return;
     if (!httpUrl || entityIds.length === 0) return;
 
     let cancelled = false;
@@ -510,11 +511,11 @@ function HomeAssistantWidget({ config, theme }: WidgetComponentProps) {
       cancelled = true;
       if (intervalId) clearInterval(intervalId);
     };
-  }, [mode, httpUrl, entityIds.join(','), pollIntervalMs]);
+  }, [preview, mode, httpUrl, entityIds.join(','), pollIntervalMs]);
 
   // No config — show demo entities
-  const isUnconfigured = (mode === 'signaling' && (!signalUrl || !displayId || entityIds.length === 0))
-    || (mode === 'http' && entityIds.length === 0);
+  const isUnconfigured = preview || (mode === 'signaling' && (!signalUrl || !displayId || entityIds.length === 0))
+    || (mode === 'http' && (!httpUrl || entityIds.length === 0));
 
   if (isUnconfigured) {
     return (
@@ -563,3 +564,4 @@ function HomeAssistantWidget({ config, theme }: WidgetComponentProps) {
 }
 
 export default HomeAssistantWidget;
+

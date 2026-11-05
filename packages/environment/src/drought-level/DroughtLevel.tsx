@@ -1,12 +1,13 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
-import { buildCacheKey, buildProxyUrl, fetchJsonWithCache, getCorsProxyUrl } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
+import { buildCacheKey, buildProxyUrl, fetchJsonWithCache } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
 import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
 import { withFetchTimeout } from '../fetch-timeout';
 
 interface DroughtLevelConfig {
+  apiUrl?: string;
   basin?: string;
   displayMode?: 'single' | 'overview';
   refreshInterval?: number;
@@ -34,9 +35,6 @@ interface BasinData {
   dateModified: string | null;
   comments: string | null;
 }
-
-const FEATURE_SERVER_URL =
-  'https://services1.arcgis.com/xeMpV7tU1t4KD3Ei/arcgis/rest/services/British_Columbia_Drought_Levels_(Edit)_view/FeatureServer/27/query';
 
 const droughtLevelInfo = (
   level: number
@@ -87,17 +85,17 @@ export default function DroughtLevel({
   theme,
 }: WidgetComponentProps) {
   const cfg = config as DroughtLevelConfig | undefined;
+  const preview = useWidgetPreview();
+  const apiUrl = cfg?.apiUrl?.trim() || '';
   const selectedBasin = cfg?.basin ?? '';
   const displayMode = cfg?.displayMode ?? 'single';
   const refreshInterval = cfg?.refreshInterval ?? 60;
   const useCorsProxy = cfg?.useCorsProxy ?? true;
 
-  // The provincial feature service is public, so the widget is always "live";
-  // sample data is only for the gallery preview, and always badged.
-  const isDemo = cfg?.galleryDemo ?? false;
+  const isDemo = preview || cfg?.galleryDemo === true || !apiUrl;
 
   // Last-good live basins. Starts empty (loading), never with sample data.
-  const [live, setLive] = useState<{ basins: BasinData[]; updatedAt: Date } | null>(null);
+  const [live, setLive] = useState<{ key: string; basins: BasinData[]; updatedAt: Date } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const refreshMs = refreshInterval * 60 * 1000;
@@ -105,10 +103,6 @@ export default function DroughtLevel({
   const fetchData = useCallback(async () => {
     if (isDemo) {
       setError(null);
-      return;
-    }
-    if (!useCorsProxy || !getCorsProxyUrl()) {
-      setError('A CORS proxy is required to load BC drought data');
       return;
     }
     try {
@@ -119,11 +113,14 @@ export default function DroughtLevel({
         returnGeometry: 'false',
         f: 'json',
       });
-      const targetUrl = `${FEATURE_SERVER_URL}?${queryParams}`;
-      const fetchUrl = buildProxyUrl(targetUrl);
+      const targetUrl = new URL(apiUrl);
+      for (const [key, value] of queryParams) {
+        if (!targetUrl.searchParams.has(key)) targetUrl.searchParams.set(key, value);
+      }
+      const fetchUrl = useCorsProxy ? buildProxyUrl(targetUrl.toString()) : targetUrl.toString();
 
       const { data: resp } = await fetchJsonWithCache<ArcGISResponse>(fetchUrl, {
-        cacheKey: buildCacheKey('drought-level', 'all-basins'),
+        cacheKey: buildCacheKey('drought-level', apiUrl),
         ttlMs: refreshMs,
         fetchInit: withFetchTimeout(),
       });
@@ -144,11 +141,11 @@ export default function DroughtLevel({
       }));
 
       parsed.sort((a, b) => a.basinName.localeCompare(b.basinName));
-      setLive({ basins: parsed, updatedAt: new Date() });
+      setLive({ key: apiUrl, basins: parsed, updatedAt: new Date() });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [isDemo, refreshMs, useCorsProxy]);
+  }, [apiUrl, isDemo, refreshMs, useCorsProxy]);
 
   useEffect(() => {
     let isMounted = true;
@@ -169,9 +166,10 @@ export default function DroughtLevel({
     portrait: { w: 260, h: 400 },
   });
 
-  const basins: BasinData[] = isDemo ? buildMockData() : live?.basins ?? [];
-  const lastUpdated = isDemo ? null : live?.updatedAt ?? null;
-  const hasData = isDemo || live !== null;
+  const current = live?.key === apiUrl ? live : null;
+  const basins: BasinData[] = isDemo ? buildMockData() : current?.basins ?? [];
+  const lastUpdated = isDemo ? null : current?.updatedAt ?? null;
+  const hasData = isDemo || current !== null;
 
   // Find selected basin or highest drought level basin for single mode
   const selected = selectedBasin
@@ -436,3 +434,4 @@ export default function DroughtLevel({
     </ThemedContainer>
   );
 }
+

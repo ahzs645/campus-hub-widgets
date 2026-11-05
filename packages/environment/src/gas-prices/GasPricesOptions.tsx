@@ -12,7 +12,7 @@ interface GasPricesData {
 
 export default function GasPricesOptions({ data, onChange }: WidgetOptionsProps) {
   const [state, setState] = useState<GasPricesData>({
-    url: (data?.url as string) ?? 'https://www.gasbuddy.com/gasprices/british-columbia/prince-george',
+    url: (data?.url as string) ?? '',
     refreshInterval: (data?.refreshInterval as number) ?? 30,
     useCorsProxy: (data?.useCorsProxy as boolean) ?? true,
     maxStations: (data?.maxStations as number) ?? 10,
@@ -21,7 +21,7 @@ export default function GasPricesOptions({ data, onChange }: WidgetOptionsProps)
   useEffect(() => {
     if (data) {
       setState({
-        url: (data.url as string) ?? 'https://www.gasbuddy.com/gasprices/british-columbia/prince-george',
+        url: (data.url as string) ?? '',
         refreshInterval: (data.refreshInterval as number) ?? 30,
         useCorsProxy: (data.useCorsProxy as boolean) ?? true,
         maxStations: (data.maxStations as number) ?? 10,
@@ -32,7 +32,7 @@ export default function GasPricesOptions({ data, onChange }: WidgetOptionsProps)
   const handleChange = (name: string, value: string | number | boolean) => {
     const newState = { ...state, [name]: value };
     setState(newState);
-    onChange(newState);
+    onChange({ ...data, ...newState });
   };
 
   return (
@@ -78,3 +78,4 @@ export default function GasPricesOptions({ data, onChange }: WidgetOptionsProps)
     </div>
   );
 }
+

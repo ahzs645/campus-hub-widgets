@@ -17,6 +17,12 @@ export default defineWidget({
     defaultW: 3,
     defaultH: 3,
     tags: ['iot', 'smart-home', 'sensors'],
+    acceptsSources: [{
+      propName: 'httpUrl', types: ['api'], requires: { format: ['json'] },
+      capabilityHint: 'Home Assistant bridge endpoint returning a states array.',
+      applySource: (source) => ({ httpUrl: source.url, mode: 'http' }),
+      removeSource: () => ({ httpUrl: '', signalUrl: '', signalToken: '' }),
+    }],
     defaultProps: {
       mode: 'signaling',
       signalUrl: '',
@@ -31,3 +37,4 @@ export default defineWidget({
   load: () => import('./HomeAssistant'),
   loadOptions: () => import('./HomeAssistantOptions'),
 });
+

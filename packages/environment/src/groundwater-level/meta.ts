@@ -16,8 +16,19 @@ export default defineWidget({
     maxH: 5,
     defaultW: 3,
     defaultH: 3,
+    acceptsSources: [{
+      propName: 'apiUrl', types: ['api'], requires: { format: ['json'] },
+      capabilityHint: 'AQUARIUS DatasetGrid URL with a dataset query parameter.',
+      applySource: (source) => {
+        let datasetId = '';
+        try { datasetId = new URL(source.url).searchParams.get('dataset') ?? ''; } catch { /* validated when fetched */ }
+        return { apiUrl: source.url, datasetId };
+      },
+      removeSource: () => ({ apiUrl: '', datasetId: '', dataSet: '', locationId: '' }),
+    }],
     defaultProps: {
-      locationId: 'OW378',
+      apiUrl: '',
+      locationId: '',
       datasetId: '',
       displayMode: 'current',
       refreshInterval: 30,
@@ -27,3 +38,4 @@ export default defineWidget({
   load: () => import('./GroundwaterLevel'),
   loadOptions: () => import('./GroundwaterLevelOptions'),
 });
+

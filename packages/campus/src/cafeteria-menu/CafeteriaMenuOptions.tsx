@@ -55,7 +55,7 @@ export default function CafeteriaMenuOptions({ data, onChange }: WidgetOptionsPr
           name="menuUrl"
           type="text"
           value={state.menuUrl}
-          placeholder="https://menu.danahospitality.ca/unbc/menu.asp?loc=48784&grid=1"
+          placeholder="https://example.edu/source"
           onChange={handleChange}
         />
 
@@ -139,3 +139,4 @@ export default function CafeteriaMenuOptions({ data, onChange }: WidgetOptionsPr
     </div>
   );
 }
+

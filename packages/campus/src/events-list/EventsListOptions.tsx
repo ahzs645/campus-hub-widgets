@@ -1,4 +1,5 @@
 'use client';
+import { useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { useState, useEffect, useRef } from 'react';
 import { FormInput, FormSelect, FormSwitch, OptionsPanel, OptionsSection, describeCapabilities } from '@firstform/campus-hub-widget-sdk';
 import { buildProxyUrl } from '@firstform/campus-hub-widget-sdk';
@@ -30,6 +31,7 @@ interface EventsListData {
 }
 
 export default function EventsListOptions({ data, onChange, linkedSource }: WidgetOptionsProps) {
+  const preview = useWidgetPreview();
   const [state, setState] = useState<EventsListData>({
     title: (data?.title as string) ?? 'Upcoming Events',
     maxItems: (data?.maxItems as number) ?? 10,
@@ -65,7 +67,7 @@ export default function EventsListOptions({ data, onChange, linkedSource }: Widg
 
   // Fetch categories when apiUrl changes (JSON only)
   useEffect(() => {
-    if (!state.apiUrl || state.sourceType !== 'json') {
+    if (preview || !state.apiUrl || state.sourceType !== 'json') {
       setAvailableCategories([]);
       setCategoryError('');
       return;
@@ -131,7 +133,7 @@ export default function EventsListOptions({ data, onChange, linkedSource }: Widg
       fetchControllerRef.current?.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.apiUrl, state.sourceType, state.useCorsProxy]);
+  }, [preview, state.apiUrl, state.sourceType, state.useCorsProxy]);
 
   const handleChange = (name: string, value: string | number | boolean) => {
     const newState = { ...state, [name]: value };
@@ -364,3 +366,4 @@ export default function EventsListOptions({ data, onChange, linkedSource }: Widg
     </OptionsPanel>
   );
 }
+

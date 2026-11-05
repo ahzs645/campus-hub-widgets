@@ -14,7 +14,12 @@ export default defineWidget({
     minH: 1,
     defaultW: 3,
     defaultH: 1,
-    defaultProps: {
+    acceptsSources: [{
+      propName: 'apiUrl', types: ['api'], requires: { format: ['json'] },
+      capabilityHint: 'Currency rates JSON with rates and a base currency.',
+      removeSource: () => ({ apiUrl: '' }),
+    }],
+    defaultProps: { apiUrl: '',
       baseCurrency: 'USD',
       currencies: ['EUR', 'GBP', 'JPY', 'INR'],
       cycleInterval: 10,
@@ -24,3 +29,4 @@ export default defineWidget({
   load: () => import('./ExchangeRate'),
   loadOptions: () => import('./ExchangeRateOptions'),
 });
+

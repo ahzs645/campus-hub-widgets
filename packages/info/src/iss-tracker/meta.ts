@@ -16,8 +16,13 @@ export default defineWidget({
     maxH: 4,
     defaultW: 3,
     defaultH: 2,
-    defaultProps: { refreshInterval: 1, showMap: true },
+    acceptsSources: [{
+      propName: 'apiUrl', types: ['api'], requires: { format: ['json'] },
+      capabilityHint: 'ISS position JSON with latitude, longitude and velocity.',
+    }],
+    defaultProps: { apiUrl: '', refreshInterval: 1, showMap: true },
   },
   load: () => import('./ISSTracker'),
   loadOptions: () => import('./ISSTrackerOptions'),
 });
+

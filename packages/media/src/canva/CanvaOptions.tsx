@@ -27,7 +27,7 @@ export default function CanvaOptions({ data, onChange }: WidgetOptionsProps) {
   const handleChange = (name: string, value: string | number | boolean) => {
     const newState = { ...state, [name]: value };
     setState(newState);
-    onChange(newState);
+    onChange({ ...data, ...newState });
   };
 
   const isValidUrl = state.url.includes('canva.com');
@@ -100,3 +100,4 @@ export default function CanvaOptions({ data, onChange }: WidgetOptionsProps) {
     </div>
   );
 }
+

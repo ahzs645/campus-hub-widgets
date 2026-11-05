@@ -1,7 +1,8 @@
 'use client';
 import { useState, useEffect, useCallback, useId } from 'react';
-import { WidgetComponentProps, DarkContainer } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, DarkContainer, useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale } from '@firstform/campus-hub-widget-sdk';
+import { DemoBadge } from '@firstform/campus-hub-widgets-shared';
 
 const FETCH_TIMEOUT_MS = 15_000;
 
@@ -12,6 +13,7 @@ function timeoutSignal(ms: number): AbortSignal | undefined {
 }
 
 interface ISSTrackerConfig {
+  apiUrl?: string;
   refreshInterval?: number;
   showMap?: boolean;
 }
@@ -32,34 +34,41 @@ function getSunLongitude(): number {
 
 export default function ISSTracker({ config, theme }: WidgetComponentProps) {
   const cfg = config as ISSTrackerConfig | undefined;
+  const preview = useWidgetPreview();
+  const apiUrl = cfg?.apiUrl?.trim() || '';
+  const isDemo = preview || !apiUrl;
   const refreshInterval = cfg?.refreshInterval ?? 1;
   const showMap = cfg?.showMap ?? true;
   const dayNightGradientId = useId().replace(/:/g, '');
 
-  const [position, setPosition] = useState<ISSPosition | null>(null);
+  const [live, setLive] = useState<{ key: string; position: ISSPosition } | null>(null);
+  const position = isDemo ? { latitude: 42.4, longitude: -73.8, velocity: 27600, timestamp: 0 } : live?.key === apiUrl ? live.position : null;
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchPosition = useCallback(async () => {
+    if (isDemo) return;
     try {
       setError(null);
-      const res = await fetch('https://api.wheretheiss.at/v1/satellites/25544', {
+      setLoading(true);
+      const res = await fetch(apiUrl, {
         signal: timeoutSignal(FETCH_TIMEOUT_MS),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      setPosition({
+      if (![data.latitude, data.longitude, data.velocity].every((value) => typeof value === 'number' && Number.isFinite(value))) throw new Error('Invalid ISS position response');
+      setLive({ key: apiUrl, position: {
         latitude: data.latitude,
         longitude: data.longitude,
         velocity: data.velocity,
         timestamp: data.timestamp,
-      });
+      } });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [apiUrl, isDemo]);
 
   useEffect(() => {
     fetchPosition();
@@ -120,12 +129,11 @@ export default function ISSTracker({ config, theme }: WidgetComponentProps) {
         flexShrink: 0,
       }}
     >
-      <img
-        src="https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57730/land_ocean_ice_2048.png"
-        alt="Earth"
-        style={{ width: earthSize, height: earthSize, objectFit: 'cover', display: 'block' }}
-        draggable={false}
-      />
+      <svg viewBox="0 0 200 200" width={earthSize} height={earthSize} role="img" aria-label="Illustrated Earth">
+        <rect width="200" height="200" fill="#153859" />
+        <path d="M12 40 35 22 72 28 86 53 65 72 54 101 35 88 29 61ZM55 104 81 102 96 125 85 158 67 182 62 143ZM109 36 132 23 170 27 197 50 176 68 155 66 145 85 127 69 111 72ZM112 82 143 86 151 115 130 146 114 120ZM159 140 187 132 199 153 181 170 158 164Z" fill="#508e78" />
+        <path d="M0 185Q100 160 200 185V200H0Z" fill="#c7e2e8" />
+      </svg>
       <svg
         width={earthSize}
         height={earthSize}
@@ -181,7 +189,8 @@ export default function ISSTracker({ config, theme }: WidgetComponentProps) {
   );
 
   return (
-    <DarkContainer ref={containerRef} bg={theme.background}>
+    <DarkContainer ref={containerRef} bg={theme.background} className="relative">
+      {isDemo && <DemoBadge />}
       <style>{`
         @keyframes iss-pulse {
           0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
@@ -238,3 +247,4 @@ export default function ISSTracker({ config, theme }: WidgetComponentProps) {
     </DarkContainer>
   );
 }
+

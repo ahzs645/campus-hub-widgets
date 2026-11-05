@@ -1,4 +1,6 @@
 'use client';
+import { DemoBadge } from '@firstform/campus-hub-widgets-shared';
+import { useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { useEffect, useState } from 'react';
 import { WidgetComponentProps, useFitScale } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon } from '@firstform/campus-hub-widget-sdk';
@@ -13,7 +15,8 @@ function CanvaDemo() {
   const { containerRef, scale } = useFitScale(600, 360);
 
   return (
-    <div ref={containerRef} className="flex h-full w-full items-center justify-center overflow-hidden">
+    <div ref={containerRef} className="relative flex h-full w-full items-center justify-center overflow-hidden">
+      <DemoBadge />
       <div
         className="shrink-0 p-5"
         style={{
@@ -120,9 +123,10 @@ function buildCanvaEmbedUrl(url: string): string | null {
 
 export default function CanvaWidget({ config, theme }: WidgetComponentProps) {
   const c = config as CanvaConfig | undefined;
-  const url = c?.url ?? '';
+  const preview = useWidgetPreview();
+  const url = preview ? '' : c?.url ?? '';
   const refreshInterval = c?.refreshInterval ?? 0;
-  const galleryDemo = c?.galleryDemo ?? false;
+  const galleryDemo = preview || (c?.galleryDemo ?? false);
 
   const embedUrl = buildCanvaEmbedUrl(url);
   const [iframeSrc, setIframeSrc] = useState(embedUrl);
@@ -148,7 +152,7 @@ export default function CanvaWidget({ config, theme }: WidgetComponentProps) {
   }, [embedUrl, refreshInterval]);
 
   if (!embedUrl) {
-    if (galleryDemo) {
+    if (galleryDemo || !url) {
       return <CanvaDemo />;
     }
 
@@ -176,3 +180,4 @@ export default function CanvaWidget({ config, theme }: WidgetComponentProps) {
     </div>
   );
 }
+

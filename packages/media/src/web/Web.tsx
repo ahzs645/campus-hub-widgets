@@ -1,4 +1,6 @@
 'use client';
+import { DemoBadge } from '@firstform/campus-hub-widgets-shared';
+import { useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { useEffect, useState } from 'react';
 import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon } from '@firstform/campus-hub-widget-sdk';
@@ -12,11 +14,12 @@ interface WebConfig {
 function WebDemo({ theme }: { theme: WidgetComponentProps['theme'] }) {
   return (
     <div
-      className="h-full w-full p-5"
+      className="relative h-full w-full p-5"
       style={{
         background: `linear-gradient(180deg, ${theme.primary}44 0%, ${theme.background} 100%)`,
       }}
     >
+      <DemoBadge />
       <div className="h-full overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-2xl">
         <div
           className="grid gap-4 p-5 text-slate-900"
@@ -28,7 +31,7 @@ function WebDemo({ theme }: { theme: WidgetComponentProps['theme'] }) {
           <div className="flex min-w-0 flex-col justify-between rounded-[24px] bg-slate-950 p-5 text-white">
             <div>
               <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/45">
-                Live Web Embed
+                Sample Web Embed
               </div>
               <div className="inline-flex rounded-full bg-emerald-400/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300">
                 Student Center
@@ -122,9 +125,10 @@ function resolveEmbedUrl(value: string) {
 
 export default function Web({ config, theme }: WidgetComponentProps) {
   const webConfig = config as WebConfig | undefined;
-  const url = webConfig?.url ?? '';
+  const preview = useWidgetPreview();
+  const url = preview ? '' : webConfig?.url ?? '';
   const refreshInterval = webConfig?.refreshInterval ?? 0;
-  const galleryDemo = webConfig?.galleryDemo ?? false;
+  const galleryDemo = preview || (webConfig?.galleryDemo ?? false);
   const [iframeSrc, setIframeSrc] = useState(resolveEmbedUrl(url));
 
   useEffect(() => {
@@ -150,7 +154,7 @@ export default function Web({ config, theme }: WidgetComponentProps) {
   }, [url, refreshInterval]);
 
   if (!url) {
-    if (galleryDemo) {
+    if (galleryDemo || !url) {
       return <WebDemo theme={theme} />;
     }
 
@@ -177,3 +181,4 @@ export default function Web({ config, theme }: WidgetComponentProps) {
     </div>
   );
 }
+

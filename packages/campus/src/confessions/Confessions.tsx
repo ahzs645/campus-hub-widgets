@@ -1,4 +1,5 @@
 'use client';
+import { useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { WidgetComponentProps, PillIndicator, normalizeSourcePayload, resolveSourceAdapter, type ConfessionItem } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, buildProxyUrl, fetchJsonWithCache, fetchTextWithCache } from '@firstform/campus-hub-widget-sdk';
@@ -45,7 +46,7 @@ export default function Confessions({ config, theme }: WidgetComponentProps) {
   const useCorsProxy = confConfig?.useCorsProxy ?? false;
   const showByline = confConfig?.showByline ?? true;
 
-  const isDemo = !apiUrl && !pageUrl;
+  const isDemo = useWidgetPreview() || (!apiUrl && !pageUrl);
   const sourceKey = `${apiUrl}|${pageUrl}|${sourceAdapterId}|${maxItems}|${useCorsProxy ? 'proxy' : 'direct'}`;
 
   // Last-good live confessions, keyed by the source they came from. A
@@ -339,3 +340,4 @@ export default function Confessions({ config, theme }: WidgetComponentProps) {
     </div>
   );
 }
+

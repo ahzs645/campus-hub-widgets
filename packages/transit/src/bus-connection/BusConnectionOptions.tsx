@@ -56,25 +56,25 @@ export default function BusConnectionOptions({ data, onChange }: WidgetOptionsPr
   const handleSwitchChange = (name: string, value: boolean) => {
     const newState = { ...state, [name]: value };
     setState(newState);
-    onChange(newState);
+    onChange({ ...data, ...newState });
   };
 
   const handleSelectChange = (name: string, value: string) => {
     const newState = { ...state, [name]: Number(value) };
     setState(newState);
-    onChange(newState);
+    onChange({ ...data, ...newState });
   };
 
   const handleInputChange = (name: string, value: string | number | boolean) => {
     const newState = { ...state, [name]: String(value) };
     setState(newState);
-    onChange(newState);
+    onChange({ ...data, ...newState });
   };
 
   const handleSimModeChange = (name: string, value: string) => {
     const newState = { ...state, [name]: value };
     setState(newState);
-    onChange(newState);
+    onChange({ ...data, ...newState });
   };
 
   const formatTimeLabel = (minutes: number) => {
@@ -193,7 +193,7 @@ export default function BusConnectionOptions({ data, onChange }: WidgetOptionsPr
                   onChange={e => {
                     const newState = { ...state, simTime: Number(e.target.value) };
                     setState(newState);
-                    onChange(newState);
+                    onChange({ ...data, ...newState });
                   }}
                   className="w-full accent-[var(--color-accent)]"
                 />
@@ -250,3 +250,4 @@ export default function BusConnectionOptions({ data, onChange }: WidgetOptionsPr
     </div>
   );
 }
+

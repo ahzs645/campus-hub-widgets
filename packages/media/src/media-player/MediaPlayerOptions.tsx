@@ -39,7 +39,7 @@ export default function MediaPlayerOptions({ data, onChange }: WidgetOptionsProp
   const handleChange = (name: string, value: string | number | boolean) => {
     const newState = { ...state, [name]: value };
     setState(newState);
-    onChange(newState);
+    onChange({ ...data, ...newState });
   };
 
   return (
@@ -135,3 +135,4 @@ export default function MediaPlayerOptions({ data, onChange }: WidgetOptionsProp
     </div>
   );
 }
+

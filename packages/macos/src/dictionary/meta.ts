@@ -15,7 +15,9 @@ export default defineWidget({
     defaultW: 3,
     defaultH: 3,
     tags: ['retro', 'info'],
+    acceptsSources: [{ propName: 'apiUrl', types: ['api'], capabilityHint: 'Dictionary API base URL ending in /entries/en.' }],
     defaultProps: {
+      apiUrl: '',
       initialWord: 'serendipity',
       showExamples: true,
     },
@@ -23,3 +25,4 @@ export default defineWidget({
   load: () => import('./MacOSDictionary'),
   loadOptions: () => import('./MacOSDictionaryOptions'),
 });
+

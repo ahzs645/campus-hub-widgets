@@ -1,4 +1,5 @@
 'use client';
+import { useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import QRCodeLib from 'qrcode';
 import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
@@ -106,7 +107,7 @@ export default function JobBoard({
   const useCorsProxy = cfg?.useCorsProxy ?? true;
   const galleryPreview = cfg?.galleryPreview ?? false;
 
-  const isDemo = !apiUrl;
+  const isDemo = useWidgetPreview() || (!apiUrl);
   const sourceKey = `${apiUrl ?? ''}|${sourceType}|${useCorsProxy ? 'proxy' : 'direct'}`;
 
   // Last-good live postings, keyed by the source they came from. A configured
@@ -124,7 +125,7 @@ export default function JobBoard({
   }, []);
 
   useEffect(() => {
-    if (!apiUrl) {
+    if (isDemo || !apiUrl) {
       setError(null);
       return;
     }
@@ -191,7 +192,7 @@ export default function JobBoard({
       isMounted = false;
       clearInterval(interval);
     };
-  }, [apiUrl, sourceKey, sourceType, cacheTtlSeconds, applyFetchedJobs, useCorsProxy]);
+  }, [isDemo, apiUrl, sourceKey, sourceType, cacheTtlSeconds, applyFetchedJobs, useCorsProxy]);
 
   // QR code generation
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
@@ -502,3 +503,4 @@ export default function JobBoard({
     </div>
   );
 }
+

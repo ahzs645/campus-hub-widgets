@@ -1,4 +1,5 @@
 'use client';
+import { FormInput } from '@firstform/campus-hub-widget-sdk';
 
 import { useEffect, useState } from 'react';
 import {
@@ -45,12 +46,13 @@ export default function MacOSTranslationOptions({
   const handleChange = (name: string, value: string | number | boolean) => {
     const next = { ...state, [name]: value };
     setState(next);
-    onChange(next);
+    onChange({ ...data, ...next });
   };
 
   return (
     <OptionsPanel>
       <OptionsSection title="Languages">
+        <FormInput label="Provider source URL" name="apiUrl" type="url" value={String(data.apiUrl ?? '')} onChange={(_name, value) => onChange({ ...data, apiUrl: value })} placeholder="Select a source or enter an API URL" />
         <FormSelect
           label="From"
           name="fromLang"
@@ -69,3 +71,4 @@ export default function MacOSTranslationOptions({
     </OptionsPanel>
   );
 }
+

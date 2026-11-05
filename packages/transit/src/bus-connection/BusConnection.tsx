@@ -1,12 +1,14 @@
 'use client';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { usePixelDisplay } from 'react-pixel-display';
-import { WidgetComponentProps, DarkContainer } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, DarkContainer, useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
+import { DemoBadge, SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
 import { renderTransitDisplay, loadPixollettaFont } from './transit/renderer';
-import { createLiveTripProvider, getScheduledTrips, type Trip } from './transit/gtfsService';
-import { SERVICE_DATES } from './transit/gtfsData';
+import { createLiveTripProvider, type Trip } from './transit/gtfsService';
 
 interface BusConnectionConfig {
+  gtfsUrl?: string;
+  realtimeUrl?: string;
   glow?: boolean;
   scrollHeadsigns?: boolean;
   departureTimeOnly?: boolean;
@@ -19,23 +21,6 @@ interface BusConnectionConfig {
   simMode?: 'weekday' | 'saturday';
   simTime?: number;
   useCorsProxy?: boolean;
-}
-
-function findWeekdayDate(): string | null {
-  return SERVICE_DATES['4795']?.[0] || null;
-}
-
-function findSaturdayDate(): string | null {
-  return SERVICE_DATES['4800']?.[0] || null;
-}
-
-function parseDateStr(str: string | null): { y: number; m: number; d: number } | null {
-  if (!str) return null;
-  return {
-    y: parseInt(str.slice(0, 4)),
-    m: parseInt(str.slice(4, 6)) - 1,
-    d: parseInt(str.slice(6, 8)),
-  };
 }
 
 /**
@@ -63,6 +48,9 @@ function pixelsEqual(next: string[], prev: string[] | null): boolean {
 
 export default function BusConnection({ config, theme }: WidgetComponentProps) {
   const busConfig = config as BusConnectionConfig | undefined;
+  const preview = useWidgetPreview();
+  const gtfsUrl = busConfig?.gtfsUrl?.trim() || '';
+  const realtimeUrl = busConfig?.realtimeUrl?.trim() || '';
   const glow = busConfig?.glow ?? true;
   const scrollHeadsigns = busConfig?.scrollHeadsigns ?? true;
   const departureTimeOnly = busConfig?.departureTimeOnly ?? false;
@@ -71,19 +59,18 @@ export default function BusConnection({ config, theme }: WidgetComponentProps) {
   const padding = busConfig?.padding ?? 8;
   const proxyUrl = busConfig?.proxyUrl?.trim() || undefined;
   const entrySpacing = busConfig?.entrySpacing ?? 2;
-  const simulate = busConfig?.simulate ?? false;
+  const simulate = preview || busConfig?.simulate === true || !gtfsUrl;
   const simMode = busConfig?.simMode ?? 'weekday';
   const simTime = busConfig?.simTime ?? 540;
   const useCorsProxy = busConfig?.useCorsProxy ?? true;
 
   const simulatedTime = useMemo(() => {
     if (!simulate) return null;
-    const dateStr = simMode === 'saturday' ? findSaturdayDate() : findWeekdayDate();
-    const parsed = parseDateStr(dateStr);
-    if (!parsed) return null;
     const hours = Math.floor(simTime / 60);
     const mins = simTime % 60;
-    return new Date(parsed.y, parsed.m, parsed.d, hours, mins, 0);
+    const now = new Date();
+    now.setHours(hours, mins, 0, 0);
+    return now;
   }, [simulate, simMode, simTime]);
 
   const simTimeRef = useRef(simulatedTime);
@@ -92,11 +79,18 @@ export default function BusConnection({ config, theme }: WidgetComponentProps) {
   // Compute simulation trips synchronously (no effect delay)
   const simulatedTrips = useMemo(() => {
     if (!simulatedTime) return null;
-    return getScheduledTrips(simulatedTime);
-  }, [simulatedTime]);
+    return ['Campus / Downtown', 'Campus / Library', 'Campus / Sports Centre'].map((headsign, index): Trip => ({
+      tripId: `sample-${index}`, routeId: `sample-${index}`, routeName: String(15 + index),
+      routeColor: ['#028e51', '#ed1d8f', '#b2bb1e'][index], headsign,
+      arrivalTime: simulatedTime.getTime() + (3 + index * (simMode === 'saturday' ? 15 : 7)) * 60_000,
+      departureTime: simulatedTime.getTime() + (4 + index * (simMode === 'saturday' ? 15 : 7)) * 60_000,
+      isRealtime: false,
+    }));
+  }, [simulatedTime, simMode]);
 
   const [fontReady, setFontReady] = useState(false);
   const [liveTrips, setLiveTrips] = useState<Trip[]>([]);
+  const [sourceError, setSourceError] = useState<string | null>(null);
   const startTimeRef = useRef(Date.now());
   const tripsRef = useRef<Trip[]>([]);
   // Use simulated trips when available, otherwise live trips
@@ -140,15 +134,15 @@ export default function BusConnection({ config, theme }: WidgetComponentProps) {
   // Live data provider (only active when not simulating)
   useEffect(() => {
     if (simulate) return;
+    setLiveTrips([]);
+    setSourceError(null);
     const provider = createLiveTripProvider(
       (updatedTrips) => setLiveTrips(updatedTrips),
-      proxyUrl,
-      undefined,
-      useCorsProxy,
+      { gtfsUrl, realtimeUrl, proxyUrl, useCorsProxy, onError: setSourceError },
     );
     provider.start();
     return () => provider.stop();
-  }, [proxyUrl, simulate, useCorsProxy]);
+  }, [gtfsUrl, realtimeUrl, proxyUrl, simulate, useCorsProxy]);
 
   useEffect(() => {
     if (!fontReady || !displaySize) return;
@@ -202,7 +196,9 @@ export default function BusConnection({ config, theme }: WidgetComponentProps) {
   }, [fontReady, displaySize, displayW, displayH, glow, scrollHeadsigns, departureTimeOnly, hideStationPrefix, entrySpacing, rendererRef]);
 
   return (
-    <DarkContainer bg="#0a0a0a" radius={4} style={{ padding: padding > 0 ? `${padding}px` : undefined }}>
+    <DarkContainer bg="#0a0a0a" radius={4} className="relative" style={{ padding: padding > 0 ? `${padding}px` : undefined }}>
+      {simulate && <DemoBadge />}
+      {!simulate && sourceError && <div className="absolute inset-x-0 bottom-0 z-20 bg-black/80"><SourceUnavailable label="Transit" detail={sourceError} compact /></div>}
       <div
         ref={wrapperRef}
         className="w-full h-full"
@@ -223,3 +219,4 @@ export default function BusConnection({ config, theme }: WidgetComponentProps) {
 
 // Registration lives in ./meta.ts, which carries the widget's metadata without
 // importing this module or its dependencies.
+

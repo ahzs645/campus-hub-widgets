@@ -19,7 +19,15 @@ export default defineWidget({
     minH: 2,
     defaultW: 6,
     defaultH: 2,
+    acceptsSources: [{
+      propName: 'gtfsUrl', types: ['api'],
+      capabilityHint: 'Prince George static GTFS ZIP for UNBC Exchange; optional realtime endpoint in source metadata.',
+      applySource: (source) => ({ gtfsUrl: source.url, realtimeUrl: source.metadata?.realtimeUrl ?? '', simulate: false }),
+      removeSource: () => ({ gtfsUrl: '', realtimeUrl: '', proxyUrl: '' }),
+    }],
     defaultProps: {
+      gtfsUrl: '',
+      realtimeUrl: '',
       glow: true,
       scrollHeadsigns: true,
       departureTimeOnly: false,
@@ -37,3 +45,4 @@ export default defineWidget({
   load: () => import('./BusConnection'),
   loadOptions: () => import('./BusConnectionOptions'),
 });
+
