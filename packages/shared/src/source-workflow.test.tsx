@@ -257,6 +257,17 @@ describe('shared source bindings', () => {
     expect(data.calendarUrl).toBe(`${remote}/calendar`);
     expect(data.calendarId).toBeUndefined();
   });
+  it('keeps an iPod track linked when adding managed cover art', () => {
+    const [audio, cover] = MacOSIPodModule.manifest.acceptsSources!;
+    const track = { ...source('track'), sourceType: 'video' as const, url: `${remote}/track.mp3` };
+    const art = { ...source('art'), sourceType: 'image' as const, url: `${remote}/cover.jpg` };
+    const data = applySourceBinding(art, cover, applySourceBinding(track, audio, {}), audio);
+    expect(data).toMatchObject({ audioUrl: track.url, coverUrl: art.url });
+    expect(data.__sourceRefs).toEqual([
+      expect.objectContaining({ sourceId: 'track', propName: 'audioUrl' }),
+      expect.objectContaining({ sourceId: 'art', propName: 'coverUrl' }),
+    ]);
+  });
 });
 
 
