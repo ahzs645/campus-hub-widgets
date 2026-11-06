@@ -15,7 +15,7 @@ export interface LottieEngineInstance {
   readonly ready: boolean;
 }
 
-export function createLottieEngine(jsonUrl: string): LottieEngineInstance {
+export function createLottieEngine(jsonUrl: string, onError?: () => void): LottieEngineInstance {
   let lottieData: object | null = null;
   let anim: AnimationItem | null = null;
   let canvas: HTMLCanvasElement | null = null;
@@ -57,6 +57,7 @@ export function createLottieEngine(jsonUrl: string): LottieEngineInstance {
     })
     .catch(() => {
       fetchFailed = true;
+      if (container) onError?.();
     });
 
   function sampleToMatrix(): number[] {
@@ -130,3 +131,4 @@ export function createLottieEngine(jsonUrl: string): LottieEngineInstance {
     },
   };
 }
+

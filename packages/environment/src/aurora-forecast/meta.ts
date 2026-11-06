@@ -14,7 +14,12 @@ export default defineWidget({
     minH: 2,
     defaultW: 3,
     defaultH: 3,
+    acceptsSources: [{
+      propName: 'apiUrl', types: ['api'], requires: { format: ['json'] },
+      capabilityHint: 'NOAA planetary K-index forecast JSON.',
+    }],
     defaultProps: {
+      apiUrl: '',
       refreshInterval: 15,
       latitude: 54,
       useCorsProxy: true,
@@ -23,3 +28,4 @@ export default defineWidget({
   load: () => import('./AuroraForecast'),
   loadOptions: () => import('./AuroraForecastOptions'),
 });
+

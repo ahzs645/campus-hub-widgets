@@ -1,4 +1,5 @@
 'use client';
+import { useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 
 import { useEffect, useMemo, useState } from 'react';
 import { buildCacheKey, buildProxyUrl, fetchJsonWithCache, type WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
@@ -18,6 +19,7 @@ function parseCalendarDay(value: string): Date {
 }
 
 interface WeatherConfig {
+  apiUrl?: string;
   location?: string;
   units?: 'metric' | 'imperial';
   showForecast?: boolean;
@@ -135,14 +137,28 @@ function getWeatherGradient(code: number, isDay: boolean) {
   return 'linear-gradient(180deg, #4A90C4 0%, #7AB4D8 40%, #A8CBE0 100%)';
 }
 
+/** A linked forecast URL still honors the widget's own units setting. */
+function withForecastUnits(apiUrl: string, units: 'metric' | 'imperial'): string {
+  try {
+    const url = new URL(apiUrl);
+    url.searchParams.set('temperature_unit', units === 'imperial' ? 'fahrenheit' : 'celsius');
+    url.searchParams.set('wind_speed_unit', units === 'imperial' ? 'mph' : 'kmh');
+    return url.toString();
+  } catch {
+    return apiUrl;
+  }
+}
+
 export default function MacOSWeather({ config }: WidgetComponentProps) {
   const weatherConfig = (config ?? {}) as WeatherConfig;
-  const location = weatherConfig.location?.trim() || 'San Francisco';
+  const location = weatherConfig.location?.trim() || '';
+  const apiUrl = weatherConfig.apiUrl?.trim() || '';
+  const preview = useWidgetPreview();
   const units = weatherConfig.units ?? 'metric';
   const showForecast = weatherConfig.showForecast ?? true;
-  const useSampleData = weatherConfig.useSampleData ?? false;
+  const useSampleData = preview || (!apiUrl && !location) || (weatherConfig.useSampleData ?? false);
 
-  const requestKey = `${location}:${units}`;
+  const requestKey = `${apiUrl}:${location}:${units}`;
   // Last-good live forecast keyed by the location/units it came from: a
   // failed refresh keeps it, and a config change never shows another
   // location's weather while refetching.
@@ -159,6 +175,15 @@ export default function MacOSWeather({ config }: WidgetComponentProps) {
 
     const run = async () => {
       try {
+        if (apiUrl) {
+          const sourceUrl = withForecastUnits(apiUrl, units);
+          const { data: forecast } = await fetchJsonWithCache<ForecastResponse>(buildProxyUrl(sourceUrl), {
+            cacheKey: buildCacheKey('macos-weather-source', sourceUrl), ttlMs: 30 * 60 * 1000,
+          });
+          if (!forecast?.current || !Array.isArray(forecast.daily?.time)) throw new Error('The source is not an Open-Meteo forecast');
+          if (!cancelled) { setLive({ key: requestKey, label: location || 'Weather', data: forecast }); setError(null); }
+          return;
+        }
         const geoUrl = buildProxyUrl(
           `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(
             location,
@@ -211,11 +236,11 @@ export default function MacOSWeather({ config }: WidgetComponentProps) {
       cancelled = true;
       window.clearInterval(refresh);
     };
-  }, [location, units, requestKey, useSampleData]);
+  }, [apiUrl, location, units, requestKey, useSampleData]);
 
   const current = !useSampleData && live?.key === requestKey ? live : null;
   const data: ForecastResponse | null = useSampleData ? SAMPLE_WEATHER_DATA : current?.data ?? null;
-  const label = useSampleData ? 'San Francisco, US' : current?.label ?? location;
+  const label = useSampleData ? 'Sample City' : current?.label ?? location;
   const loading = !useSampleData && current === null && error === null;
 
   const gradient = useMemo(() => {
@@ -405,3 +430,4 @@ export default function MacOSWeather({ config }: WidgetComponentProps) {
     </MacOSDashboardSurface>
   );
 }
+

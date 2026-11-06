@@ -47,7 +47,7 @@ export default function SunsetSunriseOptions({ data, onChange }: WidgetOptionsPr
   const handleChange = (name: string, value: string | number | boolean) => {
     const newState = { ...state, [name]: value };
     setState(newState);
-    onChange(newState);
+    onChange({ ...data, ...newState });
   };
 
   const handleDetectLocation = () => {
@@ -62,7 +62,7 @@ export default function SunsetSunriseOptions({ data, onChange }: WidgetOptionsPr
           locationName: 'My Location',
         };
         setState(newState);
-        onChange(newState);
+        onChange({ ...data, ...newState });
         setDetectingLocation(false);
       },
       () => {
@@ -162,3 +162,4 @@ export default function SunsetSunriseOptions({ data, onChange }: WidgetOptionsPr
     </OptionsPanel>
   );
 }
+

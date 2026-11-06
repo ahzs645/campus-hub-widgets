@@ -1,4 +1,5 @@
 'use client';
+import { useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { buildProxyUrl, createLibCalAvailabilityFormData, getCorsProxyUrl, normalizeSourcePayload, resolveSourceAdapter, WidgetComponentProps, type LibCalGridResponse, type LibCalSlot } from '@firstform/campus-hub-widget-sdk';
 import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
@@ -280,7 +281,7 @@ export default function LibraryAvailability({
   const closeHour = closeHourRaw <= openHour ? openHour + 1 : closeHourRaw;
   const useCorsProxy = widgetConfig?.useCorsProxy ?? true;
   const sourceAdapterId = widgetConfig?.sourceAdapter ?? 'libcal-room-availability';
-  const isDemo = !endpoint;
+  const isDemo = useWidgetPreview() || (!endpoint);
   const sourceKey = `${endpoint}|${lid}|${gid}|${useCorsProxy ? 'proxy' : 'direct'}`;
 
   const [demoResponse, setDemoResponse] = useState<LibCalGridResponse>(() => generateDemoResponse());
@@ -1258,3 +1259,4 @@ export default function LibraryAvailability({
     </div>
   );
 }
+

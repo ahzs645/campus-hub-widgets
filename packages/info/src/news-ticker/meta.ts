@@ -23,7 +23,11 @@ export default defineWidget({
       applySource: (source) => ({
         apiUrl: source.url,
         sourceType: source.sourceType === 'feed' ? 'rss' : 'json',
+        dataSource: 'announcements',
       }),
+    }, {
+      propName: 'eventApiUrl', types: ['calendar'],
+      applySource: (source) => ({ eventApiUrl: source.url, dataSource: 'events', eventSourceType: 'ical' }),
     }],
     defaultProps: {
       speed: 30,
@@ -49,3 +53,4 @@ export default defineWidget({
   load: () => import('./NewsTicker'),
   loadOptions: () => import('./NewsTickerOptions'),
 });
+

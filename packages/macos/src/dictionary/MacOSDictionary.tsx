@@ -1,9 +1,11 @@
 'use client';
+import { useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { buildCacheKey, fetchJsonWithCache, type WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 
 interface DictionaryConfig {
+  apiUrl?: string;
   initialWord?: string;
   showExamples?: boolean;
 }
@@ -23,12 +25,18 @@ interface DictionaryApiEntry {
   }>;
 }
 
+const SAMPLE_ENTRY: DictionaryApiEntry = { word: 'serendipity', phonetic: '/ˌserənˈdɪpɪti/', meanings: [{ partOfSpeech: 'noun', synonyms: ['chance', 'discovery'], definitions: [{ definition: 'Finding something good when you were looking for something else.', example: 'Meeting a new friend at the campus cafe was pure serendipity.' }] }] };
+
 type DictionaryTab = 'definitions' | 'synonyms';
 
 export default function MacOSDictionary({ config }: WidgetComponentProps) {
   const dictionaryConfig = (config ?? {}) as DictionaryConfig;
+  const preview = useWidgetPreview();
+  const apiUrl = dictionaryConfig.apiUrl?.trim() || '';
+  const isDemo = preview || !apiUrl;
   const [query, setQuery] = useState(dictionaryConfig.initialWord ?? 'serendipity');
-  const [entry, setEntry] = useState<DictionaryApiEntry | null>(null);
+  const [liveEntry, setEntry] = useState<DictionaryApiEntry | null>(null);
+  const entry = isDemo ? SAMPLE_ENTRY : liveEntry;
   const [tab, setTab] = useState<DictionaryTab>('definitions');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +47,7 @@ export default function MacOSDictionary({ config }: WidgetComponentProps) {
   }, [dictionaryConfig.initialWord]);
 
   useEffect(() => {
+    if (isDemo) { setEntry(null); setError(null); return; }
     const trimmed = query.trim();
     if (!trimmed) {
       setEntry(null);
@@ -57,9 +66,9 @@ export default function MacOSDictionary({ config }: WidgetComponentProps) {
 
         try {
           const { data } = await fetchJsonWithCache<DictionaryApiEntry[]>(
-            `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(trimmed)}`,
+            `${apiUrl.replace(/\/+$/, '')}/${encodeURIComponent(trimmed)}`,
             {
-              cacheKey: buildCacheKey('macos-dictionary', trimmed),
+              cacheKey: buildCacheKey('macos-dictionary', `${apiUrl}:${trimmed}`),
               ttlMs: 7 * 24 * 60 * 60 * 1000,
             },
           );
@@ -81,7 +90,7 @@ export default function MacOSDictionary({ config }: WidgetComponentProps) {
         window.clearTimeout(debounceRef.current);
       }
     };
-  }, [query]);
+  }, [apiUrl, query, isDemo]);
 
   const pronunciation = entry?.phonetic || entry?.phonetics?.find((item) => item.text)?.text || '';
   const synonyms = useMemo(() => {
@@ -149,7 +158,7 @@ export default function MacOSDictionary({ config }: WidgetComponentProps) {
               letterSpacing: '0.02em',
             }}
           >
-            Dictionary
+            Dictionary {isDemo ? '· Demo' : ''}
           </button>
           <span
             style={{
@@ -349,3 +358,4 @@ export default function MacOSDictionary({ config }: WidgetComponentProps) {
     </div>
   );
 }
+

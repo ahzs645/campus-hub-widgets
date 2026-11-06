@@ -76,7 +76,7 @@ export default function DroughtLevelOptions({ data, onChange }: WidgetOptionsPro
   const handleChange = (name: string, value: string | number | boolean) => {
     const newState = { ...state, [name]: value };
     setState(newState);
-    onChange(newState);
+    onChange({ ...data, ...newState });
   };
 
   const droughtLevels = [
@@ -190,3 +190,4 @@ export default function DroughtLevelOptions({ data, onChange }: WidgetOptionsPro
     </div>
   );
 }
+

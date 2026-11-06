@@ -30,7 +30,7 @@ export default function HolidayCalendarOptions({ data, onChange }: WidgetOptions
   const handleChange = (name: string, value: string | boolean) => {
     const newState = { ...state, [name]: value };
     setState(newState);
-    onChange(newState);
+    onChange({ ...data, ...newState });
   };
 
   return (
@@ -52,3 +52,4 @@ export default function HolidayCalendarOptions({ data, onChange }: WidgetOptions
     </div>
   );
 }
+

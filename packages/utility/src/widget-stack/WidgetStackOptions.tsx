@@ -79,7 +79,7 @@ export default function WidgetStackOptions({ data, onChange }: WidgetOptionsProp
     (newState: WidgetStackData) => {
       stateRef.current = newState;
       setState(newState);
-      onChange(newState as unknown as Record<string, unknown>);
+      onChange({ ...data, ...newState });
     },
     [onChange]
   );
@@ -451,3 +451,4 @@ function AddWidgetPicker({
     </div>
   );
 }
+

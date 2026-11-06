@@ -1,4 +1,6 @@
 'use client';
+import { createDemoImage, DemoBadge } from '@firstform/campus-hub-widgets-shared';
+import { useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AppIcon, buildProxyUrl, useFitScale, type WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { VIEWPORT_H, VIEWPORT_W } from './meta';
@@ -48,7 +50,8 @@ export function resolveWebRegionFrameUrl(value: string, useCorsProxy = false) {
 
 export default function WebRegion({ config, theme }: WidgetComponentProps) {
   const webConfig = config as WebRegionConfig | undefined;
-  const url = webConfig?.url ?? '';
+  const preview = useWidgetPreview();
+  const url = preview ? '' : webConfig?.url ?? '';
   const refreshInterval = webConfig?.refreshInterval ?? 0;
   const regionX = webConfig?.regionX ?? 0;
   const regionY = webConfig?.regionY ?? 0;
@@ -98,16 +101,7 @@ export default function WebRegion({ config, theme }: WidgetComponentProps) {
   }, [containerWidth, containerHeight, regionX, regionY, regionW, regionH, fit]);
 
   if (!url) {
-    return (
-      <div
-        className="h-full flex flex-col items-center justify-center p-6 text-center"
-        style={{ backgroundColor: `${theme.primary}40` }}
-      >
-        <AppIcon name="globe" className="w-9 h-9 mb-3 text-white/70" />
-        <span className="text-white/70 text-sm">No URL configured</span>
-        <span className="text-white/50 text-xs mt-1">Add a web URL and pick a region</span>
-      </div>
-    );
+    return <div className="relative h-full w-full overflow-hidden rounded-lg"><img src={createDemoImage('Campus noticeboard', 2)} alt="Sample website region" className="h-full w-full object-cover" /><DemoBadge /></div>;
   }
 
   return (
@@ -128,3 +122,4 @@ export default function WebRegion({ config, theme }: WidgetComponentProps) {
     </div>
   );
 }
+

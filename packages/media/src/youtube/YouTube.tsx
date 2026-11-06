@@ -1,3 +1,5 @@
+import { createDemoImage } from '@firstform/campus-hub-widgets-shared';
+import { useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon } from '@firstform/campus-hub-widget-sdk';
 
@@ -10,11 +12,11 @@ interface YouTubeConfig {
 }
 
 const YOUTUBE_DEMO_VIDEO = {
-  title: 'Rick Astley - Never Gonna Give You Up (Official Video)',
-  channel: 'Rick Astley',
+  title: 'A day on campus',
+  channel: 'Sample channel',
   duration: '3:33',
-  views: '1.6B views',
-  thumbnail: 'https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg',
+  views: 'Demo video',
+  thumbnail: createDemoImage('Campus stories', 1),
 };
 
 function YouTubeDemo({
@@ -37,7 +39,7 @@ function YouTubeDemo({
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-black/10" />
           <div className="absolute left-4 top-4 rounded-full bg-black/35 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/75">
-            Featured Video
+            Demo · Video preview
           </div>
           <div className="absolute right-4 top-4 flex gap-2 text-[11px]">
             <span className="rounded-full bg-black/35 px-2.5 py-1 text-white/75">
@@ -110,11 +112,12 @@ function extractVideoId(url: string): string | null {
 
 export default function YouTube({ config, theme }: WidgetComponentProps) {
   const youtubeConfig = config as YouTubeConfig | undefined;
-  const videoId = youtubeConfig?.videoId ? extractVideoId(youtubeConfig.videoId) : null;
+  const preview = useWidgetPreview();
+  const videoId = !preview && youtubeConfig?.videoId ? extractVideoId(youtubeConfig.videoId) : null;
   const autoplay = youtubeConfig?.autoplay ?? false;
   const muted = youtubeConfig?.muted ?? true;
   const loop = youtubeConfig?.loop ?? true;
-  const galleryDemo = youtubeConfig?.galleryDemo ?? false;
+  const galleryDemo = preview || !youtubeConfig?.videoId || (youtubeConfig?.galleryDemo ?? false);
 
   if (!videoId) {
     if (galleryDemo) {
@@ -155,3 +158,4 @@ export default function YouTube({ config, theme }: WidgetComponentProps) {
     </div>
   );
 }
+

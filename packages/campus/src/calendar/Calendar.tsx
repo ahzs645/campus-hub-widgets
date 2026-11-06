@@ -1,4 +1,5 @@
 'use client';
+import { useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { useState, useEffect, useCallback } from 'react';
 import { WidgetComponentProps, useLoopingAutoScroll } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
@@ -69,6 +70,8 @@ function resolveCalendarUrl(url: string, format: string): string {
     // Extract calendar ID from Google Calendar URL
     try {
       const u = new URL(url);
+      const src = u.searchParams.get('src');
+      if (src) return `https://calendar.google.com/calendar/ical/${encodeURIComponent(src)}/public/basic.ics`;
       const cid = u.searchParams.get('cid');
       if (cid) {
         // cid is base64-encoded calendar ID
@@ -98,7 +101,7 @@ export default function CalendarWidget({ config, theme }: WidgetComponentProps) 
   const daysAhead = c?.daysAhead ?? 7;
   const customTitle = c?.title?.trim() || '';
   const useCorsProxy = c?.useCorsProxy ?? true;
-  const galleryDemo = c?.galleryDemo ?? false;
+  const galleryDemo = useWidgetPreview() || (c?.galleryDemo ?? false);
 
   const isDemo = !calendarUrl || galleryDemo;
 
@@ -270,3 +273,4 @@ export default function CalendarWidget({ config, theme }: WidgetComponentProps) 
     </ThemedContainer>
   );
 }
+

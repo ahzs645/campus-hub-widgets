@@ -31,4 +31,5 @@ export const LOTTIE_MODES: ModeEntry[] = GLYPH_CATALOG.map((g) => ({
   jsonUrl: g.jsonUrl,
 }));
 
-export const MODES: ModeEntry[] = [...NATIVE_MODES, ...LOTTIE_MODES];
+export const MODES: ModeEntry[] = [...NATIVE_MODES, { id: 'source', name: 'Saved animation', description: 'Use a Lottie JSON source from your library', type: 'lottie' }];
+

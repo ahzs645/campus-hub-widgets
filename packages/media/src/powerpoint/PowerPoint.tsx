@@ -1,4 +1,6 @@
 'use client';
+import { DemoBadge } from '@firstform/campus-hub-widgets-shared';
+import { useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { useEffect, useMemo, useState } from 'react';
 import { WidgetComponentProps, useFitScale } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon } from '@firstform/campus-hub-widget-sdk';
@@ -26,11 +28,12 @@ function PowerPointDemo({
   return (
     <div
       ref={containerRef}
-      className="flex h-full w-full items-center justify-center overflow-hidden"
+      className="relative flex h-full w-full items-center justify-center overflow-hidden"
       style={{
         background: `linear-gradient(180deg, ${theme.primary}2b 0%, ${theme.background} 100%)`,
       }}
     >
+      <DemoBadge />
       <div
         className="shrink-0 p-4"
         style={{
@@ -130,11 +133,12 @@ function PowerPointDemo({
 
 export default function PowerPointWidget({ config, theme }: WidgetComponentProps) {
   const pptConfig = config as PowerPointConfig | undefined;
-  const url = pptConfig?.url ?? '';
+  const preview = useWidgetPreview();
+  const url = preview ? '' : pptConfig?.url ?? '';
   const refreshInterval = pptConfig?.refreshInterval ?? 0;
   const showTitle = pptConfig?.showTitle ?? false;
   const title = pptConfig?.title ?? '';
-  const galleryDemo = pptConfig?.galleryDemo ?? false;
+  const galleryDemo = preview || (pptConfig?.galleryDemo ?? false);
 
   const embedUrl = useMemo(() => buildPowerPointEmbedUrl(url), [url]);
   const [iframeSrc, setIframeSrc] = useState(embedUrl);
@@ -162,7 +166,7 @@ export default function PowerPointWidget({ config, theme }: WidgetComponentProps
   }, [embedUrl, refreshInterval]);
 
   if (!url) {
-    if (galleryDemo) {
+    if (galleryDemo || !url) {
       return <PowerPointDemo theme={theme} showTitle={showTitle} title={title} />;
     }
 
@@ -215,3 +219,4 @@ export default function PowerPointWidget({ config, theme }: WidgetComponentProps
     </div>
   );
 }
+

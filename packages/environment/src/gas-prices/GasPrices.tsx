@@ -1,11 +1,10 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, buildProxyUrl, fetchTextWithCache } from '@firstform/campus-hub-widget-sdk';
 import { ThemedContainer } from '@firstform/campus-hub-widget-sdk';
 import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
 import { withFetchTimeout } from '../fetch-timeout';
-import { DEFAULT_URL } from './meta';
 
 interface StationPrice {
   name: string;
@@ -104,8 +103,9 @@ export default function GasPrices({ config: cfg, theme }: WidgetComponentProps) 
   const [warning, setWarning] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  const galleryDemo = gasConfig.galleryDemo ?? false;
-  const url = gasConfig.url?.trim() || DEFAULT_URL;
+  const preview = useWidgetPreview();
+  const url = gasConfig.url?.trim() || '';
+  const galleryDemo = preview || gasConfig.galleryDemo === true || !url;
   const refreshInterval = gasConfig.refreshInterval ?? 30;
   const useCorsProxy = gasConfig.useCorsProxy ?? true;
   const maxStations = gasConfig.maxStations ?? 10;
@@ -297,3 +297,4 @@ export default function GasPrices({ config: cfg, theme }: WidgetComponentProps) 
     </ThemedContainer>
   );
 }
+

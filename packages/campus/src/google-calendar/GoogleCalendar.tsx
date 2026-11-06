@@ -1,4 +1,6 @@
 'use client';
+import Calendar from '../calendar/Calendar';
+import { useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { useState, useEffect, useCallback } from 'react';
 import { WidgetComponentProps, useLoopingAutoScroll } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, fetchJsonWithCache } from '@firstform/campus-hub-widget-sdk';
@@ -81,7 +83,12 @@ function eventProgress(event: CalendarEvent): number | null {
   return (now - event.start.getTime()) / (event.end.getTime() - event.start.getTime());
 }
 
-export default function GoogleCalendar({ config, theme }: WidgetComponentProps) {
+export default function GoogleCalendar(props: WidgetComponentProps) {
+  const calendarUrl = typeof props.config?.calendarUrl === 'string' ? props.config.calendarUrl.trim() : '';
+  return calendarUrl ? <Calendar {...props} config={{ ...props.config, calendarUrl }} /> : <GoogleCalendarApi {...props} />;
+}
+
+function GoogleCalendarApi({ config, theme }: WidgetComponentProps) {
   const calConfig = config as GoogleCalendarConfig | undefined;
   const calendarId = calConfig?.calendarId?.trim() || '';
   const apiKey = calConfig?.apiKey?.trim() || '';
@@ -93,7 +100,7 @@ export default function GoogleCalendar({ config, theme }: WidgetComponentProps) 
 
   // Both a calendar ID and an API key are needed to fetch; until then the
   // widget is in (badged) demo mode.
-  const isDemo = !calendarId || !apiKey;
+  const isDemo = useWidgetPreview() || (!calendarId && !apiKey);
   const sourceKey = `${calendarId}|${apiKey}|${daysAhead}|${maxEvents}`;
 
   // Last-good live events, keyed by the source they came from. A configured
@@ -106,6 +113,7 @@ export default function GoogleCalendar({ config, theme }: WidgetComponentProps) 
       setError(null);
       return;
     }
+    if (!calendarId || !apiKey) { setError('Provide both a calendar ID and an API key, or choose a public calendar source.'); return; }
     try {
       const now = new Date();
       const timeMin = now.toISOString();
@@ -277,3 +285,4 @@ export default function GoogleCalendar({ config, theme }: WidgetComponentProps) 
     </ThemedContainer>
   );
 }
+

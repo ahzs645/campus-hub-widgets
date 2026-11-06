@@ -17,11 +17,11 @@ export default defineWidget({
     tags: ['retro', 'campus'],
     acceptsSources: [{
       propName: 'apiUrl',
-      types: ['api', 'calendar', 'feed'],
+      types: ['api', 'calendar', 'google-calendar', 'feed'],
       applySource: (source) => ({
         apiUrl: source.url,
         sourceType:
-          source.sourceType === 'calendar'
+          (source.sourceType === 'calendar' || source.sourceType === 'google-calendar')
             ? 'ical'
             : source.sourceType === 'feed'
               ? 'rss'
@@ -39,3 +39,4 @@ export default defineWidget({
   load: () => import('./MacOSCalendar'),
   loadOptions: () => import('./MacOSCalendarOptions'),
 });
+

@@ -1,4 +1,6 @@
 'use client';
+import { useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
+import { createDemoImage, DemoBadge } from '@firstform/campus-hub-widgets-shared';
 import { useState, useEffect, useCallback } from 'react';
 import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import {
@@ -43,30 +45,31 @@ const DEFAULT_POSTERS: Poster[] = [
     id: 1,
     title: 'Spring Festival 2025',
     subtitle: 'March 15-17 | Main Quad',
-    image: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&h=600&fit=crop',
+    image: createDemoImage('Campus festival', 0),
   },
   {
     id: 2,
     title: 'Career Fair',
     subtitle: 'Meet 50+ employers | March 20',
-    image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&h=600&fit=crop',
+    image: createDemoImage('Creative community', 1),
   },
   {
     id: 3,
     title: 'Basketball Championship',
     subtitle: 'Finals this Saturday | 7PM',
-    image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800&h=600&fit=crop',
+    image: createDemoImage('Student showcase', 2),
   },
   {
     id: 4,
     title: 'Art Exhibition Opening',
     subtitle: 'Student Gallery | Free Entry',
-    image: 'https://images.unsplash.com/photo-1561214115-f2f134cc4912?w=800&h=600&fit=crop',
+    image: createDemoImage('Meet your club', 3),
   },
 ];
 
 export default function PosterCarousel({ config, theme }: WidgetComponentProps) {
-  const carouselConfig = config as PosterCarouselConfig | undefined;
+  const preview = useWidgetPreview();
+  const carouselConfig = (preview ? {} : config) as PosterCarouselConfig | undefined;
   const rotationSeconds = carouselConfig?.rotationSeconds ?? 10;
   const configuredDataSource = carouselConfig?.dataSource ?? 'default';
   // Backward compatibility for templates saved before source adapters existed.
@@ -75,7 +78,7 @@ export default function PosterCarousel({ config, theme }: WidgetComponentProps) 
   const sourceAdapterId = carouselConfig?.sourceAdapter
     ?? (configuredDataSource === 'unbc-news' ? 'unbc-news-releases' : undefined);
   const sourceAdapter = resolveSourceAdapter({ adapterId: sourceAdapterId, url: apiUrl });
-  const sourceUrl = apiUrl || sourceAdapter?.defaultUrl;
+  const sourceUrl = apiUrl?.trim() || ''; // Only a saved/configured URL can start a live request.
   const sourceLabel = carouselConfig?.sourceLabel || sourceAdapter?.label;
   const maxStories = carouselConfig?.maxStories ?? 5;
   const refreshInterval = carouselConfig?.refreshInterval ?? 30; // minutes
@@ -411,3 +414,4 @@ function normalizePosters(data: unknown): Poster[] {
     })
     .filter((poster): poster is Poster => poster !== null);
 }
+

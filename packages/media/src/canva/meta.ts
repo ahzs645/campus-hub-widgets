@@ -14,7 +14,7 @@ export default defineWidget({
     minH: 2,
     defaultW: 6,
     defaultH: 4,
-    acceptsSources: [{ propName: 'url', types: ['embed'] }],
+    acceptsSources: [{ propName: 'url', types: ['embed', 'canva'] }],
     defaultProps: {
       url: '',
       refreshInterval: 0,
@@ -23,3 +23,4 @@ export default defineWidget({
   load: () => import('./Canva'),
   loadOptions: () => import('./CanvaOptions'),
 });
+

@@ -33,12 +33,13 @@ export default function MacOSDictionaryOptions({
   const handleChange = (name: string, value: string | number | boolean) => {
     const next = { ...state, [name]: value };
     setState(next);
-    onChange(next);
+    onChange({ ...data, ...next });
   };
 
   return (
     <OptionsPanel>
       <OptionsSection title="Dictionary">
+        <FormInput label="Provider source URL" name="apiUrl" type="url" value={String(data.apiUrl ?? '')} onChange={(_name, value) => onChange({ ...data, apiUrl: value })} placeholder="Select a source or enter an API URL" />
         <FormInput
           label="Initial word"
           name="initialWord"
@@ -55,3 +56,4 @@ export default function MacOSDictionaryOptions({
     </OptionsPanel>
   );
 }
+

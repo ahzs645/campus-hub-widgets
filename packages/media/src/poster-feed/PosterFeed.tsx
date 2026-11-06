@@ -1,4 +1,7 @@
 'use client';
+import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
+import { useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
+import { createDemoImage, DemoBadge } from '@firstform/campus-hub-widgets-shared';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { parseRss } from '@firstform/campus-hub-widget-sdk';
@@ -20,22 +23,22 @@ const DEFAULT_POSTERS: FeedPoster[] = [
   {
     id: '1',
     title: 'Spring Festival',
-    image: 'https://images.unsplash.com/photo-1723274565296-2945e2ebc306?w=400&h=520&fit=crop',
+    image: createDemoImage('Campus festival', 0),
   },
   {
     id: '2',
     title: 'Career Fair',
-    image: 'https://images.unsplash.com/photo-1607930232028-f01079639b00?w=400&h=520&fit=crop',
+    image: createDemoImage('Creative community', 1),
   },
   {
     id: '3',
     title: 'Basketball Finals',
-    image: 'https://images.unsplash.com/photo-1677757103853-a304b6a182f5?w=400&h=520&fit=crop',
+    image: createDemoImage('Student showcase', 2),
   },
   {
     id: '4',
     title: 'Art Exhibition',
-    image: 'https://images.unsplash.com/photo-1676312830459-f6f13dfdd899?w=400&h=520&fit=crop',
+    image: createDemoImage('Meet your club', 3),
   },
 ];
 
@@ -311,11 +314,14 @@ function FadeMode({
 
 export default function PosterFeed({ config, theme }: WidgetComponentProps) {
   const feedConfig = config as PosterFeedConfig | undefined;
-  const feedUrl = feedConfig?.feedUrl;
+  const preview = useWidgetPreview();
+  const feedUrl = preview ? '' : feedConfig?.feedUrl?.trim();
+  const isDemo = !feedUrl;
   const rotationSeconds = feedConfig?.rotationSeconds ?? 8;
   const animationMode = feedConfig?.animationMode ?? 'stack';
 
-  const [posters, setPosters] = useState<FeedPoster[]>(DEFAULT_POSTERS);
+  const [live, setLive] = useState<{ key: string; posters: FeedPoster[] } | null>(null);
+  const posters = isDemo ? DEFAULT_POSTERS : live?.key === feedUrl ? live.posters : [];
   const [activeIndex, setActiveIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -325,7 +331,6 @@ export default function PosterFeed({ config, theme }: WidgetComponentProps) {
   // Fetch and parse RSS feed
   useEffect(() => {
     if (!feedUrl) {
-      setPosters(DEFAULT_POSTERS);
       setError(null);
       return;
     }
@@ -361,7 +366,7 @@ export default function PosterFeed({ config, theme }: WidgetComponentProps) {
           return;
         }
 
-        setPosters(parsed);
+        setLive({ key: feedUrl, posters: parsed });
         setActiveIndex(0);
         setProgress(0);
         setError(null);
@@ -403,13 +408,13 @@ export default function PosterFeed({ config, theme }: WidgetComponentProps) {
     };
   }, [posters.length, rotationSeconds, advance]);
 
-  if (error && posters === DEFAULT_POSTERS) {
+  if (error && !isDemo && posters.length === 0) {
     return (
       <div
         className="h-full rounded-2xl flex items-center justify-center"
         style={{ backgroundColor: `${theme.primary}40` }}
       >
-        <span className="text-white/50 text-sm">{error}</span>
+        <SourceUnavailable label="Posters" detail={error} />
       </div>
     );
   }
@@ -426,7 +431,8 @@ export default function PosterFeed({ config, theme }: WidgetComponentProps) {
   }
 
   return (
-    <div className="w-full h-full rounded-2xl overflow-hidden" style={{ backgroundColor: `${theme.primary}20` }}>
+    <div className="relative w-full h-full rounded-2xl overflow-hidden" style={{ backgroundColor: `${theme.primary}20` }}>
+      {isDemo && <DemoBadge />}
       {animationMode === 'stack' && (
         <StackMode posters={posters} activeIndex={activeIndex} theme={theme} />
       )}
@@ -444,3 +450,4 @@ export default function PosterFeed({ config, theme }: WidgetComponentProps) {
     </div>
   );
 }
+

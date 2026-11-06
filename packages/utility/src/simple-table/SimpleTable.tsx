@@ -1,4 +1,6 @@
 'use client';
+import { DemoBadge, SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
+import { useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, buildProxyUrl, fetchTextWithCache } from '@firstform/campus-hub-widget-sdk';
@@ -56,7 +58,8 @@ function parseCSV(text: string): string[][] {
 }
 
 export default function SimpleTable({ config, theme }: WidgetComponentProps) {
-  const tableConfig = config as SimpleTableConfig | undefined;
+  const preview = useWidgetPreview();
+  const tableConfig = (preview ? {} : config) as SimpleTableConfig | undefined;
   const source = tableConfig?.source ?? 'manual';
   const csvUrl = tableConfig?.csvUrl?.trim() || '';
   const manualData = tableConfig?.manualData?.trim() || '';
@@ -67,7 +70,9 @@ export default function SimpleTable({ config, theme }: WidgetComponentProps) {
   const useCorsProxy = tableConfig?.useCorsProxy ?? true;
   const autoScroll = tableConfig?.autoScroll ?? true;
   const scrollSpeed = tableConfig?.scrollSpeed ?? 40;
-  const [rows, setRows] = useState<string[][]>(() => parseCSV(DEMO_CSV));
+  const isDemo = source === 'manual' ? !manualData : !csvUrl;
+  const [live, setLive] = useState<{ key: string; rows: string[][] } | null>(null);
+  const rows = useMemo(() => isDemo ? parseCSV(DEMO_CSV) : source === 'manual' ? parseCSV(manualData) : live?.key === csvUrl ? live.rows : [], [isDemo, source, manualData, live, csvUrl]);
   const [error, setError] = useState<string | null>(null);
   const [scrollMetrics, setScrollMetrics] = useState({ viewportHeight: 0, contentHeight: 0 });
 
@@ -77,12 +82,10 @@ export default function SimpleTable({ config, theme }: WidgetComponentProps) {
 
   const fetchCSV = useCallback(async () => {
     if (source === 'manual') {
-      setRows(parseCSV(manualData || DEMO_CSV));
       setError(null);
       return;
     }
     if (!csvUrl) {
-      setRows(parseCSV(DEMO_CSV));
       return;
     }
     try {
@@ -97,7 +100,7 @@ export default function SimpleTable({ config, theme }: WidgetComponentProps) {
         setError('No data found');
         return;
       }
-      setRows(parsed);
+      setLive({ key: csvUrl, rows: parsed });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load CSV');
     }
@@ -211,9 +214,11 @@ export default function SimpleTable({ config, theme }: WidgetComponentProps) {
   return (
     <div
       ref={containerRef}
-      className="w-full h-full overflow-hidden"
+      className="relative w-full h-full overflow-hidden"
       style={{ backgroundColor: `${theme.primary}10` }}
     >
+      {isDemo && <DemoBadge />}
+      {!isDemo && source === 'url' && rows.length === 0 && error && <SourceUnavailable label="Table" detail={error} />}
       <style>{`
         @keyframes simpleTableTicker {
           0% { transform: translateY(0); }
@@ -295,3 +300,4 @@ export default function SimpleTable({ config, theme }: WidgetComponentProps) {
     </div>
   );
 }
+

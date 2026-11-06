@@ -1,10 +1,11 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { DarkContainer, buildCacheKey, fetchJsonWithCache, type WidgetComponentProps, useFitScale, useLoopingAutoScroll } from '@firstform/campus-hub-widget-sdk';
+import { DarkContainer, buildCacheKey, fetchJsonWithCache, type WidgetComponentProps, useFitScale, useLoopingAutoScroll, useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
 import { DEFAULT_SYMBOLS } from './meta';
 
 interface StockQuotesConfig {
+  apiUrl?: string;
   title?: string;
   symbols?: string[];
   chartSymbol?: string;
@@ -146,6 +147,9 @@ function Sparkline({
 
 export default function StockQuotes({ config, theme }: WidgetComponentProps) {
   const stockConfig = config as StockQuotesConfig | undefined;
+  const preview = useWidgetPreview();
+  const legacySource = stockConfig?.apiUrl === undefined && Array.isArray(stockConfig?.symbols);
+  const apiUrl = stockConfig?.apiUrl?.trim() || (legacySource ? '/api/stocks' : '');
   const title = stockConfig?.title?.trim() || 'Stock Quotes';
   const symbols =
     Array.isArray(stockConfig?.symbols) && stockConfig.symbols.length > 0
@@ -161,13 +165,13 @@ export default function StockQuotes({ config, theme }: WidgetComponentProps) {
   // Demo only when no usable symbol is configured; the quotes then come
   // from sample data with a visible badge. Configured symbols never fall
   // back to sample prices.
-  const isDemo = symbols.length === 0;
+  const isDemo = preview || !apiUrl || symbols.length === 0;
   const symbolsKey = symbols.join(',');
   const chartSymbol =
     stockConfig?.chartSymbol?.trim().toUpperCase() ||
     symbols[0] ||
     DEMO_QUOTES[0].symbol;
-  const requestKey = `${symbolsKey}|${chartSymbol}|${range}`;
+  const requestKey = `${apiUrl}|${symbolsKey}|${chartSymbol}|${range}`;
 
   // Last-good live data keyed by the request it came from, so a config
   // change never shows another request's prices while refetching.
@@ -189,7 +193,9 @@ export default function StockQuotes({ config, theme }: WidgetComponentProps) {
         chart: chartSymbol,
         range,
       });
-      const url = `/api/stocks?${params.toString()}`;
+      const endpoint = new URL(apiUrl, window.location.origin);
+      for (const [key, value] of params) endpoint.searchParams.set(key, value);
+      const url = apiUrl.startsWith('/') ? `${endpoint.pathname}${endpoint.search}` : endpoint.toString();
       const { data } = await fetchJsonWithCache<StocksResponse>(url, {
         cacheKey: buildCacheKey('stock-quotes', url),
         ttlMs: refreshInterval * 60 * 1000,
@@ -211,7 +217,7 @@ export default function StockQuotes({ config, theme }: WidgetComponentProps) {
     } finally {
       setLoading(false);
     }
-  }, [chartSymbol, isDemo, range, refreshInterval, requestKey, symbolsKey]);
+  }, [apiUrl, chartSymbol, isDemo, range, refreshInterval, requestKey, symbolsKey]);
 
   useEffect(() => {
     fetchStocks();
@@ -411,3 +417,4 @@ export default function StockQuotes({ config, theme }: WidgetComponentProps) {
     </DarkContainer>
   );
 }
+

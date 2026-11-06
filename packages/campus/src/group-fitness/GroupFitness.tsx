@@ -1,6 +1,7 @@
 'use client';
+import { useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppIcon, DEFAULT_GROUP_FITNESS_URL, buildCacheKey, buildProxyUrl, fetchTextWithCache, getTodayWeekday, getCorsProxyUrl, normalizeSourcePayload, resolveSourceAdapter, useAdaptiveFitScale, type GroupFitnessSection, type GroupFitnessViewMode, type ParsedGroupFitnessSchedule, type WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
+import { AppIcon, buildCacheKey, buildProxyUrl, fetchTextWithCache, getTodayWeekday, getCorsProxyUrl, normalizeSourcePayload, resolveSourceAdapter, useAdaptiveFitScale, type GroupFitnessSection, type GroupFitnessViewMode, type ParsedGroupFitnessSchedule, type WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
 
 interface GroupFitnessConfig {
@@ -171,7 +172,7 @@ export default function GroupFitness({
   const maxRows = Math.max(1, cfg?.maxRows ?? 6);
   const useCorsProxy = cfg?.useCorsProxy ?? true;
 
-  const isDemo = !scheduleUrl;
+  const isDemo = useWidgetPreview() || (!scheduleUrl);
 
   // Last-good live schedule, keyed by the URL it came from. A configured
   // source starts empty (loading), never with the demo schedule.
@@ -382,3 +383,4 @@ export default function GroupFitness({
     </div>
   );
 }
+

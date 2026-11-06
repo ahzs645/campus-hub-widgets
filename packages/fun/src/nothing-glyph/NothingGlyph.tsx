@@ -1,5 +1,7 @@
 'use client';
-import { useEffect, useRef } from 'react';
+import { DemoBadge, SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
+import { useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
+import { useEffect, useRef, useState } from 'react';
 import { WidgetComponentProps, DarkContainer } from '@firstform/campus-hub-widget-sdk';
 import { useFitScale } from '@firstform/campus-hub-widget-sdk';
 import { MatrixLayout } from './matrix/MatrixLayout';
@@ -10,6 +12,7 @@ import { createLottieEngine, type LottieEngineInstance } from './matrix/LottieEn
 import { MODES } from './modes';
 
 interface NothingGlyphConfig {
+  animationUrl?: string;
   mode?: string;
   glow?: boolean;
   pixelSize?: number;
@@ -41,7 +44,11 @@ function brightnessToColor(b: number, maxBrightness: number): string {
 
 export default function NothingGlyph({ config }: WidgetComponentProps) {
   const cfg = config as NothingGlyphConfig | undefined;
-  const mode = cfg?.mode ?? 'pendulum';
+  const preview = useWidgetPreview();
+  const animationUrl = preview ? '' : cfg?.animationUrl?.trim() || '';
+  const mode = preview ? 'pendulum' : cfg?.mode ?? 'pendulum';
+  const isDemo = preview || (mode === 'source' || mode.startsWith('lottie-')) && !animationUrl;
+  const [error, setError] = useState<string | null>(null);
   const glow = cfg?.glow ?? true;
   const pixelSize = cfg?.pixelSize ?? 12;
   const brightness = cfg?.brightness ?? 4095;
@@ -78,8 +85,9 @@ export default function NothingGlyph({ config }: WidgetComponentProps) {
     const entry = MODES.find(m => m.id === mode);
     let engine: Engine;
 
-    if (entry?.type === 'lottie' && entry.jsonUrl) {
-      engine = createLottieEngine(entry.jsonUrl);
+    setError(null);
+    if (animationUrl && (entry?.type === 'lottie' || mode.startsWith('lottie-'))) {
+      engine = createLottieEngine(animationUrl, () => setError('The selected animation could not be loaded.'));
     } else {
       engine = createNativeEngine(mode);
     }
@@ -146,10 +154,12 @@ export default function NothingGlyph({ config }: WidgetComponentProps) {
       if (engine.destroy) engine.destroy();
       engineRef.current = null;
     };
-  }, [mode, pixelSize, glow, brightness, canvasW, canvasH, gridW, gridH]);
+  }, [mode, animationUrl, pixelSize, glow, brightness, canvasW, canvasH, gridW, gridH]);
 
   return (
     <DarkContainer bg="#0a0a0a" radius={4} className="flex flex-col items-center justify-center">
+      {isDemo && <DemoBadge />}
+      {error && <SourceUnavailable label="Animation" detail={error} compact />}
       <div ref={fitRef} className="flex-1 w-full flex items-center justify-center min-h-0 overflow-hidden">
         <canvas
           ref={canvasRef}
@@ -169,4 +179,5 @@ export default function NothingGlyph({ config }: WidgetComponentProps) {
     </DarkContainer>
   );
 }
+
 

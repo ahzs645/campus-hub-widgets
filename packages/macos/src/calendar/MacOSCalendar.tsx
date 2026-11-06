@@ -176,13 +176,16 @@ export default function MacOSCalendar({ config }: WidgetComponentProps) {
   return (
     <div
       ref={containerRef}
-      className="flex h-full w-full min-h-0 flex-col overflow-hidden rounded-[20px]"
+      className="relative flex h-full w-full min-h-0 flex-col overflow-hidden rounded-[20px]"
       style={{
         background: `linear-gradient(180deg, ${brownLight} 0%, ${brown} 30%, ${brownDark} 100%)`,
         boxShadow:
           '0 8px 24px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.16)',
       }}
     >
+      {!isCompact && !calendarFooterVisible && (isDemo || error || loading) && (
+        <span className="absolute right-2 top-2 z-10 rounded-full bg-black/55 px-2 py-0.5 text-[10px] text-white">{feedStatus}</span>
+      )}
       {isCompact ? (
         <div className="flex items-center justify-between px-3 pt-2.5 pb-1.5">
           <div className="min-w-0">
@@ -398,3 +401,4 @@ export default function MacOSCalendar({ config }: WidgetComponentProps) {
     </div>
   );
 }
+

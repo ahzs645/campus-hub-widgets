@@ -30,7 +30,7 @@ export default function TimeProgressOptions({ data, onChange }: WidgetOptionsPro
 
   const emit = (newState: TimeProgressData) => {
     setState(newState);
-    onChange(newState as unknown as Record<string, unknown>);
+    onChange({ ...data, ...newState });
   };
 
   const handleChange = (name: string, value: string | number | boolean) => {
@@ -63,3 +63,4 @@ export default function TimeProgressOptions({ data, onChange }: WidgetOptionsPro
     </div>
   );
 }
+

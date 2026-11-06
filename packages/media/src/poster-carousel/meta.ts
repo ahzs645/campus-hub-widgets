@@ -42,6 +42,7 @@ export default defineWidget({
       propName: 'posters',
       types: ['image', 'unsplash'],
       multiple: true,
+      itemUrlProp: 'image',
       applySource: (source, currentData) => {
         const existingPosters = Array.isArray(currentData.posters)
           ? currentData.posters as Poster[]
@@ -49,7 +50,7 @@ export default defineWidget({
         return {
           dataSource: 'default',
           posters: [
-            ...existingPosters,
+            ...existingPosters.filter((poster) => poster.id !== source._id),
             {
               id: source._id,
               title: source.name,
@@ -71,3 +72,4 @@ export default defineWidget({
   load: () => import('./PosterCarousel'),
   loadOptions: () => import('./PosterCarouselOptions'),
 });
+

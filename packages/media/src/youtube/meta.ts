@@ -14,7 +14,7 @@ export default defineWidget({
     minH: 2,
     defaultW: 6,
     defaultH: 4,
-    acceptsSources: [{ propName: 'videoId', types: ['video'] }],
+    acceptsSources: [{ propName: 'videoId', types: ['video', 'youtube'] }],
     defaultProps: {
       videoId: '',
       autoplay: false,
@@ -25,3 +25,4 @@ export default defineWidget({
   load: () => import('./YouTube'),
   loadOptions: () => import('./YouTubeOptions'),
 });
+

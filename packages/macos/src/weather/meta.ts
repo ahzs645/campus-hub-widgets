@@ -15,8 +15,10 @@ export default defineWidget({
     defaultW: 3,
     defaultH: 3,
     tags: ['retro', 'environment'],
+    acceptsSources: [{ propName: 'apiUrl', types: ['api'], capabilityHint: 'Open-Meteo forecast with current weather and daily forecasts.', applySource: (source) => ({ apiUrl: source.url, location: '', useSampleData: false }) }],
     defaultProps: {
-      location: 'San Francisco',
+      apiUrl: '',
+      location: '',
       units: 'metric',
       showForecast: true,
     },
@@ -24,3 +26,4 @@ export default defineWidget({
   load: () => import('./MacOSWeather'),
   loadOptions: () => import('./MacOSWeatherOptions'),
 });
+

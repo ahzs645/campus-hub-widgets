@@ -1,12 +1,13 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, buildProxyUrl, fetchJsonWithCache, fetchTextWithCache } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
 import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
 import { withFetchTimeout } from '../fetch-timeout';
 
 interface AirQualityConfig {
+  apiUrl?: string;
   dataSource?: 'waqi' | 'bc-aqhi';
   waqiToken?: string;
   waqiCity?: string;
@@ -60,8 +61,6 @@ const aqiLevel = (val: number): { label: string; color: string; textColor: strin
   return { label: 'Hazardous', color: '#7e0023', textColor: '#fff' };
 };
 
-const BC_AQHI_URL = 'https://www.env.gov.bc.ca/epd/bcairquality/data/aqhi.html?id=AQHI-PRINCE_GEORGE';
-
 const parseBcAqhi = (html: string): AqiData | null => {
   // The BC AQHI page shows current reading in a bold/large font.
   // Look for the AQHI value which is typically in the page content.
@@ -95,18 +94,18 @@ const MOCK_DATA: AqiData = {
 
 export default function AirQuality({ config, theme }: WidgetComponentProps) {
   const aqConfig = config as AirQualityConfig | undefined;
+  const preview = useWidgetPreview();
+  const apiUrl = aqConfig?.apiUrl?.trim() || '';
   const dataSource = aqConfig?.dataSource ?? 'waqi';
   const waqiToken = aqConfig?.waqiToken?.trim();
   const waqiCity = aqConfig?.waqiCity?.trim() || 'prince-george';
   const refreshInterval = aqConfig?.refreshInterval ?? 15;
   const useCorsProxy = aqConfig?.useCorsProxy ?? true;
 
-  // WAQI with no token is "not configured": sample reading with a Demo badge.
-  // BC AQHI is a public page, so it is always a real (configured) source.
-  const isDemo = dataSource !== 'bc-aqhi' && !waqiToken;
+  const isDemo = preview || (dataSource === 'bc-aqhi' ? !apiUrl : !waqiToken);
   // Identifies the source a reading came from, so a config change never shows
   // another source's data while refetching.
-  const sourceKey = dataSource === 'bc-aqhi' ? 'bc-aqhi' : `waqi:${waqiCity}`;
+  const sourceKey = dataSource === 'bc-aqhi' ? apiUrl : `waqi:${waqiCity}`;
 
   // Last-good live reading, keyed by source. A configured source starts empty
   // (loading), never with the sample reading.
@@ -165,9 +164,9 @@ export default function AirQuality({ config, theme }: WidgetComponentProps) {
   const fetchBcAqhi = useCallback(async () => {
     try {
       setError(null);
-      const fetchUrl = useCorsProxy ? buildProxyUrl(BC_AQHI_URL) : BC_AQHI_URL;
+      const fetchUrl = useCorsProxy ? buildProxyUrl(apiUrl) : apiUrl;
       const { text } = await fetchTextWithCache(fetchUrl, {
-        cacheKey: buildCacheKey('aqi-bcaqhi', BC_AQHI_URL),
+        cacheKey: buildCacheKey('aqi-bcaqhi', apiUrl),
         ttlMs: refreshMs,
         fetchInit: withFetchTimeout(),
       });
@@ -180,9 +179,10 @@ export default function AirQuality({ config, theme }: WidgetComponentProps) {
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [refreshMs, useCorsProxy, sourceKey]);
+  }, [apiUrl, refreshMs, useCorsProxy, sourceKey]);
 
   useEffect(() => {
+    if (isDemo) return;
     let isMounted = true;
     const fetch = async () => {
       if (!isMounted) return;
@@ -198,7 +198,7 @@ export default function AirQuality({ config, theme }: WidgetComponentProps) {
       isMounted = false;
       clearInterval(interval);
     };
-  }, [dataSource, fetchWaqi, fetchBcAqhi, refreshMs]);
+  }, [isDemo, dataSource, fetchWaqi, fetchBcAqhi, refreshMs]);
 
   const { containerRef, scale, designWidth: DESIGN_W, designHeight: DESIGN_H, isLandscape } = useAdaptiveFitScale({
     landscape: { w: 340, h: 280 },
@@ -327,3 +327,4 @@ export default function AirQuality({ config, theme }: WidgetComponentProps) {
     </ThemedContainer>
   );
 }
+

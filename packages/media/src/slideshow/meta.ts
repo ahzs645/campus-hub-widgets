@@ -14,7 +14,15 @@ export default defineWidget({
     minH: 2,
     defaultW: 6,
     defaultH: 4,
-    acceptsSources: [{ propName: 'slides', types: ['image'], multiple: true }],
+    acceptsSources: [{
+      propName: 'slides', types: ['image', 'unsplash'], multiple: true,
+      applySource: (source, currentData) => ({
+        slides: [
+          ...(Array.isArray(currentData.slides) ? currentData.slides : []).filter((slide) => slide?.id !== source._id),
+          { id: source._id, url: source.url, caption: source.name },
+        ],
+      }),
+    }],
     defaultProps: {
       slides: [],
       duration: 5,
@@ -26,3 +34,4 @@ export default defineWidget({
   load: () => import('./Slideshow'),
   loadOptions: () => import('./SlideshowOptions'),
 });
+

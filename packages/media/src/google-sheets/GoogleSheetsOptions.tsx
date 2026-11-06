@@ -42,7 +42,7 @@ export default function GoogleSheetsOptions({ data, onChange }: WidgetOptionsPro
   const handleChange = (name: string, value: string | number | boolean) => {
     const newState = { ...state, [name]: value };
     setState(newState);
-    onChange(newState);
+    onChange({ ...data, ...newState });
   };
 
   const isValidUrl = state.url.includes('docs.google.com/spreadsheets');
@@ -174,3 +174,4 @@ export default function GoogleSheetsOptions({ data, onChange }: WidgetOptionsPro
     </div>
   );
 }
+

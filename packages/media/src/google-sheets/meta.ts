@@ -14,7 +14,7 @@ export default defineWidget({
     minH: 2,
     defaultW: 6,
     defaultH: 4,
-    acceptsSources: [{ propName: 'url', types: ['embed'] }],
+    acceptsSources: [{ propName: 'url', types: ['embed', 'google-sheets'] }],
     defaultProps: {
       url: '',
       sheetName: '',
@@ -28,3 +28,4 @@ export default defineWidget({
   load: () => import('./GoogleSheets'),
   loadOptions: () => import('./GoogleSheetsOptions'),
 });
+

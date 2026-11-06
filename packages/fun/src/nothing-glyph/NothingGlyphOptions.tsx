@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { FormSelect, FormSwitch, FormStepper } from '@firstform/campus-hub-widget-sdk';
+import { FormSelect, FormSwitch, FormStepper, FormInput } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 import { MODES } from './modes';
 
@@ -33,7 +33,7 @@ export default function NothingGlyphOptions({ data, onChange }: WidgetOptionsPro
   const handleChange = (name: string, value: string | number | boolean) => {
     const newState = { ...state, [name]: value };
     setState(newState);
-    onChange(newState);
+    onChange({ ...data, ...newState });
   };
 
   // Group modes: native first, then lottie
@@ -56,6 +56,7 @@ export default function NothingGlyphOptions({ data, onChange }: WidgetOptionsPro
       <div className="space-y-4">
         <h3 className="font-semibold text-[var(--ui-text)] text-center">Nothing Glyph Settings</h3>
 
+        <FormInput label="Animation source URL" name="animationUrl" type="url" value={String(data.animationUrl ?? '')} onChange={(_name, value) => onChange({ ...data, animationUrl: value, mode: 'source' })} placeholder="Select a Lottie JSON source" />
         <FormSelect
           label="Animation"
           name="mode"
@@ -84,3 +85,4 @@ export default function NothingGlyphOptions({ data, onChange }: WidgetOptionsPro
     </div>
   );
 }
+

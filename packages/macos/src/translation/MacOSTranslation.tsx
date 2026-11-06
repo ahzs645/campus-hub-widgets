@@ -1,9 +1,11 @@
 'use client';
+import { useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 
 import { useEffect, useRef, useState } from 'react';
 import { type WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 
 interface TranslationConfig {
+  apiUrl?: string;
   fromLang?: string;
   toLang?: string;
 }
@@ -23,10 +25,14 @@ const LANGUAGES = [
 
 export default function MacOSTranslation({ config }: WidgetComponentProps) {
   const translationConfig = (config ?? {}) as TranslationConfig;
+  const preview = useWidgetPreview();
+  const apiUrl = translationConfig.apiUrl?.trim() || '';
+  const isDemo = preview || !apiUrl;
   const [fromLang, setFromLang] = useState(translationConfig.fromLang ?? 'en');
   const [toLang, setToLang] = useState(translationConfig.toLang ?? 'fr');
   const [sourceText, setSourceText] = useState('Welcome to Campus Hub.');
-  const [translatedText, setTranslatedText] = useState('');
+  const [liveTranslation, setTranslatedText] = useState('');
+  const translatedText = isDemo ? 'Bienvenue sur Campus Hub.' : liveTranslation;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const debounceRef = useRef<number | null>(null);
@@ -41,6 +47,7 @@ export default function MacOSTranslation({ config }: WidgetComponentProps) {
   }, [translationConfig.toLang]);
 
   useEffect(() => {
+    if (isDemo) { setTranslatedText(''); setError(null); return; }
     if (!sourceText.trim()) {
       setTranslatedText('');
       setError(null);
@@ -61,15 +68,17 @@ export default function MacOSTranslation({ config }: WidgetComponentProps) {
           setLoading(true);
           setError(null);
           const response = await fetch(
-            `https://api.mymemory.translated.net/get?q=${encodeURIComponent(
+            `${apiUrl}${apiUrl.includes('?') ? '&' : '?'}q=${encodeURIComponent(
               sourceText,
             )}&langpair=${fromLang}|${toLang}`,
             { signal: controller.signal },
           );
+          if (!response.ok) throw new Error(`Translation source failed (${response.status})`);
           const data = (await response.json()) as {
             responseData?: { translatedText?: string };
           };
-          setTranslatedText(data.responseData?.translatedText ?? '');
+          if (typeof data.responseData?.translatedText !== 'string') throw new Error('The selected source did not return a translation');
+          setTranslatedText(data.responseData.translatedText);
         } catch (nextError) {
           if (!(nextError instanceof DOMException && nextError.name === 'AbortError')) {
             setError(nextError instanceof Error ? nextError.message : 'Translation failed');
@@ -85,7 +94,7 @@ export default function MacOSTranslation({ config }: WidgetComponentProps) {
         window.clearTimeout(debounceRef.current);
       }
     };
-  }, [fromLang, sourceText, toLang]);
+  }, [apiUrl, isDemo, fromLang, sourceText, toLang]);
 
   const font = '"Helvetica Neue", Helvetica, Arial, sans-serif';
   const aquaSelectStyle = {
@@ -154,7 +163,7 @@ export default function MacOSTranslation({ config }: WidgetComponentProps) {
               flexShrink: 0,
             }}
           >
-            Translate from
+            {isDemo ? 'Demo · From' : 'Translate from'}
           </span>
           <div style={{ position: 'relative', flex: 1, minWidth: 0, marginLeft: 'auto' }}>
             <select
@@ -317,3 +326,4 @@ export default function MacOSTranslation({ config }: WidgetComponentProps) {
     </div>
   );
 }
+

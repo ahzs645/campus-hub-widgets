@@ -39,7 +39,7 @@ export default function ImageOptions({ data, onChange }: WidgetOptionsProps) {
   const handleChange = (name: string, value: string | number | boolean) => {
     const newState = { ...state, [name]: value };
     setState(newState);
-    onChange(newState);
+    onChange({ ...data, ...newState });
   };
 
   const handleSvgUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,7 +51,7 @@ export default function ImageOptions({ data, onChange }: WidgetOptionsProps) {
       const dataUrl = `data:image/svg+xml;base64,${btoa(svgText)}`;
       const newState = { ...state, url: dataUrl };
       setState(newState);
-      onChange(newState);
+      onChange({ ...data, ...newState });
     };
     reader.readAsText(file);
     // Reset so the same file can be re-uploaded
@@ -61,7 +61,7 @@ export default function ImageOptions({ data, onChange }: WidgetOptionsProps) {
   const handleClearSvg = () => {
     const newState = { ...state, url: '' };
     setState(newState);
-    onChange(newState);
+    onChange({ ...data, ...newState });
   };
 
   return (
@@ -158,3 +158,4 @@ export default function ImageOptions({ data, onChange }: WidgetOptionsProps) {
     </div>
   );
 }
+

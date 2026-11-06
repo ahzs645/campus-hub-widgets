@@ -1,10 +1,10 @@
 'use client';
+import { useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { useEffect, useRef, useState } from 'react';
 import { FormInput, FormSelect, FormSwitch } from '@firstform/campus-hub-widget-sdk';
 import { buildProxyUrl, getCorsProxyUrl } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 import {
-  DEFAULT_GROUP_FITNESS_URL,
   WEEKDAY_NAMES,
   parseGroupFitnessSchedule,
   type GroupFitnessViewMode,
@@ -46,6 +46,7 @@ const getInitialState = (data: Record<string, unknown>): GroupFitnessOptionsData
 });
 
 export default function GroupFitnessOptions({ data, onChange }: WidgetOptionsProps) {
+  const preview = useWidgetPreview();
   const [state, setState] = useState<GroupFitnessOptionsData>(getInitialState(data));
   const [scheduleInfo, setScheduleInfo] = useState<ParsedGroupFitnessSchedule | null>(null);
   const [loading, setLoading] = useState(false);
@@ -57,7 +58,7 @@ export default function GroupFitnessOptions({ data, onChange }: WidgetOptionsPro
   }, [data]);
 
   useEffect(() => {
-    if (!state.scheduleUrl.trim()) {
+    if (preview || !state.scheduleUrl.trim()) {
       setScheduleInfo(null);
       setLoadError('');
       return;
@@ -105,7 +106,7 @@ export default function GroupFitnessOptions({ data, onChange }: WidgetOptionsPro
       clearTimeout(timeout);
       fetchControllerRef.current?.abort();
     };
-  }, [state.scheduleUrl, state.useCorsProxy]);
+  }, [preview, state.scheduleUrl, state.useCorsProxy]);
 
   const handleChange = (name: string, value: string | number | boolean) => {
     const nextState = { ...state, [name]: value };
@@ -224,7 +225,7 @@ export default function GroupFitnessOptions({ data, onChange }: WidgetOptionsPro
           name="scheduleUrl"
           type="url"
           value={state.scheduleUrl}
-          placeholder={DEFAULT_GROUP_FITNESS_URL}
+          placeholder="https://example.edu/fitness-schedule"
           onChange={handleChange}
         />
 
@@ -268,3 +269,4 @@ export default function GroupFitnessOptions({ data, onChange }: WidgetOptionsPro
     </div>
   );
 }
+

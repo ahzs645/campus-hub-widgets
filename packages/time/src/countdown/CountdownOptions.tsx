@@ -78,7 +78,7 @@ export default function CountdownOptions({ data, onChange }: WidgetOptionsProps)
 
   const emit = (newState: CountdownData) => {
     setState(newState);
-    onChange(newState as unknown as Record<string, unknown>);
+    onChange({ ...data, ...newState });
   };
 
   const handleChange = (name: string, value: string | number | boolean) => {
@@ -270,3 +270,4 @@ export default function CountdownOptions({ data, onChange }: WidgetOptionsProps)
     </div>
   );
 }
+

@@ -16,7 +16,12 @@ export default defineWidget({
     maxH: 4,
     defaultW: 2,
     defaultH: 2,
-    defaultProps: {
+    acceptsSources: [{
+      propName: 'apiUrl', types: ['api'], requires: { format: ['json'] },
+      capabilityHint: 'CoinGecko-compatible markets JSON with prices and optional sparklines.',
+      removeSource: () => ({ apiUrl: '' }),
+    }],
+    defaultProps: { apiUrl: '',
       coins: ['bitcoin', 'ethereum', 'solana'],
       cycleInterval: 10,
       showSparkline: true,
@@ -25,3 +30,4 @@ export default defineWidget({
   load: () => import('./CryptoTracker'),
   loadOptions: () => import('./CryptoTrackerOptions'),
 });
+

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ISS_LIVE_URL,
   buildYouTubeLiveProbeUrl,
   isYouTubeChannelLikeInput,
   parseYouTubeLiveProbeHtml,
@@ -9,8 +8,8 @@ import {
 } from './stream-utils';
 
 describe('stream-utils', () => {
-  it('uses the ISS preset URL when no custom URL is provided', () => {
-    expect(resolveConfiguredStreamUrl('', 'iss-live')).toBe(ISS_LIVE_URL);
+  it('does not activate a hidden stream for an empty legacy preset', () => {
+    expect(resolveConfiguredStreamUrl('', 'iss-live')).toBe('');
   });
 
   it('builds probe URLs from handles and channel URLs', () => {
@@ -63,3 +62,4 @@ describe('stream-utils', () => {
     });
   });
 });
+

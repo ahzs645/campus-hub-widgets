@@ -1,4 +1,5 @@
 'use client';
+import { useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 
 import { Pause, Play, SkipBack, SkipForward } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -27,10 +28,12 @@ function clamp(value: number, min: number, max: number) {
 }
 
 export default function MacOSIPod({ config }: WidgetComponentProps) {
-  const playerConfig = (config ?? {}) as IpodConfig;
+  const preview = useWidgetPreview();
+  const playerConfig = (preview ? {} : config ?? {}) as IpodConfig;
   const { containerRef, scale } = useFitScale(280, 150);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [audioError, setAudioError] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const accentColor = playerConfig.accentColor ?? '#70b86c';
@@ -45,6 +48,7 @@ export default function MacOSIPod({ config }: WidgetComponentProps) {
       return;
     }
 
+    setAudioError(false);
     const audio = new Audio(playerConfig.audioUrl);
     audioRef.current = audio;
 
@@ -52,12 +56,15 @@ export default function MacOSIPod({ config }: WidgetComponentProps) {
     const updateDuration = () => setDuration(audio.duration || 0);
     const handleEnded = () => setIsPlaying(false);
 
+    const handleError = () => { setAudioError(true); setIsPlaying(false); };
+    audio.addEventListener('error', handleError);
     audio.addEventListener('timeupdate', updateTime);
     audio.addEventListener('loadedmetadata', updateDuration);
     audio.addEventListener('ended', handleEnded);
 
     return () => {
       audio.pause();
+      audio.removeEventListener('error', handleError);
       audio.removeEventListener('timeupdate', updateTime);
       audio.removeEventListener('loadedmetadata', updateDuration);
       audio.removeEventListener('ended', handleEnded);
@@ -69,7 +76,7 @@ export default function MacOSIPod({ config }: WidgetComponentProps) {
     if (!audio) return;
 
     if (audio.paused) {
-      await audio.play();
+      try { await audio.play(); } catch { setAudioError(true); return; }
       setIsPlaying(true);
       return;
     }
@@ -259,7 +266,7 @@ export default function MacOSIPod({ config }: WidgetComponentProps) {
                     color: '#1a3300',
                   }}
                 >
-                  {playerConfig.title?.trim() || 'Campus Groove'}
+                  {playerConfig.title?.trim() || (playerConfig.audioUrl ? 'Audio track' : 'Campus Groove')}
                 </span>
               </div>
               <div
@@ -271,7 +278,7 @@ export default function MacOSIPod({ config }: WidgetComponentProps) {
                   color: '#3a5a10',
                 }}
               >
-                {playerConfig.artist?.trim() || 'Campus Hub'}
+                {playerConfig.artist?.trim() || (playerConfig.audioUrl ? '' : 'Sample artist')}
               </div>
               <div
                 className="truncate"
@@ -282,7 +289,7 @@ export default function MacOSIPod({ config }: WidgetComponentProps) {
                   opacity: 0.8,
                 }}
               >
-                {playerConfig.album?.trim() || 'Aqua Mix'}
+                {playerConfig.album?.trim() || (playerConfig.audioUrl ? '' : 'Sample playlist')}
               </div>
             </div>
 
@@ -332,7 +339,7 @@ export default function MacOSIPod({ config }: WidgetComponentProps) {
                   color: '#355610',
                 }}
               >
-                {isPlaying ? 'Playing' : playerConfig.audioUrl ? 'Paused' : 'Ready'}
+                {audioError ? 'Audio unavailable' : isPlaying ? 'Playing' : playerConfig.audioUrl ? 'Paused' : 'Demo'}
               </span>
               <span
                 style={{
@@ -352,3 +359,4 @@ export default function MacOSIPod({ config }: WidgetComponentProps) {
     </div>
   );
 }
+

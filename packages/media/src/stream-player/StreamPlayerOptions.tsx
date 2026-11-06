@@ -1,19 +1,30 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AppIcon,
   FormInput,
   FormSelect,
   FormSwitch,
+  applySourceBinding,
   getVideoThumbnailUrl,
+  useSourcePicker,
+  useWidgetOptionsSurface,
+  type SourceBinding,
   type WidgetOptionsProps,
 } from '@firstform/campus-hub-widget-sdk';
 import {
-  ISS_LIVE_URL,
   resolveConfiguredStreamUrl,
   type StreamFormat,
   type StreamPreset,
 } from './stream-utils';
+
+// Both stream bindings accept the same types, so the shared picker's first-match
+// rule always lands on the primary URL. The fallback asks for its binding directly.
+const FALLBACK_BINDING: SourceBinding = {
+  propName: 'fallbackUrl',
+  independent: true,
+  types: ['video', 'embed', 'youtube', 'vimeo', 'google-drive'],
+};
 
 interface StreamPlayerData {
   preset: StreamPreset;
@@ -42,6 +53,10 @@ const DEFAULT_STATE: StreamPlayerData = {
 };
 
 export default function StreamPlayerOptions({ data, onChange }: WidgetOptionsProps) {
+  const pickSource = useSourcePicker();
+  const surface = useWidgetOptionsSurface();
+  const currentData = useRef(data);
+  currentData.current = data;
   const [state, setState] = useState<StreamPlayerData>({
     preset: (data?.preset as StreamPreset) ?? DEFAULT_STATE.preset,
     format: (data?.format as StreamFormat) ?? DEFAULT_STATE.format,
@@ -77,7 +92,7 @@ export default function StreamPlayerOptions({ data, onChange }: WidgetOptionsPro
       [name]: value,
     };
     setState(nextState);
-    onChange(nextState);
+    onChange({ ...data, ...nextState });
   };
 
   const activeUrl = resolveConfiguredStreamUrl(state.url, state.preset);
@@ -94,10 +109,6 @@ export default function StreamPlayerOptions({ data, onChange }: WidgetOptionsPro
       : 'https://example.com/live.m3u8';
 
   const helpText = useMemo(() => {
-    if (state.preset === 'iss-live') {
-      return 'Uses the default NASA ISS YouTube stream when the URL field is empty.';
-    }
-
     if (state.format === 'youtube-channel-live') {
       return 'Checks a YouTube channel’s /live page and switches to the active stream when the channel goes live.';
     }
@@ -110,16 +121,7 @@ export default function StreamPlayerOptions({ data, onChange }: WidgetOptionsPro
       <div className="space-y-4">
         <h3 className="font-semibold text-[var(--ui-text)]">Source</h3>
 
-        <FormSelect
-          label="Preset"
-          name="preset"
-          value={state.preset}
-          options={[
-            { value: 'custom', label: 'Custom' },
-            { value: 'iss-live', label: 'ISS Live (NASA)' },
-          ]}
-          onChange={handleChange}
-        />
+<p className="text-sm text-[var(--ui-text-muted)]">Choose a saved source or add a stream from the Source Store.</p>
 
         <FormSelect
           label="Format"
@@ -155,6 +157,20 @@ export default function StreamPlayerOptions({ data, onChange }: WidgetOptionsPro
           placeholder="Optional fallback when a live channel is offline"
           onChange={handleChange}
         />
+
+        {pickSource && surface !== 'gallery' && (
+          <button
+            type="button"
+            className="text-sm font-medium text-[var(--color-accent)] underline"
+            onClick={() => pickSource({
+              widgetType: 'stream-player',
+              bindings: [FALLBACK_BINDING],
+              onSelect: (source) => onChange(applySourceBinding(source, FALLBACK_BINDING, currentData.current ?? {})),
+            })}
+          >
+            Choose a saved fallback source
+          </button>
+        )}
 
         {state.format === 'youtube-channel-live' && (
           <FormInput
@@ -234,7 +250,7 @@ export default function StreamPlayerOptions({ data, onChange }: WidgetOptionsPro
                   {state.preset === 'iss-live' ? 'ISS live preset' : 'Stream preview'}
                 </div>
                 <div className="mt-1 max-w-xs truncate text-xs text-white/50">
-                  {activeUrl || ISS_LIVE_URL}
+                  {activeUrl || 'Select a source'}
                 </div>
               </div>
             </div>
@@ -244,3 +260,4 @@ export default function StreamPlayerOptions({ data, onChange }: WidgetOptionsPro
     </div>
   );
 }
+

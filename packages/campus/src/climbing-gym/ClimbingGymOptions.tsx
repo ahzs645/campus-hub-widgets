@@ -12,8 +12,6 @@ interface ClimbingGymData {
   useCorsProxy: boolean;
 }
 
-const DEFAULT_PORTAL_URL =
-  'https://portal.rockgympro.com/portal/public/e4f8e07377b8d1ba053944154f4c2c50/occupancy?&iframeid=occupancyCounter&fId=';
 
 export default function ClimbingGymOptions({ data, onChange }: WidgetOptionsProps) {
   const [state, setState] = useState<ClimbingGymData>({
@@ -64,7 +62,7 @@ export default function ClimbingGymOptions({ data, onChange }: WidgetOptionsProp
           name="portalUrl"
           type="text"
           value={state.portalUrl}
-          placeholder={DEFAULT_PORTAL_URL}
+          placeholder="https://example.edu/occupancy"
           onChange={handleChange}
         />
 
@@ -127,3 +125,4 @@ export default function ClimbingGymOptions({ data, onChange }: WidgetOptionsProp
     </div>
   );
 }
+

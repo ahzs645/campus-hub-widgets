@@ -104,7 +104,7 @@ export default function RadioStationOptions({ data, onChange }: WidgetOptionsPro
           name="stationName"
           type="text"
           value={state.stationName}
-          placeholder="CFUR 88.7 FM"
+          placeholder="Station name"
           onChange={handleChange}
         />
 
@@ -122,7 +122,7 @@ export default function RadioStationOptions({ data, onChange }: WidgetOptionsPro
           name="provider"
           type="text"
           value={state.provider}
-          placeholder="CFUR / iHeartRadio"
+          placeholder="Station provider"
           onChange={handleChange}
         />
 
@@ -197,7 +197,7 @@ export default function RadioStationOptions({ data, onChange }: WidgetOptionsPro
         />
 
         <div className="text-sm text-[var(--ui-text-muted)]">
-          The CFUR iHeart endpoint is browser-accessible and typically updates every 15 to 30 seconds when metadata is available.
+          Select a station source from your library or add a supported provider in Sources.
         </div>
       </div>
 
@@ -270,3 +270,4 @@ export default function RadioStationOptions({ data, onChange }: WidgetOptionsPro
     </div>
   );
 }
+

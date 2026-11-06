@@ -15,7 +15,9 @@ export default defineWidget({
     defaultW: 4,
     defaultH: 3,
     tags: ['retro', 'info'],
+    acceptsSources: [{ propName: 'apiUrl', types: ['api'], capabilityHint: 'A stock endpoint returning quotes and chart points.' }],
     defaultProps: {
+      apiUrl: '',
       symbols: 'AAPL,MSFT,NVDA,GOOG',
       range: '6mo',
     },
@@ -23,3 +25,4 @@ export default defineWidget({
   load: () => import('./MacOSStocks'),
   loadOptions: () => import('./MacOSStocksOptions'),
 });
+

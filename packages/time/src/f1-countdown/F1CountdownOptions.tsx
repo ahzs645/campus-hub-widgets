@@ -1,20 +1,23 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { FormSwitch } from '@firstform/campus-hub-widget-sdk';
+import { FormSwitch, FormInput } from '@firstform/campus-hub-widget-sdk';
 import type { WidgetOptionsProps } from '@firstform/campus-hub-widget-sdk';
 
 interface F1CountdownData {
+  apiUrl: string;
   showSessions: boolean;
 }
 
 export default function F1CountdownOptions({ data, onChange }: WidgetOptionsProps) {
   const [state, setState] = useState<F1CountdownData>({
+    apiUrl: (data?.apiUrl as string) ?? '',
     showSessions: (data?.showSessions as boolean) ?? true,
   });
 
   useEffect(() => {
     if (data) {
       setState({
+        apiUrl: (data.apiUrl as string) ?? '',
         showSessions: (data.showSessions as boolean) ?? true,
       });
     }
@@ -23,7 +26,7 @@ export default function F1CountdownOptions({ data, onChange }: WidgetOptionsProp
   const handleChange = (name: string, value: string | number | boolean) => {
     const newState = { ...state, [name]: value };
     setState(newState);
-    onChange(newState as unknown as Record<string, unknown>);
+    onChange({ ...data, ...newState });
   };
 
   return (
@@ -31,6 +34,7 @@ export default function F1CountdownOptions({ data, onChange }: WidgetOptionsProp
       <div className="space-y-4">
         <h3 className="font-semibold text-[var(--ui-text)] text-center">Settings</h3>
 
+        <FormInput label="Schedule source URL" name="apiUrl" type="url" value={state.apiUrl} onChange={handleChange} placeholder="Select a source or enter an API URL" />
         <FormSwitch
           label="Show Sessions"
           name="showSessions"
@@ -45,3 +49,4 @@ export default function F1CountdownOptions({ data, onChange }: WidgetOptionsProp
     </div>
   );
 }
+

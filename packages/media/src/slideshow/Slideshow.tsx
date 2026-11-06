@@ -1,9 +1,12 @@
 'use client';
+import { createDemoImage, DemoBadge, SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
+import { useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { useState, useEffect, useCallback } from 'react';
 import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon } from '@firstform/campus-hub-widget-sdk';
 
 interface Slide {
+  id?: string;
   url: string;
   caption?: string;
 }
@@ -16,9 +19,15 @@ interface SlideshowConfig {
   showProgress?: boolean;
 }
 
+const DEMO_SLIDES: Slide[] = [{ url: createDemoImage('Campus life'), caption: 'Welcome to campus' }, { url: createDemoImage('Get involved', 1), caption: 'Discover something new' }];
+
 export default function Slideshow({ config, theme }: WidgetComponentProps) {
   const slideshowConfig = config as SlideshowConfig | undefined;
-  const slides = slideshowConfig?.slides ?? [];
+  const preview = useWidgetPreview();
+  const configuredSlides = Array.isArray(slideshowConfig?.slides) ? slideshowConfig.slides : [];
+  const isDemo = preview || configuredSlides.length === 0;
+  const slides = isDemo ? DEMO_SLIDES : configuredSlides;
+  const [failedUrl, setFailedUrl] = useState('');
   const duration = (slideshowConfig?.duration ?? 5) * 1000;
   const transition = slideshowConfig?.transition ?? 'fade';
   const showCaptions = slideshowConfig?.showCaptions ?? true;
@@ -55,7 +64,7 @@ export default function Slideshow({ config, theme }: WidgetComponentProps) {
     );
   }
 
-  const currentSlide = slides[currentIndex];
+  const currentSlide = slides[currentIndex % slides.length];
 
   const getTransitionClasses = () => {
     if (transition === 'none') return '';
@@ -68,14 +77,16 @@ export default function Slideshow({ config, theme }: WidgetComponentProps) {
 
   return (
     <div className="h-full w-full overflow-hidden rounded-lg bg-black relative">
+      {isDemo && <DemoBadge />}
       <div
         className={`w-full h-full transition-all duration-300 ${getTransitionClasses()}`}
       >
-        <img
+        {failedUrl === currentSlide.url && !isDemo ? <SourceUnavailable label="Slide" /> : <img
           src={currentSlide.url}
           alt={currentSlide.caption || `Slide ${currentIndex + 1}`}
           className="w-full h-full object-cover"
-        />
+          onError={() => setFailedUrl(currentSlide.url)}
+        />}
         {showCaptions && currentSlide.caption && (
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
             <p className="text-white text-sm font-medium">{currentSlide.caption}</p>
@@ -101,3 +112,4 @@ export default function Slideshow({ config, theme }: WidgetComponentProps) {
     </div>
   );
 }
+

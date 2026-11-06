@@ -1,4 +1,6 @@
 'use client';
+import { DemoBadge } from '@firstform/campus-hub-widgets-shared';
+import { useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 
 import { useEffect, useMemo, useState } from 'react';
 import { buildCacheKey, fetchJsonWithCache, type WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
@@ -7,6 +9,7 @@ import {
 } from '../shared/ui';
 
 interface StocksConfig {
+  apiUrl?: string;
   symbols?: string;
   range?: '1mo' | '3mo' | '6mo' | '1y';
 }
@@ -28,6 +31,11 @@ interface StocksResponse {
   quotes: Quote[];
   chart: ChartPoint[];
 }
+
+const SAMPLE_STOCKS: StocksResponse = {
+  quotes: [{ symbol: 'DEMO', name: 'Example Company', price: 123.45, change: 2.1, changePercent: 1.73 }],
+  chart: [103, 108, 107, 115, 112, 121, 123.45].map((close, i) => ({ timestamp: 1761955200 + i * 86400, close })),
+};
 
 const RANGE_OPTIONS = [
   { value: '1mo', label: '1M' },
@@ -62,10 +70,13 @@ function buildLinePath(points: ChartPoint[], width: number, height: number) {
 
 export default function MacOSStocks({ config }: WidgetComponentProps) {
   const stocksConfig = (config ?? {}) as StocksConfig;
+  const apiUrl = stocksConfig.apiUrl?.trim() || '';
+  const isDemo = useWidgetPreview() || !apiUrl;
   const symbols = useMemo(() => normalizeSymbols(stocksConfig.symbols), [stocksConfig.symbols]);
   const [range, setRange] = useState<StocksConfig['range']>(stocksConfig.range ?? '6mo');
   const [selectedSymbol, setSelectedSymbol] = useState(symbols[0] ?? 'AAPL');
-  const [data, setData] = useState<StocksResponse | null>(null);
+  const [live, setData] = useState<StocksResponse | null>(null);
+  const data = isDemo ? SAMPLE_STOCKS : live;
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -73,6 +84,9 @@ export default function MacOSStocks({ config }: WidgetComponentProps) {
   }, [symbols]);
 
   useEffect(() => {
+    setData(null);
+    setError(null);
+    if (isDemo) return;
     let cancelled = false;
 
     const run = async () => {
@@ -83,16 +97,17 @@ export default function MacOSStocks({ config }: WidgetComponentProps) {
           range: range ?? '6mo',
         });
         const { data: next } = await fetchJsonWithCache<StocksResponse>(
-          `/api/stocks?${query.toString()}`,
+          `${apiUrl}${apiUrl.includes('?') ? '&' : '?'}${query.toString()}`,
           {
             cacheKey: buildCacheKey(
               'macos-stocks',
-              `${symbols.join(',')}:${selectedSymbol}:${range}`,
+              `${apiUrl}:${symbols.join(',')}:${selectedSymbol}:${range}`,
             ),
             ttlMs: 5 * 60 * 1000,
           },
         );
 
+        if (!Array.isArray(next?.quotes) || !Array.isArray(next?.chart)) throw new Error('The selected source does not contain stock quotes and chart data');
         if (!cancelled) {
           setData(next);
           setError(null);
@@ -114,7 +129,7 @@ export default function MacOSStocks({ config }: WidgetComponentProps) {
       cancelled = true;
       window.clearInterval(refresh);
     };
-  }, [range, selectedSymbol, symbols]);
+  }, [apiUrl, isDemo, range, selectedSymbol, symbols]);
 
   const chartPath = data?.chart.length
     ? buildLinePath(data.chart, 320, 120)
@@ -140,7 +155,7 @@ export default function MacOSStocks({ config }: WidgetComponentProps) {
 
   return (
     <div
-      className="flex h-full w-full min-h-0 flex-col overflow-hidden rounded-[20px]"
+      className="relative flex h-full w-full min-h-0 flex-col overflow-hidden rounded-[20px]"
       style={{
         fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
         background: 'linear-gradient(180deg, #1B3A5C 0%, #0F2844 40%, #0A1E36 100%)',
@@ -148,6 +163,7 @@ export default function MacOSStocks({ config }: WidgetComponentProps) {
           '0 8px 24px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.14)',
       }}
     >
+      {isDemo && <DemoBadge />}
       {error ? (
         <div className="flex h-full min-h-0 items-center justify-center px-4 text-center text-[12px] text-white/55">
           {error}
@@ -296,3 +312,4 @@ export default function MacOSStocks({ config }: WidgetComponentProps) {
     </div>
   );
 }
+

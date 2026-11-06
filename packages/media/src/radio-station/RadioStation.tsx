@@ -1,7 +1,9 @@
 'use client';
+import { createDemoImage, DemoBadge } from '@firstform/campus-hub-widgets-shared';
+import { useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AppIcon, WidgetComponentProps, buildProxyUrl, normalizeSourcePayload, resolveSourceAdapter, type RadioNowPlaying } from '@firstform/campus-hub-widget-sdk';
-import { CFUR_ARTWORK_URL, clampPollInterval } from './meta';
+import { clampPollInterval } from './meta';
 
 export type RadioPlayerMode = 'none' | 'audio' | 'embed';
 type MetadataState = 'idle' | 'loading' | 'live' | 'stale' | 'error';
@@ -30,10 +32,10 @@ const DEMO_TRACKS: RadioNowPlaying[] = [
     title: 'Morning Tide',
     artist: 'The Northern Lights',
     album: 'Community Airwaves',
-    showName: 'CFUR Morning Magazine',
+    showName: 'Campus Morning Magazine',
     description: 'Demo metadata preview for the radio widget.',
-    artworkUrl: CFUR_ARTWORK_URL,
-    timestamp: 'Live demo feed',
+    artworkUrl: createDemoImage('Community airwaves', 1),
+    timestamp: 'Sample data',
     raw: null,
   },
   {
@@ -42,8 +44,8 @@ const DEMO_TRACKS: RadioNowPlaying[] = [
     album: 'Late Night Broadcast',
     showName: 'Night Shift',
     description: 'Shows how artist, title, and album stack inside the widget.',
-    artworkUrl: CFUR_ARTWORK_URL,
-    timestamp: 'Live demo feed',
+    artworkUrl: createDemoImage('Community airwaves', 1),
+    timestamp: 'Sample data',
     raw: null,
   },
   {
@@ -52,8 +54,8 @@ const DEMO_TRACKS: RadioNowPlaying[] = [
     album: 'Studio Session',
     showName: 'Independent Spotlight',
     description: 'Reactive sample data rotates automatically until you link a live source.',
-    artworkUrl: CFUR_ARTWORK_URL,
-    timestamp: 'Live demo feed',
+    artworkUrl: createDemoImage('Community airwaves', 1),
+    timestamp: 'Sample data',
     raw: null,
   },
 ];
@@ -97,7 +99,8 @@ function formatTime(timestamp: number | undefined) {
 }
 
 export default function RadioStation({ config, theme }: WidgetComponentProps) {
-  const radioConfig = config as RadioStationConfig | undefined;
+  const preview = useWidgetPreview();
+  const radioConfig = (preview ? {} : config) as RadioStationConfig | undefined;
   const stationName = radioConfig?.stationName?.trim() ?? '';
   const stationTagline = radioConfig?.stationTagline?.trim() ?? '';
   const provider = radioConfig?.provider?.trim() ?? '';
@@ -113,10 +116,13 @@ export default function RadioStation({ config, theme }: WidgetComponentProps) {
   const showArtwork = radioConfig?.showArtwork ?? true;
   const showTimestamp = radioConfig?.showTimestamp ?? true;
   const useCorsProxy = radioConfig?.useCorsProxy ?? false;
-  const demoMode = !metadataUrl;
+  const demoMode = !metadataUrl && !audioUrl && !embedUrl;
 
   const [metadataState, setMetadataState] = useState<MetadataState>('idle');
-  const [nowPlaying, setNowPlaying] = useState<RadioNowPlaying | null>(null);
+  const [liveTrack, setNowPlaying] = useState<RadioNowPlaying | null>(null);
+  const [trackSource, setTrackSource] = useState('');
+  const [demoIndex, setDemoIndex] = useState(0);
+  const nowPlaying = demoMode ? DEMO_TRACKS[demoIndex] : trackSource === metadataUrl ? liveTrack : null;
   const [lastCheckedAt, setLastCheckedAt] = useState<number | undefined>(undefined);
   const [lastSuccessAt, setLastSuccessAt] = useState<number | undefined>(undefined);
   const [metadataError, setMetadataError] = useState<string | null>(null);
@@ -133,25 +139,8 @@ export default function RadioStation({ config, theme }: WidgetComponentProps) {
   useEffect(() => {
     if (!demoMode) return undefined;
 
-    let trackIndex = 0;
-    setNowPlaying(DEMO_TRACKS[trackIndex]);
-    setMetadataState('live');
-    setMetadataError(null);
-    setLastCheckedAt(Date.now());
-    setLastSuccessAt(Date.now());
-
-    const timer = window.setInterval(() => {
-      trackIndex = (trackIndex + 1) % DEMO_TRACKS.length;
-      const nextTimestamp = Date.now();
-      setNowPlaying(DEMO_TRACKS[trackIndex]);
-      setMetadataState('live');
-      setLastCheckedAt(nextTimestamp);
-      setLastSuccessAt(nextTimestamp);
-    }, DEMO_ROTATION_MS);
-
-    return () => {
-      window.clearInterval(timer);
-    };
+    const timer = window.setInterval(() => setDemoIndex((index) => (index + 1) % DEMO_TRACKS.length), DEMO_ROTATION_MS);
+    return () => window.clearInterval(timer);
   }, [demoMode]);
 
   useEffect(() => {
@@ -168,6 +157,10 @@ export default function RadioStation({ config, theme }: WidgetComponentProps) {
       return;
     }
 
+    lastTrackRef.current = null;
+    setTrackSource('');
+    setNowPlaying(null);
+    setMetadataState('loading');
     let cancelled = false;
     let timer: number | undefined;
 
@@ -207,6 +200,7 @@ export default function RadioStation({ config, theme }: WidgetComponentProps) {
         if (nextTrack) {
           lastTrackRef.current = nextTrack;
           setNowPlaying(nextTrack);
+          setTrackSource(metadataUrl);
         }
 
         setMetadataError(null);
@@ -275,12 +269,12 @@ export default function RadioStation({ config, theme }: WidgetComponentProps) {
   }, [audioUrl, autoplay, playerMode]);
 
   const trackArtwork = nowPlaying?.artworkUrl || artworkUrl;
-  const effectiveStationName = stationName || 'CFUR 88.7 FM';
+  const effectiveStationName = stationName || (demoMode ? 'Campus Radio' : 'Radio Station');
   const effectiveProvider = provider || stationTagline || 'Radio Station';
   const topLine =
     nowPlaying?.showName ||
     stationTagline ||
-    (demoMode ? 'Reactive preview' : effectiveProvider);
+    (demoMode ? 'Sample station' : effectiveProvider);
   const secondaryLine =
     nowPlaying?.artist ||
     nowPlaying?.album ||
@@ -346,7 +340,7 @@ export default function RadioStation({ config, theme }: WidgetComponentProps) {
             </div>
           </div>
           <div className="flex flex-col items-end gap-2">
-            <StatusChip state={metadataState} hasTrack={Boolean(nowPlaying)} />
+            {demoMode ? <span className="rounded-full bg-white/15 px-3 py-1 text-xs">Demo</span> : <StatusChip state={metadataState} hasTrack={Boolean(nowPlaying)} />}
           </div>
         </div>
 
@@ -369,7 +363,7 @@ export default function RadioStation({ config, theme }: WidgetComponentProps) {
 
           <div className="min-w-0 flex-1">
             <div className="text-[clamp(0.66rem,1.05cqi,0.9rem)] font-semibold uppercase tracking-[0.18em] text-emerald-100/70">
-              {nowPlaying?.showName ? 'On Air' : 'Now Playing'}
+              {demoMode ? 'Sample track' : nowPlaying?.showName ? 'On Air' : 'Now Playing'}
             </div>
             <div className="mt-2 break-words text-[clamp(1.1rem,4.8cqi,3rem)] font-semibold leading-tight">
               {nowPlaying?.title || 'No current track title'}
@@ -477,3 +471,4 @@ export default function RadioStation({ config, theme }: WidgetComponentProps) {
     </div>
   );
 }
+

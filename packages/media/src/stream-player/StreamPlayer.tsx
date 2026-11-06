@@ -1,3 +1,5 @@
+import { createDemoImage, DemoBadge } from '@firstform/campus-hub-widgets-shared';
+import { useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type Hls from 'hls.js';
 import { AppIcon, WidgetComponentProps, buildProxyUrl, getCorsProxyUrl } from '@firstform/campus-hub-widget-sdk';
@@ -131,7 +133,8 @@ function resolveBadge(
 }
 
 export default function StreamPlayer({ config, theme }: WidgetComponentProps) {
-  const streamConfig = config as StreamPlayerConfig | undefined;
+  const preview = useWidgetPreview();
+  const streamConfig = (preview ? {} : config) as StreamPlayerConfig | undefined;
   const preset = (streamConfig?.preset ?? 'custom') as StreamPreset;
   const format = (streamConfig?.format ?? 'auto') as StreamFormat;
   const autoplay = streamConfig?.autoplay ?? true;
@@ -301,13 +304,12 @@ export default function StreamPlayer({ config, theme }: WidgetComponentProps) {
   const badge = resolveBadge(primarySource, liveProbe, usingFallback, showStatus);
 
   if (!primarySource) {
-    return (
-      <EmptyState
-        theme={theme}
-        title="No stream configured"
-        detail="Add a URL, choose a format, or use the ISS preset."
-      />
-    );
+    if (primaryUrl) return <EmptyState theme={theme} title="Stream unavailable" detail="The configured stream URL could not be recognized." />;
+    return <div className="relative h-full w-full overflow-hidden rounded-lg bg-black">
+      <img src={createDemoImage('Campus broadcast', 3)} alt="Sample stream artwork" className="h-full w-full object-cover" />
+      <DemoBadge />
+      <div className="absolute inset-0 flex items-center justify-center"><AppIcon name="film" className="h-16 w-16 text-white/80" /></div>
+    </div>;
   }
 
   if (!activeSource) {
@@ -404,3 +406,4 @@ export default function StreamPlayer({ config, theme }: WidgetComponentProps) {
     </div>
   );
 }
+

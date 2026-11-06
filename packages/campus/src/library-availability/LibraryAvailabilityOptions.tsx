@@ -1,3 +1,4 @@
+import { useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   FormInput,
@@ -86,6 +87,7 @@ const extractRoomsFromResponse = (response: LibCalGridResponse): RoomInfo[] => {
 };
 
 export default function LibraryAvailabilityOptions({ data, onChange }: WidgetOptionsProps) {
+  const preview = useWidgetPreview();
   const state: LibraryAvailabilityData = {
     title: (data?.title as string) ?? DEFAULTS.title,
     mode: (data?.mode as DisplayMode) ?? DEFAULTS.mode,
@@ -112,7 +114,7 @@ export default function LibraryAvailabilityOptions({ data, onChange }: WidgetOpt
     const endpoint = state.endpoint.trim();
     const proxyMissing = state.useCorsProxy && !getCorsProxyUrl();
 
-    if (!endpoint || proxyMissing) {
+    if (preview || !endpoint || proxyMissing) {
       fetchControllerRef.current?.abort();
       setLiveRooms([]);
       setRoomLoading(false);
@@ -173,6 +175,7 @@ export default function LibraryAvailabilityOptions({ data, onChange }: WidgetOpt
       fetchControllerRef.current?.abort();
     };
   }, [
+    preview,
     state.daysToShow,
     state.endpoint,
     state.gid,
@@ -204,7 +207,7 @@ export default function LibraryAvailabilityOptions({ data, onChange }: WidgetOpt
 
   const handleChange = (name: string, value: string | number | boolean) => {
     const next = { ...data, ...state, [name]: value };
-    onChange(next);
+    onChange({ ...data, ...next });
   };
 
   return (
@@ -332,7 +335,7 @@ export default function LibraryAvailabilityOptions({ data, onChange }: WidgetOpt
           name="endpoint"
           type="url"
           value={state.endpoint}
-          placeholder="https://unbc.libcal.com/spaces/availability/grid"
+          placeholder="https://example.edu/source"
           onChange={handleChange}
         />
 
@@ -382,3 +385,4 @@ export default function LibraryAvailabilityOptions({ data, onChange }: WidgetOpt
     </div>
   );
 }
+

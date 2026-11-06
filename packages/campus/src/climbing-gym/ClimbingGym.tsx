@@ -1,4 +1,5 @@
 'use client';
+import { useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { useState, useEffect, useCallback } from 'react';
 import { AppIcon, ThemedContainer, buildCacheKey, buildProxyUrl, fetchTextWithCache, normalizeSourcePayload, resolveSourceAdapter, useAdaptiveFitScale, type NormalizedOccupancy, type WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
 import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
@@ -101,7 +102,7 @@ export default function ClimbingGym({ config, theme }: WidgetComponentProps) {
   const showCapacityBar = cfg?.showCapacityBar ?? true;
   const showHours = cfg?.showHours ?? true;
   const useCorsProxy = cfg?.useCorsProxy ?? true;
-  const galleryDemo = cfg?.galleryDemo ?? false;
+  const galleryDemo = useWidgetPreview() || (cfg?.galleryDemo ?? false);
   const forceOpen = cfg?.forceOpen ?? false;
 
   const isDemo = !portalUrl || galleryDemo;
@@ -304,3 +305,4 @@ export default function ClimbingGym({ config, theme }: WidgetComponentProps) {
     </ThemedContainer>
   );
 }
+

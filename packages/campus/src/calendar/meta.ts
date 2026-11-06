@@ -14,7 +14,7 @@ export default defineWidget({
     minH: 3,
     defaultW: 3,
     defaultH: 4,
-    acceptsSources: [{ propName: 'calendarUrl', types: ['calendar'] }],
+    acceptsSources: [{ propName: 'calendarUrl', types: ['calendar', 'google-calendar'], applySource: (source) => ({ calendarUrl: source.url, sourceFormat: source.sourceType === 'google-calendar' ? 'google-public' : 'ical' }) }],
     defaultProps: {
       calendarUrl: '',
       sourceFormat: 'ical',
@@ -29,3 +29,4 @@ export default defineWidget({
   load: () => import('./Calendar'),
   loadOptions: () => import('./CalendarOptions'),
 });
+

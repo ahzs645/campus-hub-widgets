@@ -16,7 +16,12 @@ export default defineWidget({
     maxH: 5,
     defaultW: 3,
     defaultH: 3,
+    acceptsSources: [{
+      propName: 'apiUrl', types: ['api'], requires: { format: ['html'] },
+      capabilityHint: 'BC Wildfire danger summary page.',
+    }],
     defaultProps: {
+      apiUrl: '',
       fireCentre: 'Cariboo Fire Centre',
       refreshInterval: 30,
       useCorsProxy: true,
@@ -25,3 +30,4 @@ export default defineWidget({
   load: () => import('./FireHazard'),
   loadOptions: () => import('./FireHazardOptions'),
 });
+

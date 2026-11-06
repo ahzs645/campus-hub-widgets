@@ -15,7 +15,9 @@ export default defineWidget({
     defaultW: 4,
     defaultH: 3,
     tags: ['retro', 'info'],
+    acceptsSources: [{ propName: 'apiUrl', types: ['api'], capabilityHint: 'MyMemory-compatible translation endpoint.' }],
     defaultProps: {
+      apiUrl: '',
       fromLang: 'en',
       toLang: 'fr',
     },
@@ -23,3 +25,4 @@ export default defineWidget({
   load: () => import('./MacOSTranslation'),
   loadOptions: () => import('./MacOSTranslationOptions'),
 });
+

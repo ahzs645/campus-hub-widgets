@@ -1,11 +1,12 @@
 'use client';
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { WidgetComponentProps, DarkContainer } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, DarkContainer, useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { useFitScale } from '@firstform/campus-hub-widget-sdk';
 import { DotMatrixText, textToChars } from '@firstform/campus-hub-widget-sdk';
 import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
 
 interface CryptoTrackerConfig {
+  apiUrl?: string;
   coins?: string[];
   cycleInterval?: number;
   showSparkline?: boolean;
@@ -119,13 +120,17 @@ function formatPrice(price: number): string {
 
 export default function CryptoTracker({ config, theme }: WidgetComponentProps) {
   const trackerConfig = config as CryptoTrackerConfig | undefined;
+  const preview = useWidgetPreview();
   const coins = trackerConfig?.coins ?? DEFAULT_COINS;
   const cycleInterval = trackerConfig?.cycleInterval ?? 10;
   const showSparkline = trackerConfig?.showSparkline ?? true;
 
   const { containerRef, scale } = useFitScale(220, 200);
   const coinIds = coins.map((id) => id.trim()).filter(Boolean).join(',');
-  const isDemo = coinIds === '';
+  const legacySource = trackerConfig?.apiUrl === undefined && Array.isArray(trackerConfig?.coins);
+  const apiUrl = trackerConfig?.apiUrl?.trim() || (legacySource ? 'https://api.coingecko.com/api/v3/coins/markets' : '');
+  const isDemo = preview || !apiUrl || coinIds === '';
+  const sourceKey = `${apiUrl}:${coinIds}`;
   // Last-good live prices keyed by the coin list they came from.
   const [live, setLive] = useState<{ key: string; data: CoinData[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -138,14 +143,19 @@ export default function CryptoTracker({ config, theme }: WidgetComponentProps) {
       return;
     }
     try {
+      const url = new URL(apiUrl, window.location.origin);
+      url.searchParams.set('vs_currency', 'usd');
+      url.searchParams.set('ids', coinIds);
+      url.searchParams.set('price_change_percentage', '24h');
+      url.searchParams.set('sparkline', 'true');
       const res = await fetch(
-        `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${encodeURIComponent(coinIds)}&price_change_percentage=24h&sparkline=true`,
+        url.toString(),
         { signal: timeoutSignal(FETCH_TIMEOUT_MS) },
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: CoinData[] = await res.json();
       if (!Array.isArray(data) || data.length === 0) throw new Error('No prices returned');
-      setLive({ key: coinIds, data });
+      setLive({ key: sourceKey, data });
       setError(null);
     } catch (err) {
       // Keep last-good prices; never substitute sample prices.
@@ -155,7 +165,7 @@ export default function CryptoTracker({ config, theme }: WidgetComponentProps) {
           : err instanceof Error ? err.message : 'Unable to load prices',
       );
     }
-  }, [coinIds, isDemo]);
+  }, [apiUrl, coinIds, isDemo, sourceKey]);
 
   useEffect(() => {
     fetchData();
@@ -163,7 +173,7 @@ export default function CryptoTracker({ config, theme }: WidgetComponentProps) {
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  const current = !isDemo && live?.key === coinIds ? live : null;
+  const current = !isDemo && live?.key === sourceKey ? live : null;
   const coinData: CoinData[] = isDemo ? SAMPLE_COIN_DATA : current?.data ?? [];
   const isUnavailable = !isDemo && current === null && error !== null;
 
@@ -321,3 +331,4 @@ export default function CryptoTracker({ config, theme }: WidgetComponentProps) {
     </DarkContainer>
   );
 }
+

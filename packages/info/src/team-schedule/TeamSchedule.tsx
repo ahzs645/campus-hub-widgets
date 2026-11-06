@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { DarkContainer, buildCacheKey, buildProxyUrl, fetchJsonWithCache, type WidgetComponentProps, useFitScale, useLoopingAutoScroll } from '@firstform/campus-hub-widget-sdk';
+import { DarkContainer, buildCacheKey, buildProxyUrl, fetchJsonWithCache, type WidgetComponentProps, useFitScale, useLoopingAutoScroll, useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
 
 interface TeamScheduleConfig {
@@ -174,10 +174,11 @@ function formatMatchup(game: TeamGame): string {
 
 export default function TeamSchedule({ config, theme }: WidgetComponentProps) {
   const scheduleConfig = config as TeamScheduleConfig | undefined;
+  const preview = useWidgetPreview();
   const title = scheduleConfig?.title?.trim() || 'Team Schedule';
   const teamName = scheduleConfig?.teamName?.trim() || 'Phoenix Suns';
   const league = scheduleConfig?.league?.trim() || 'NBA';
-  const source = scheduleConfig?.source ?? 'demo';
+  const source = preview ? 'demo' : scheduleConfig?.source ?? 'demo';
   const apiUrl = scheduleConfig?.apiUrl?.trim() || '';
   const manualData = scheduleConfig?.manualData?.trim() || '';
   const maxGames = Math.max(1, Math.min(8, scheduleConfig?.maxGames ?? 5));
@@ -412,3 +413,4 @@ export default function TeamSchedule({ config, theme }: WidgetComponentProps) {
     </DarkContainer>
   );
 }
+

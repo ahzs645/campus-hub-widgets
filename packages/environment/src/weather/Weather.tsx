@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import {
   buildCacheKey,
   buildProxyUrl,
@@ -14,7 +14,7 @@ import { AppIcon } from '@firstform/campus-hub-widget-sdk';
 import type { IconName, NormalizedWeatherObservation } from '@firstform/campus-hub-widget-sdk';
 import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
 import { withFetchTimeout } from '../fetch-timeout';
-import { DISPLAY_MODE_PRESETS, GEOMET_PRINCE_GEORGE_URL } from './meta';
+import { DISPLAY_MODE_PRESETS } from './meta';
 
 type WeatherIconKey =
   | 'sunny'
@@ -266,9 +266,10 @@ const weatherFromObservation = (
 
 export default function Weather({ config, theme }: WidgetComponentProps) {
   const weatherConfig = config as WeatherConfig | undefined;
+  const preview = useWidgetPreview();
   const units = weatherConfig?.units ?? 'fahrenheit';
   const location = weatherConfig?.location ?? 'Campus';
-  const apiUrl = weatherConfig?.apiUrl?.trim() || GEOMET_PRINCE_GEORGE_URL;
+  const apiUrl = weatherConfig?.apiUrl?.trim() || '';
   const appearance = weatherConfig?.appearance ?? 'default';
   const show = resolveDisplayItems(weatherConfig);
   const apiKey = weatherConfig?.apiKey?.trim();
@@ -277,9 +278,7 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
   const sourceAdapterId = weatherConfig?.sourceAdapter
     ?? (configuredDataSource === 'unbc-rooftop' ? 'unbc-rooftop-weather' : undefined);
   const sourceAdapter = resolveSourceAdapter({ adapterId: sourceAdapterId, url: apiUrl });
-  const sourceUrl = sourceAdapter?.matches({ url: apiUrl })
-    ? apiUrl
-    : sourceAdapter?.defaultUrl;
+  const sourceUrl = apiUrl;
   const refreshInterval = weatherConfig?.refreshInterval ?? 10; // minutes
   const useCorsProxy = weatherConfig?.useCorsProxy ?? true;
 
@@ -287,7 +286,7 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
 
   // The default provider with no API key is "not configured": show the sample
   // reading with a Demo badge rather than silently presenting fake weather.
-  const isDemo = dataSource === 'openweathermap' && !apiKey;
+  const isDemo = preview || (dataSource === 'openweathermap' ? !apiKey : !sourceUrl);
   // Identifies the configured source (and display units) a reading belongs to,
   // so a config change never shows another source's data while refetching.
   const sourceKey = dataSource === 'source'
@@ -414,6 +413,7 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
   }, [apiKey, location, sourceKey, units, refreshMs]);
 
   useEffect(() => {
+    if (isDemo) return;
     let isMounted = true;
     const fetchWeather = async () => {
       if (!isMounted) return;
@@ -432,7 +432,7 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
       isMounted = false;
       clearInterval(interval);
     };
-  }, [dataSource, fetchAdaptedSource, fetchGeoMet, fetchOWM, refreshMs]);
+  }, [isDemo, dataSource, fetchAdaptedSource, fetchGeoMet, fetchOWM, refreshMs]);
 
   // demo → sample reading (badged); live → last-good reading from this source;
   // unavailable → the configured source failed with nothing good to show.
@@ -746,3 +746,4 @@ export default function Weather({ config, theme }: WidgetComponentProps) {
     </ThemedContainer>
   );
 }
+

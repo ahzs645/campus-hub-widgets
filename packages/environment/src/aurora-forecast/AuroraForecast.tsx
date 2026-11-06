@@ -1,12 +1,13 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, fetchJsonWithCache, buildProxyUrl } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale } from '@firstform/campus-hub-widget-sdk';
 import { SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
 import { withFetchTimeout } from '../fetch-timeout';
 
 interface AuroraConfig {
+  apiUrl?: string;
   refreshInterval?: number;
   latitude?: number;
   useCorsProxy?: boolean;
@@ -52,8 +53,6 @@ const auroraVisibility = (kp: number, latitude: number): { text: string; color: 
   if (latitude >= visibleLat - 5) return { text: 'Possible', color: '#eab308' };
   return { text: 'Not Visible', color: '#6b7280' };
 };
-
-const NOAA_KP_URL = 'https://services.swpc.noaa.gov/products/noaa-planetary-k-index-forecast.json';
 
 const parseKpForecast = (raw: unknown): AuroraData | null => {
   if (!Array.isArray(raw) || raw.length < 2) return null;
@@ -107,15 +106,15 @@ export default function AuroraForecast({
   theme,
 }: WidgetComponentProps) {
   const cfg = config as AuroraConfig | undefined;
+  const preview = useWidgetPreview();
+  const apiUrl = cfg?.apiUrl?.trim() || '';
   const refreshInterval = cfg?.refreshInterval ?? 15;
   const latitude = cfg?.latitude ?? 54; // Default: Prince George, BC
   const useCorsProxy = cfg?.useCorsProxy ?? true;
-  // NOAA's feed is public and needs no setup, so the widget is always "live";
-  // sample data is only for the gallery preview, and always badged.
-  const isDemo = cfg?.galleryDemo ?? false;
+  const isDemo = preview || cfg?.galleryDemo === true || !apiUrl;
 
   // Last-good live forecast. Starts empty (loading), never with sample data.
-  const [live, setLive] = useState<{ data: AuroraData; updatedAt: Date } | null>(null);
+  const [live, setLive] = useState<{ key: string; data: AuroraData; updatedAt: Date } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const refreshMs = refreshInterval * 60 * 1000;
@@ -127,22 +126,22 @@ export default function AuroraForecast({
     }
     try {
       setError(null);
-      const fetchUrl = useCorsProxy ? buildProxyUrl(NOAA_KP_URL) : NOAA_KP_URL;
+      const fetchUrl = useCorsProxy ? buildProxyUrl(apiUrl) : apiUrl;
       const { data: raw } = await fetchJsonWithCache<unknown>(fetchUrl, {
-        cacheKey: buildCacheKey('aurora-kp', NOAA_KP_URL),
+        cacheKey: buildCacheKey('aurora-kp', apiUrl),
         ttlMs: refreshMs,
         fetchInit: withFetchTimeout(),
       });
       const parsed = parseKpForecast(raw);
       if (parsed) {
-        setLive({ data: parsed, updatedAt: new Date() });
+        setLive({ key: apiUrl, data: parsed, updatedAt: new Date() });
       } else {
         setError('Failed to parse aurora data');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [isDemo, refreshMs, useCorsProxy]);
+  }, [apiUrl, isDemo, refreshMs, useCorsProxy]);
 
   useEffect(() => {
     let isMounted = true;
@@ -172,8 +171,9 @@ export default function AuroraForecast({
   // Fill the full container width when stretched horizontally
   const DW = containerWidth > 0 ? Math.max(BASE_W, containerWidth / scale) : BASE_W;
 
-  const data: AuroraData | null = isDemo ? MOCK_DATA : live?.data ?? null;
-  const lastUpdated = isDemo ? null : live?.updatedAt ?? null;
+  const current = live?.key === apiUrl ? live : null;
+  const data: AuroraData | null = isDemo ? MOCK_DATA : current?.data ?? null;
+  const lastUpdated = isDemo ? null : current?.updatedAt ?? null;
 
   if (!data) {
     return (
@@ -344,3 +344,4 @@ export default function AuroraForecast({
     </div>
   );
 }
+

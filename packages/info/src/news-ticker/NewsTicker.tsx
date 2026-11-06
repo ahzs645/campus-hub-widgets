@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, fetchJsonWithCache, fetchTextWithCache } from '@firstform/campus-hub-widget-sdk';
 import { parseRss } from '@firstform/campus-hub-widget-sdk';
 import { useEventsState, buildProxyUrl, type CalendarEvent } from '@firstform/campus-hub-widget-sdk';
@@ -322,12 +322,13 @@ const areTickerItemsEqual = (a: TickerItem[], b: TickerItem[]): boolean => {
 
 export default function NewsTicker({ config, theme }: WidgetComponentProps) {
   const tickerConfig = config as NewsTickerConfig | undefined;
-  const rawApiUrl = tickerConfig?.apiUrl?.trim();
+  const preview = useWidgetPreview();
+  const rawApiUrl = preview ? undefined : tickerConfig?.apiUrl?.trim();
   const apiUrl = rawApiUrl && rawApiUrl.length > 0 ? rawApiUrl : undefined;
   const sourceType = tickerConfig?.sourceType ?? 'json';
   const announcementsApiUrl =
     sourceType === 'simcity-template' ? apiUrl || DEFAULT_SIMCITY_API_URL : apiUrl;
-  const configuredItems = tickerConfig?.items;
+  const configuredItems = preview ? undefined : tickerConfig?.items;
   const simcityCategories = tickerConfig?.simcityCategories;
   const templateCityName = tickerConfig?.templateCityName;
   const templateMayorName = tickerConfig?.templateMayorName;
@@ -346,9 +347,13 @@ export default function NewsTicker({ config, theme }: WidgetComponentProps) {
   const label = tickerConfig?.label ?? 'Breaking';
   const dataSource = tickerConfig?.dataSource ?? 'announcements';
   const useCorsProxy = tickerConfig?.useCorsProxy ?? true;
+  const isLocalTemplate = sourceType === 'simcity-template' && announcementsApiUrl === DEFAULT_SIMCITY_API_URL;
+  const announcementsDemo = preview || (!apiUrl && !configuredItems?.length) || isLocalTemplate;
 
   // Announcement items state
-  const [items, setItems] = useState<TickerItem[]>(configuredItems ?? DEFAULT_TICKER_ITEMS);
+  const [items, setItems] = useState<TickerItem[]>(configuredItems ?? (announcementsDemo ? DEFAULT_TICKER_ITEMS : []));
+  const [announcementsError, setAnnouncementsError] = useState<string | null>(null);
+  const [loadedSource, setLoadedSource] = useState<string | undefined>(undefined);
   const itemsRef = useRef(items);
   const pendingItemsRef = useRef<TickerItem[] | null>(null);
   const hasAppliedRemoteItemsRef = useRef(false);
@@ -379,6 +384,9 @@ export default function NewsTicker({ config, theme }: WidgetComponentProps) {
   useEffect(() => {
     pendingItemsRef.current = null;
     hasAppliedRemoteItemsRef.current = false;
+    setAnnouncementsError(null);
+    setLoadedSource(undefined);
+    if (announcementsApiUrl && !isLocalTemplate) setItems([]);
   }, [dataSource, announcementsApiUrl, sourceType]);
 
   useEffect(() => {
@@ -394,6 +402,7 @@ export default function NewsTicker({ config, theme }: WidgetComponentProps) {
 
     const fetchTicker = async () => {
       try {
+        setAnnouncementsError(null);
         const mapCurrentSimCityData = (data: unknown) =>
           mapSimCityTickerItems(data, {
             fallbackLabel: label,
@@ -429,7 +438,8 @@ export default function NewsTicker({ config, theme }: WidgetComponentProps) {
             label: item.categories?.[0] ?? label ?? 'NEWS',
             text: item.title,
           }));
-          if (isMounted) queueFetchedItems(mapped);
+          if (!mapped.length) throw new Error('No announcements returned');
+          if (isMounted) { queueFetchedItems(mapped); setLoadedSource(announcementsApiUrl); }
           return;
         }
 
@@ -439,8 +449,10 @@ export default function NewsTicker({ config, theme }: WidgetComponentProps) {
             ttlMs: cacheTtlSeconds * 1000,
           });
           const mapped = mapCurrentSimCityData(data);
-          if (isMounted && mapped.length > 0) {
+          if (!mapped.length) throw new Error('No announcements returned');
+          if (isMounted) {
             queueFetchedItems(mapped);
+            setLoadedSource(announcementsApiUrl);
           }
           return;
         }
@@ -449,11 +461,13 @@ export default function NewsTicker({ config, theme }: WidgetComponentProps) {
           cacheKey: buildCacheKey('ticker-json', fetchUrl),
           ttlMs: cacheTtlSeconds * 1000,
         });
-        if (Array.isArray(data) && isMounted) {
+        if (!Array.isArray(data) || !data.length) throw new Error('No announcements returned');
+        if (isMounted) {
           queueFetchedItems(data);
+          setLoadedSource(announcementsApiUrl);
         }
       } catch (error) {
-        console.error('Failed to fetch ticker items:', error);
+        if (isMounted) setAnnouncementsError(error instanceof Error ? error.message : 'Unable to load announcements');
       }
     };
 
@@ -482,7 +496,7 @@ export default function NewsTicker({ config, theme }: WidgetComponentProps) {
   ]);
 
   // Events data via shared hook
-  const eventApiUrl = dataSource === 'events' ? tickerConfig?.eventApiUrl?.trim() || undefined : undefined;
+  const eventApiUrl = !preview && dataSource === 'events' ? tickerConfig?.eventApiUrl?.trim() || undefined : undefined;
   const {
     events,
     isDemo: eventsDemo,
@@ -504,6 +518,7 @@ export default function NewsTicker({ config, theme }: WidgetComponentProps) {
   const eventsUnavailable = isEventsMode && !!eventApiUrl && !!eventsError && events.length === 0;
   const eventsPending = isEventsMode && eventsLoading && events.length === 0;
   const showEventsStatus = eventsUnavailable || eventsPending;
+  const announcementsPending = !isEventsMode && !announcementsDemo && !!announcementsApiUrl && loadedSource !== announcementsApiUrl;
 
   // Uniformly scale the ticker to fill its row height (designed at 70px),
   // then apply user scale from widget options.
@@ -624,13 +639,13 @@ export default function NewsTicker({ config, theme }: WidgetComponentProps) {
         </div>
 
         {/* Scrolling Content */}
-        {showEventsStatus ? (
+        {showEventsStatus || announcementsPending ? (
           <div className="absolute inset-0 flex items-center pl-48">
-            {eventsUnavailable ? (
-              <SourceUnavailable label="Events" compact />
+            {eventsUnavailable || announcementsError ? (
+              <SourceUnavailable label={isEventsMode ? 'Events' : 'Announcements'} detail={isEventsMode ? eventsError : announcementsError} compact />
             ) : (
               <span className="font-semibold text-xl opacity-60" style={{ color: theme.primary }}>
-                Loading events…
+                {isEventsMode ? 'Loading events…' : 'Loading announcements…'}
               </span>
             )}
           </div>
@@ -649,7 +664,7 @@ export default function NewsTicker({ config, theme }: WidgetComponentProps) {
         )}
 
         {/* Sample events shown only while no events feed is configured. */}
-        {showEventsDemo && (
+        {(showEventsDemo || (!isEventsMode && announcementsDemo)) && (
           <div
             className="absolute right-3 top-1/2 -translate-y-1/2 z-10 px-3 py-1 rounded-full text-xs font-semibold"
             style={{ backgroundColor: theme.primary, color: theme.accent }}
@@ -661,3 +676,4 @@ export default function NewsTicker({ config, theme }: WidgetComponentProps) {
     </div>
   );
 }
+

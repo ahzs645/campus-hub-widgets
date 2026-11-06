@@ -5,16 +5,12 @@
  */
 
 import GtfsRealtimeBindings from 'gtfs-realtime-bindings';
-import { buildProxyUrl, getCorsProxyUrl } from './corsProxy';
+import { buildProxyUrl } from './corsProxy';
 import { BAKED_STATIC_GTFS, getBestStaticGtfsSnapshot, type StaticGtfsData } from './staticGtfs';
 
 const POLL_INTERVAL = 30000;
 const STATIC_REFRESH_INTERVAL = 1000 * 60 * 60 * 6;
 const STATIC_RETRY_INTERVAL = 1000 * 60 * 5;
-
-/** Default BC Transit GTFS-Realtime trip updates endpoint (Prince George, operator 22). */
-const GTFS_RT_TRIP_UPDATES_URL =
-  'https://bct.tmix.se/gtfs-realtime/tripupdates.pb?operatorIds=22';
 
 export interface Trip {
   tripId: string;
@@ -154,6 +150,7 @@ async function fetchRealtimeUpdates(
   stopId: string,
   proxyUrl?: string,
   useCorsProxy: boolean = true,
+  realtimeUrl?: string,
 ): Promise<Map<string, RealtimeUpdate>> {
   try {
     let url: string;
@@ -162,16 +159,15 @@ async function fetchRealtimeUpdates(
       url = proxyUrl.endsWith('/')
         ? `${proxyUrl}tripupdates.pb?operatorIds=22`
         : `${proxyUrl}/tripupdates.pb?operatorIds=22`;
-    } else if (useCorsProxy) {
-      // Use the default BC Transit feed URL, wrapped with the system CORS proxy
-      url = buildProxyUrl(GTFS_RT_TRIP_UPDATES_URL);
+    } else if (realtimeUrl) {
+      url = useCorsProxy ? buildProxyUrl(realtimeUrl) : realtimeUrl;
     } else {
       // No proxy available, cannot fetch
       return new Map();
     }
 
     const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
-    if (!res.ok) return new Map();
+    if (!res.ok) throw new Error(`Realtime feed returned HTTP ${res.status}`);
 
     const buffer = await res.arrayBuffer();
     const feed = GtfsRealtimeBindings.transit_realtime.FeedMessage.decode(
@@ -203,8 +199,7 @@ async function fetchRealtimeUpdates(
 
     return updates;
   } catch (err) {
-    console.warn('Failed to fetch realtime updates:', err);
-    return new Map();
+    throw err;
   }
 }
 
@@ -231,40 +226,67 @@ function applyRealtimeUpdates(trips: Trip[], rtUpdates: Map<string, RealtimeUpda
   });
 }
 
+export interface LiveTripSource {
+  gtfsUrl: string;
+  realtimeUrl?: string;
+  proxyUrl?: string;
+  useCorsProxy?: boolean;
+  onError?: (message: string | null) => void;
+}
+
 export function createLiveTripProvider(
   onUpdate: (trips: Trip[]) => void,
-  proxyUrl?: string,
-  getSimulatedNow?: () => Date | null,
-  useCorsProxy: boolean = true,
+  source: LiveTripSource,
 ) {
   let intervalId: ReturnType<typeof setInterval> | null = null;
-  let rtUpdates = new Map<string, RealtimeUpdate>();
-  let staticData = BAKED_STATIC_GTFS;
+  let staticData: StaticGtfsData | null = null;
   let nextStaticRefreshAt = 0;
-  const canFetchRealtime = !!(proxyUrl || (useCorsProxy && getCorsProxyUrl()));
+  let stopped = false;
+  let refreshing = false;
+  const useCorsProxy = source.useCorsProxy ?? true;
 
   async function refresh() {
-    const simNow = getSimulatedNow ? getSimulatedNow() : null;
-    if (!simNow && Date.now() >= nextStaticRefreshAt) {
-      const snapshot = await getBestStaticGtfsSnapshot(useCorsProxy);
-      staticData = snapshot.data;
-      nextStaticRefreshAt = Date.now() + (snapshot.source === 'network' ? STATIC_REFRESH_INTERVAL : STATIC_RETRY_INTERVAL);
+    if (stopped || refreshing) return;
+    refreshing = true;
+    let warning: string | null = null;
+    try {
+      if (!source.gtfsUrl.trim()) throw new Error('Select a static GTFS source');
+      if (!staticData || Date.now() >= nextStaticRefreshAt) {
+        const snapshot = await getBestStaticGtfsSnapshot(useCorsProxy, source.gtfsUrl);
+        staticData = snapshot.data;
+        if (snapshot.source === 'cache') warning = 'Showing a cached transit schedule';
+        nextStaticRefreshAt = Date.now() + (snapshot.source === 'network' ? STATIC_REFRESH_INTERVAL : STATIC_RETRY_INTERVAL);
+      }
+      if (stopped) return;
+      const scheduled = getScheduledTrips(null, staticData);
+      let trips = scheduled;
+      if (source.realtimeUrl || source.proxyUrl) {
+        try {
+          const updates = await fetchRealtimeUpdates(staticData.stopInfo.stopId, source.proxyUrl, useCorsProxy, source.realtimeUrl);
+          trips = applyRealtimeUpdates(scheduled, updates);
+        } catch (error) {
+          warning = error instanceof Error ? error.message : 'Realtime transit data unavailable';
+        }
+      }
+      if (!stopped) {
+        source.onError?.(warning);
+        onUpdate(trips);
+      }
+    } catch (error) {
+      if (!stopped) source.onError?.(error instanceof Error ? error.message : 'Transit source unavailable');
+    } finally {
+      refreshing = false;
     }
-    // Only fetch realtime if not simulating and a proxy is available
-    if (!simNow && canFetchRealtime) {
-      rtUpdates = await fetchRealtimeUpdates(staticData.stopInfo.stopId, proxyUrl, useCorsProxy);
-    }
-    const scheduled = getScheduledTrips(simNow, simNow ? BAKED_STATIC_GTFS : staticData);
-    const merged = simNow ? scheduled : (canFetchRealtime ? applyRealtimeUpdates(scheduled, rtUpdates) : scheduled);
-    onUpdate(merged);
   }
 
   return {
     start() {
-      refresh();
-      intervalId = setInterval(refresh, POLL_INTERVAL);
+      stopped = false;
+      void refresh();
+      intervalId = setInterval(() => { void refresh(); }, POLL_INTERVAL);
     },
     stop() {
+      stopped = true;
       if (intervalId) clearInterval(intervalId);
       intervalId = null;
     },

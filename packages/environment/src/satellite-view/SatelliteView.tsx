@@ -1,9 +1,11 @@
 'use client';
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { useAdaptiveFitScale, ThemedContainer } from '@firstform/campus-hub-widget-sdk';
+import { createDemoImage, DemoBadge, SourceUnavailable } from '@firstform/campus-hub-widgets-shared';
 
 interface SatelliteViewConfig {
+  tileUrl?: string;
   lat?: number;
   lon?: number;
   zoom?: number;
@@ -32,11 +34,13 @@ const latLonToTile = (
 
 const SUBDOMAINS = ['a', 'b', 'c', 'd'];
 
-const tileUrl = (tx: number, ty: number, zoom: number, year: string): string => {
+const tileUrl = (template: string, tx: number, ty: number, zoom: number, year: string): string => {
   const sub = SUBDOMAINS[(tx + ty) % SUBDOMAINS.length];
-  const layer = year === '2016' ? 's2cloudless' : `s2cloudless-${year}`;
-  return `https://${sub}.tiles.maps.eox.at/wmts/1.0.0/${layer}_3857/default/GoogleMapsCompatible/${zoom}/${ty}/${tx}.jpg`;
+  const fields: Record<string, string> = { s: sub, z: String(zoom), x: String(tx), y: String(ty), year };
+  return template.replace(/\{(s|z|x|y|year)\}|%7b(s|z|x|y|year)%7d/gi, (_match, plain, encoded) => fields[String(plain ?? encoded).toLowerCase()]);
 };
+
+const SAMPLE_MAP = createDemoImage('Satellite imagery sample', 3);
 
 /** Well-known locations for presets. */
 const LOCATION_PRESETS: Record<string, { lat: number; lon: number; label: string }> = {
@@ -50,6 +54,10 @@ const LOCATION_PRESETS: Record<string, { lat: number; lon: number; label: string
 
 export default function SatelliteView({ config, theme }: WidgetComponentProps) {
   const cfg = config as SatelliteViewConfig | undefined;
+  const preview = useWidgetPreview();
+  const legacySource = cfg?.tileUrl === undefined && typeof cfg?.lat === 'number' && typeof cfg?.lon === 'number';
+  const urlTemplate = cfg?.tileUrl?.trim() || (legacySource ? 'https://{s}.tiles.maps.eox.at/wmts/1.0.0/s2cloudless-{year}_3857/default/GoogleMapsCompatible/{z}/{y}/{x}.jpg' : '');
+  const isDemo = preview || !urlTemplate;
   const lat = cfg?.lat ?? 53.9171; // Prince George default
   const lon = cfg?.lon ?? -122.7497;
   const zoom = Math.min(13, Math.max(1, cfg?.zoom ?? 10));
@@ -126,7 +134,7 @@ export default function SatelliteView({ config, theme }: WidgetComponentProps) {
   // Reset errors when config changes
   useEffect(() => {
     setLoadErrors(new Set());
-  }, [lat, lon, zoom, year]);
+  }, [lat, lon, zoom, year, urlTemplate]);
 
   const compact = viewportWidth < 320 || viewportHeight < 240;
   const crosshairSize = clamp(Math.min(viewportWidth, viewportHeight) * 0.055, 16, 24);
@@ -153,14 +161,16 @@ export default function SatelliteView({ config, theme }: WidgetComponentProps) {
         }}
       >
         {/* Tile grid */}
-        {tileGrid.map(({ tx, ty, px, py }) => {
+        {isDemo && <><img src={SAMPLE_MAP} alt="Sample satellite view" className="h-full w-full object-cover" /><DemoBadge /></>}
+        {!isDemo && loadErrors.size >= tileGrid.length && <SourceUnavailable label="Satellite imagery" detail="The configured tiles could not be loaded." />}
+        {!isDemo && tileGrid.map(({ tx, ty, px, py }) => {
           const key = `${zoom}-${tx}-${ty}`;
           const isError = loadErrors.has(key);
           return (
             <img
               key={key}
               data-layout-diagnostic-ignore="true"
-              src={isError ? undefined : tileUrl(tx, ty, zoom, year)}
+              src={isError ? undefined : tileUrl(urlTemplate, tx, ty, zoom, year)}
               alt=""
               width={TILE_SIZE}
               height={TILE_SIZE}
@@ -267,3 +277,4 @@ export default function SatelliteView({ config, theme }: WidgetComponentProps) {
     </ThemedContainer>
   );
 }
+

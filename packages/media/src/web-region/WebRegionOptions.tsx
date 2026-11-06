@@ -95,7 +95,7 @@ export default function WebRegionOptions({ data, onChange }: WidgetOptionsProps)
     (patch: Partial<WebRegionData>) => {
       setState((prev) => {
         const next = { ...prev, ...patch };
-        onChange(next);
+        onChange({ ...data, ...next });
         return next;
       });
     },
@@ -382,3 +382,4 @@ export default function WebRegionOptions({ data, onChange }: WidgetOptionsProps)
     </div>
   );
 }
+

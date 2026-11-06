@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { WidgetComponentProps } from '@firstform/campus-hub-widget-sdk';
+import { WidgetComponentProps, useWidgetPreview } from '@firstform/campus-hub-widget-sdk';
 import { buildCacheKey, buildProxyUrl, fetchTextWithCache } from '@firstform/campus-hub-widget-sdk';
 import { useFitScale } from '@firstform/campus-hub-widget-sdk';
 import { AppIcon, FadeOverlay } from '@firstform/campus-hub-widget-sdk';
@@ -92,7 +92,8 @@ export default function RSSReader({ config, theme }: WidgetComponentProps) {
   const scrollSpeed = rssConfig?.scrollSpeed ?? 40;
   const customTitle = rssConfig?.title?.trim() || '';
   const useCorsProxy = rssConfig?.useCorsProxy ?? true;
-  const isDemo = !feedUrl;
+  const preview = useWidgetPreview();
+  const isDemo = preview || !feedUrl;
   // Last-good live feed, keyed by the URL it came from. A configured feed
   // starts empty (loading), never with the demo items.
   const [live, setLive] = useState<{ key: string; title: string; items: FeedItem[] } | null>(null);
@@ -320,3 +321,4 @@ export default function RSSReader({ config, theme }: WidgetComponentProps) {
     </div>
   );
 }
+

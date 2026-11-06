@@ -18,7 +18,12 @@ export default defineWidget({
     maxH: 5,
     defaultW: 4,
     defaultH: 3,
-    defaultProps: {
+    acceptsSources: [{
+      propName: 'apiUrl', types: ['api'], requires: { format: ['json'] },
+      capabilityHint: 'Stock JSON with quotes and an optional chart array.',
+      removeSource: () => ({ apiUrl: '' }),
+    }],
+    defaultProps: { apiUrl: '',
       title: 'Stock Quotes',
       symbols: DEFAULT_SYMBOLS,
       chartSymbol: 'NVDA',
@@ -32,3 +37,4 @@ export default defineWidget({
   load: () => import('./StockQuotes'),
   loadOptions: () => import('./StockQuotesOptions'),
 });
+

@@ -10,8 +10,6 @@ import {
   type StopInfo,
 } from './gtfsData';
 
-const STATIC_GTFS_URL =
-  'https://bct.tmix.se/Tmix.Cap.TdExport.WebApi/gtfs/?operatorIds=22';
 const CACHE_KEY = 'campus-hub:transit:prince-george-static-gtfs:v1';
 const TARGET_STOP_ID = '105017';
 const TARGET_ROUTE_IDS = new Set(['15-PRG', '16-PRG', '19-PRG']);
@@ -47,10 +45,10 @@ export const BAKED_STATIC_GTFS: StaticGtfsData = {
   stopSchedule: BAKED_STOP_SCHEDULE,
 };
 
-function readCachedStaticGtfs(): StaticGtfsCacheEntry | null {
+function readCachedStaticGtfs(sourceUrl: string): StaticGtfsCacheEntry | null {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = window.localStorage.getItem(CACHE_KEY);
+    const raw = window.localStorage.getItem(`${CACHE_KEY}:${encodeURIComponent(sourceUrl)}`);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as StaticGtfsCacheEntry;
     if (!parsed?.data?.stopSchedule || !parsed?.data?.serviceDates) return null;
@@ -60,15 +58,15 @@ function readCachedStaticGtfs(): StaticGtfsCacheEntry | null {
   }
 }
 
-function writeCachedStaticGtfs(data: StaticGtfsData): void {
+function writeCachedStaticGtfs(data: StaticGtfsData, sourceUrl: string): void {
   if (typeof window === 'undefined') return;
   try {
     window.localStorage.setItem(
-      CACHE_KEY,
+      `${CACHE_KEY}:${encodeURIComponent(sourceUrl)}`,
       JSON.stringify({ data, storedAt: Date.now() } satisfies StaticGtfsCacheEntry),
     );
   } catch {
-    // Ignore storage quota/private-mode failures. The baked data remains as fallback.
+    // Ignore storage quota/private-mode failures. A failed refresh can still retain the current in-memory schedule.
   }
 }
 
@@ -354,15 +352,16 @@ function isUsableStaticGtfs(data: StaticGtfsData): boolean {
   return data.stopSchedule.length > 0 && Object.keys(data.serviceDates).length > 0;
 }
 
-export function getCachedStaticGtfs(): StaticGtfsData | null {
-  const cached = readCachedStaticGtfs();
+export function getCachedStaticGtfs(sourceUrl: string): StaticGtfsData | null {
+  const cached = readCachedStaticGtfs(sourceUrl);
   if (!cached) return null;
   if (Date.now() - cached.storedAt > CACHE_MAX_AGE_MS) return null;
   return cached.data;
 }
 
-export async function fetchStaticGtfs(useCorsProxy: boolean): Promise<StaticGtfsData> {
-  const url = useCorsProxy ? buildProxyUrl(STATIC_GTFS_URL) : STATIC_GTFS_URL;
+export async function fetchStaticGtfs(useCorsProxy: boolean, sourceUrl: string): Promise<StaticGtfsData> {
+  if (!sourceUrl.trim()) throw new Error('Select a static GTFS source');
+  const url = useCorsProxy ? buildProxyUrl(sourceUrl) : sourceUrl;
   // The static feed is a zip, so allow longer than the realtime feed.
   const response = await fetch(url, { signal: AbortSignal.timeout(60_000) });
   if (!response.ok) throw new Error(`Failed to fetch static GTFS: ${response.status}`);
@@ -372,21 +371,21 @@ export async function fetchStaticGtfs(useCorsProxy: boolean): Promise<StaticGtfs
     throw new Error('Fetched static GTFS did not contain usable UNBC schedule data');
   }
 
-  writeCachedStaticGtfs(data);
+  writeCachedStaticGtfs(data, sourceUrl);
   return data;
 }
 
-export async function getBestStaticGtfsSnapshot(useCorsProxy: boolean): Promise<StaticGtfsSnapshot> {
-  const cached = getCachedStaticGtfs();
+export async function getBestStaticGtfsSnapshot(useCorsProxy: boolean, sourceUrl: string): Promise<StaticGtfsSnapshot> {
+  const cached = getCachedStaticGtfs(sourceUrl);
   try {
-    return { data: await fetchStaticGtfs(useCorsProxy), source: 'network' };
+    return { data: await fetchStaticGtfs(useCorsProxy, sourceUrl), source: 'network' };
   } catch (err) {
     if (cached) return { data: cached, source: 'cache' };
-    console.warn('Failed to fetch static GTFS, using baked schedule snapshot:', err);
-    return { data: BAKED_STATIC_GTFS, source: 'baked' };
+    throw err;
   }
 }
 
-export async function getBestStaticGtfs(useCorsProxy: boolean): Promise<StaticGtfsData> {
-  return (await getBestStaticGtfsSnapshot(useCorsProxy)).data;
+export async function getBestStaticGtfs(useCorsProxy: boolean, sourceUrl: string): Promise<StaticGtfsData> {
+  return (await getBestStaticGtfsSnapshot(useCorsProxy, sourceUrl)).data;
 }
+

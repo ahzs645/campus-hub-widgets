@@ -36,7 +36,7 @@ export default function UvIndexOptions({ data, onChange }: WidgetOptionsProps) {
     longitude: (data?.longitude as number) ?? -122.7497,
     waqiToken: (data?.waqiToken as string) ?? '',
     waqiCity: (data?.waqiCity as string) ?? 'prince-george',
-    weatherNetworkUrl: (data?.weatherNetworkUrl as string) ?? DEFAULT_WEATHER_NETWORK_URL,
+    weatherNetworkUrl: (data?.weatherNetworkUrl as string) ?? '',
     refreshInterval: (data?.refreshInterval as number) ?? 30,
   });
 
@@ -51,7 +51,7 @@ export default function UvIndexOptions({ data, onChange }: WidgetOptionsProps) {
         longitude: (data.longitude as number) ?? -122.7497,
         waqiToken: (data.waqiToken as string) ?? '',
         waqiCity: (data.waqiCity as string) ?? 'prince-george',
-        weatherNetworkUrl: (data.weatherNetworkUrl as string) ?? DEFAULT_WEATHER_NETWORK_URL,
+        weatherNetworkUrl: (data.weatherNetworkUrl as string) ?? '',
         refreshInterval: (data.refreshInterval as number) ?? 30,
       });
     }
@@ -60,7 +60,7 @@ export default function UvIndexOptions({ data, onChange }: WidgetOptionsProps) {
   const handleChange = (name: string, value: string | number | boolean) => {
     const newState = { ...state, [name]: value };
     setState(newState);
-    onChange(newState);
+    onChange({ ...data, ...newState });
   };
 
   const isOpenUv = state.dataSource === 'openuv';
@@ -205,3 +205,4 @@ export default function UvIndexOptions({ data, onChange }: WidgetOptionsProps) {
     </div>
   );
 }
+

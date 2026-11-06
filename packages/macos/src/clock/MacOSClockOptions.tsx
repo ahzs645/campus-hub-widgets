@@ -39,7 +39,7 @@ export default function MacOSClockOptions({
   const handleChange = (name: string, value: string | number | boolean) => {
     const next = { ...state, [name]: value };
     setState(next);
-    onChange(next);
+    onChange({ ...data, ...next });
   };
 
   return (
@@ -83,3 +83,4 @@ export default function MacOSClockOptions({
     </OptionsPanel>
   );
 }
+
