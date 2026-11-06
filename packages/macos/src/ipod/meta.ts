@@ -18,8 +18,8 @@ export default defineWidget({
     defaultH: 3,
     tags: ['retro', 'media'],
     acceptsSources: [
-      { propName: 'audioUrl', types: ['video'], applySource: (source) => ({ audioUrl: source.url, title: source.name, artist: '', album: '' }) },
-      { propName: 'coverUrl', types: ['image', 'unsplash'] },
+      { propName: 'audioUrl', types: ['video'], independent: true, applySource: (source) => ({ audioUrl: source.url, title: source.name, artist: '', album: '' }) },
+      { propName: 'coverUrl', types: ['image', 'unsplash'], independent: true },
     ],
     defaultProps: {
       title: '',

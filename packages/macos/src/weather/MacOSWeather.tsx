@@ -137,6 +137,18 @@ function getWeatherGradient(code: number, isDay: boolean) {
   return 'linear-gradient(180deg, #4A90C4 0%, #7AB4D8 40%, #A8CBE0 100%)';
 }
 
+/** A linked forecast URL still honors the widget's own units setting. */
+function withForecastUnits(apiUrl: string, units: 'metric' | 'imperial'): string {
+  try {
+    const url = new URL(apiUrl);
+    url.searchParams.set('temperature_unit', units === 'imperial' ? 'fahrenheit' : 'celsius');
+    url.searchParams.set('wind_speed_unit', units === 'imperial' ? 'mph' : 'kmh');
+    return url.toString();
+  } catch {
+    return apiUrl;
+  }
+}
+
 export default function MacOSWeather({ config }: WidgetComponentProps) {
   const weatherConfig = (config ?? {}) as WeatherConfig;
   const location = weatherConfig.location?.trim() || '';
@@ -164,8 +176,9 @@ export default function MacOSWeather({ config }: WidgetComponentProps) {
     const run = async () => {
       try {
         if (apiUrl) {
-          const { data: forecast } = await fetchJsonWithCache<ForecastResponse>(buildProxyUrl(apiUrl), {
-            cacheKey: buildCacheKey('macos-weather-source', apiUrl), ttlMs: 30 * 60 * 1000,
+          const sourceUrl = withForecastUnits(apiUrl, units);
+          const { data: forecast } = await fetchJsonWithCache<ForecastResponse>(buildProxyUrl(sourceUrl), {
+            cacheKey: buildCacheKey('macos-weather-source', sourceUrl), ttlMs: 30 * 60 * 1000,
           });
           if (!forecast?.current || !Array.isArray(forecast.daily?.time)) throw new Error('The source is not an Open-Meteo forecast');
           if (!cancelled) { setLive({ key: requestKey, label: location || 'Weather', data: forecast }); setError(null); }

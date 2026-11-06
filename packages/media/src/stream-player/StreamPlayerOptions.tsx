@@ -1,11 +1,15 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AppIcon,
   FormInput,
   FormSelect,
   FormSwitch,
+  applySourceBinding,
   getVideoThumbnailUrl,
+  useSourcePicker,
+  useWidgetOptionsSurface,
+  type SourceBinding,
   type WidgetOptionsProps,
 } from '@firstform/campus-hub-widget-sdk';
 import {
@@ -13,6 +17,14 @@ import {
   type StreamFormat,
   type StreamPreset,
 } from './stream-utils';
+
+// Both stream bindings accept the same types, so the shared picker's first-match
+// rule always lands on the primary URL. The fallback asks for its binding directly.
+const FALLBACK_BINDING: SourceBinding = {
+  propName: 'fallbackUrl',
+  independent: true,
+  types: ['video', 'embed', 'youtube', 'vimeo', 'google-drive'],
+};
 
 interface StreamPlayerData {
   preset: StreamPreset;
@@ -41,6 +53,10 @@ const DEFAULT_STATE: StreamPlayerData = {
 };
 
 export default function StreamPlayerOptions({ data, onChange }: WidgetOptionsProps) {
+  const pickSource = useSourcePicker();
+  const surface = useWidgetOptionsSurface();
+  const currentData = useRef(data);
+  currentData.current = data;
   const [state, setState] = useState<StreamPlayerData>({
     preset: (data?.preset as StreamPreset) ?? DEFAULT_STATE.preset,
     format: (data?.format as StreamFormat) ?? DEFAULT_STATE.format,
@@ -141,6 +157,20 @@ export default function StreamPlayerOptions({ data, onChange }: WidgetOptionsPro
           placeholder="Optional fallback when a live channel is offline"
           onChange={handleChange}
         />
+
+        {pickSource && surface !== 'gallery' && (
+          <button
+            type="button"
+            className="text-sm font-medium text-[var(--color-accent)] underline"
+            onClick={() => pickSource({
+              widgetType: 'stream-player',
+              bindings: [FALLBACK_BINDING],
+              onSelect: (source) => onChange(applySourceBinding(source, FALLBACK_BINDING, currentData.current ?? {})),
+            })}
+          >
+            Choose a saved fallback source
+          </button>
+        )}
 
         {state.format === 'youtube-channel-live' && (
           <FormInput

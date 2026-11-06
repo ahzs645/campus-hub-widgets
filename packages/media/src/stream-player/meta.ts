@@ -16,7 +16,7 @@ export default defineWidget({
     defaultH: 4,
     acceptsSources: [
       { propName: 'url', types: ['video', 'embed', 'youtube', 'vimeo', 'google-drive'] },
-      { propName: 'fallbackUrl', types: ['video', 'embed', 'youtube', 'vimeo', 'google-drive'] },
+      { propName: 'fallbackUrl', independent: true, types: ['video', 'embed', 'youtube', 'vimeo', 'google-drive'] },
     ],
     defaultProps: {
       preset: 'custom',
